@@ -1,3 +1,8 @@
+/**
+ * @deprecated This file is deprecated. Use lib/services/promptService.ts instead.
+ * This file is kept for backwards compatibility during migration.
+ */
+
 import { supabase } from "./supabase";
 
 /**

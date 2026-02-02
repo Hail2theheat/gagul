@@ -1,0 +1,1 @@
+ALTER TABLE responses ALTER COLUMN content DROP NOT NULL;
