@@ -94,8 +94,12 @@ export interface FiresideComment {
   id: string;
   response_id: string;
   user_id: string;
+  username?: string;
   content: string;
   created_at: string;
+  parent_comment_id?: string;
+  reply_count?: number;
+  replies?: FiresideComment[];
 }
 
 /**
@@ -234,13 +238,14 @@ export async function addComment(
 }
 
 /**
- * Get comments for a response
+ * Get comments for a response (flat list, no threading)
  */
 export async function getComments(responseId: string): Promise<FiresideComment[]> {
   const { data, error } = await supabase
     .from('fireside_comments')
     .select('*')
     .eq('response_id', responseId)
+    .is('parent_comment_id', null)
     .order('created_at', { ascending: true });
 
   if (error) {
@@ -249,6 +254,46 @@ export async function getComments(responseId: string): Promise<FiresideComment[]
   }
 
   return (data as FiresideComment[]) || [];
+}
+
+/**
+ * Get comments with replies for a response (threaded)
+ */
+export async function getCommentsWithReplies(responseId: string): Promise<FiresideComment[]> {
+  const { data, error } = await supabase.rpc('get_comments_with_replies', {
+    p_response_id: responseId,
+  });
+
+  if (error) {
+    console.error('Error getting threaded comments:', error);
+    return [];
+  }
+
+  return (data as FiresideComment[]) || [];
+}
+
+/**
+ * Add a reply to a comment
+ */
+export async function addCommentReply(
+  parentCommentId: string,
+  content: string
+): Promise<{ success: boolean; comment_id?: string; error?: string }> {
+  const { data, error } = await supabase.rpc('add_comment_reply', {
+    p_parent_comment_id: parentCommentId,
+    p_content: content,
+  });
+
+  if (error) {
+    console.error('Error adding reply:', error);
+    return { success: false, error: error.message };
+  }
+
+  if (data?.error) {
+    return { success: false, error: data.error };
+  }
+
+  return { success: true, comment_id: data?.comment_id };
 }
 
 /**

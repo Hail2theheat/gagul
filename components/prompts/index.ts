@@ -14,3 +14,13 @@ export { QuiplashInput } from './QuiplashInput';
 export { PromptRating } from './PromptRating';
 export { QuiplashCard } from './QuiplashCard';
 export { QuiplashVotingCard } from './QuiplashVotingCard';
+
+// Fireside reactions & comments
+export { ReactionBar } from './ReactionBar';
+export { CommentSheet } from './CommentSheet';
+
+// Voice & Video
+export { VoiceRecorder } from './VoiceRecorder';
+export { AudioPlayer } from './AudioPlayer';
+export { VideoRecorder } from './VideoRecorder';
+export { VideoPlayer } from './VideoPlayer';

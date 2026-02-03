@@ -1,8 +1,9 @@
 import { router } from "expo-router";
 import React, { useEffect, useState, useRef } from "react";
-import { Alert, Pressable, Text, TextInput, View, Switch, Animated, Dimensions, ScrollView } from "react-native";
+import { Alert, Pressable, Text, TextInput, View, Switch, Animated, Dimensions, ScrollView, Modal, FlatList } from "react-native";
 import { supabase } from "../../lib/supabase";
 import { registerPushToken } from "../../lib/services/pushService";
+import { getUserEmojis, updateUserEmojis, UserEmojis, DEFAULT_EMOJIS } from "../../lib/services/reactionService";
 import { PixelCharacter, CharacterConfig, DEFAULT_CHARACTER } from "../../components/PixelCharacter";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -227,6 +228,16 @@ export default function Settings() {
   const [pushToken, setPushToken] = useState<string | null>(null);
   const [registeringPush, setRegisteringPush] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [userEmojis, setUserEmojis] = useState<UserEmojis>(DEFAULT_EMOJIS);
+  const [editingEmojiSlot, setEditingEmojiSlot] = useState<number | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  // Common emoji options for picker
+  const emojiOptions = [
+    '❤️', '😂', '🔥', '😮', '👏', '😍', '🥺', '😭',
+    '🙌', '💀', '🤣', '😊', '🥰', '😎', '🤔', '👀',
+    '💯', '✨', '🎉', '👍', '💪', '🙏', '😅', '🤯',
+  ];
 
   const stars = [
     { x: 25, y: 60, size: 3, delay: 0, color: "#FFF" },
@@ -272,7 +283,21 @@ export default function Settings() {
       setProfile(data);
       setNewUsername(data.username || "");
     }
+
+    // Load emoji preferences
+    const emojis = await getUserEmojis();
+    setUserEmojis(emojis);
   }
+
+  const handleEmojiSelect = async (emoji: string) => {
+    if (editingEmojiSlot === null) return;
+
+    const slotKey = `emoji_slot_${editingEmojiSlot}` as keyof UserEmojis;
+    const updatedEmojis = await updateUserEmojis({ [slotKey]: emoji });
+    setUserEmojis(updatedEmojis);
+    setShowEmojiPicker(false);
+    setEditingEmojiSlot(null);
+  };
 
   useEffect(() => {
     refreshSession();
@@ -539,6 +564,88 @@ export default function Settings() {
           </Pressable>
         )}
       </View>
+
+      {/* Reaction Emojis Card */}
+      <View style={{ backgroundColor: CARD, borderColor: BORDER, borderWidth: 1, borderRadius: 16, padding: 16, marginBottom: 14 }}>
+        <Text style={{ color: TEXT, fontWeight: "700", fontSize: 16, marginBottom: 8 }}>Reaction Emojis</Text>
+        <Text style={{ color: MUTED, fontSize: 13, marginBottom: 16 }}>
+          Customize your quick reactions for Fireside
+        </Text>
+
+        <View style={{ flexDirection: "row", justifyContent: "space-around" }}>
+          {[1, 2, 3, 4].map((slot) => {
+            const slotKey = `emoji_slot_${slot}` as keyof UserEmojis;
+            return (
+              <Pressable
+                key={slot}
+                onPress={() => {
+                  setEditingEmojiSlot(slot);
+                  setShowEmojiPicker(true);
+                }}
+                style={{
+                  width: 56,
+                  height: 56,
+                  backgroundColor: INPUT_BG,
+                  borderColor: BORDER,
+                  borderWidth: 1,
+                  borderRadius: 12,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text style={{ fontSize: 28 }}>{userEmojis[slotKey]}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <Text style={{ color: MUTED, fontSize: 11, textAlign: "center", marginTop: 12 }}>
+          Tap to change
+        </Text>
+      </View>
+
+      {/* Emoji Picker Modal */}
+      <Modal
+        visible={showEmojiPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowEmojiPicker(false)}
+      >
+        <Pressable
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", alignItems: "center" }}
+          onPress={() => setShowEmojiPicker(false)}
+        >
+          <View style={{ backgroundColor: CARD, borderRadius: 20, padding: 20, width: "85%", maxWidth: 320 }}>
+            <Text style={{ color: TEXT, fontWeight: "700", fontSize: 18, textAlign: "center", marginBottom: 16 }}>
+              Choose an Emoji
+            </Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 8 }}>
+              {emojiOptions.map((emoji) => (
+                <Pressable
+                  key={emoji}
+                  onPress={() => handleEmojiSelect(emoji)}
+                  style={{
+                    width: 50,
+                    height: 50,
+                    backgroundColor: INPUT_BG,
+                    borderRadius: 12,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Text style={{ fontSize: 26 }}>{emoji}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <Pressable
+              onPress={() => setShowEmojiPicker(false)}
+              style={{ marginTop: 16, paddingVertical: 12, alignItems: "center" }}
+            >
+              <Text style={{ color: MUTED, fontWeight: "600" }}>Cancel</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
 
       {/* Sign Out */}
       <Pressable

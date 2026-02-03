@@ -27,6 +27,11 @@ import {
   FiresideComment,
 } from "../../../lib/services/firesideService";
 import { MultipleChoiceResults } from "../../../components/prompts/MultipleChoiceResults";
+import { ReactionBar } from "../../../components/prompts/ReactionBar";
+import { CommentSheet } from "../../../components/prompts/CommentSheet";
+import { AudioPlayer } from "../../../components/prompts/AudioPlayer";
+import { VideoPlayer } from "../../../components/prompts/VideoPlayer";
+import { trackViewStart, trackViewEnd } from "../../../lib/services/metricsService";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -377,6 +382,8 @@ export default function LowdownScreen() {
   const [comments, setComments] = useState<FiresideComment[]>([]);
   const [commentText, setCommentText] = useState("");
   const [signedPhotoUrl, setSignedPhotoUrl] = useState<string | null>(null);
+  const [showCommentSheet, setShowCommentSheet] = useState(false);
+  const viewStartTime = useRef<number | null>(null);
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -405,6 +412,30 @@ export default function LowdownScreen() {
     };
     fetchSignedUrl();
   }, [currentResponseIndex, currentPromptIndex, firesideData]);
+
+  // Track view time for responses
+  useEffect(() => {
+    const prompt = firesideData?.prompts[currentPromptIndex];
+    const response = prompt?.responses?.[currentResponseIndex];
+
+    // End previous view tracking
+    if (viewStartTime.current && response?.response_id) {
+      trackViewEnd(response.response_id, viewStartTime.current);
+    }
+
+    // Start new view tracking
+    if (currentResponseIndex >= 0 && response?.response_id) {
+      viewStartTime.current = trackViewStart(response.response_id);
+    } else {
+      viewStartTime.current = null;
+    }
+
+    return () => {
+      if (viewStartTime.current && response?.response_id) {
+        trackViewEnd(response.response_id, viewStartTime.current);
+      }
+    };
+  }, [currentResponseIndex, currentPromptIndex]);
 
   // Load and subscribe to comments for current response
   useEffect(() => {
@@ -1248,6 +1279,13 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
               — Player {currentResponse?.user_id.slice(0, 6)}
             </Text>
 
+            {/* Reaction bar */}
+            {currentResponse?.response_id && (
+              <View style={styles.reactionContainer}>
+                <ReactionBar responseId={currentResponse.response_id} />
+              </View>
+            )}
+
             <Text style={styles.responseCount}>
               {currentResponseIndex + 1} of {responses.length}
             </Text>
@@ -1262,6 +1300,17 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
       {/* Comment input - show for responses OR for quiz/MC prompts */}
       {((!showingPrompt && !isQuiplash) || (showingPrompt && isQuizOrMC && responses.length > 0)) && (
         <View style={styles.commentContainer}>
+          {/* Open full comment sheet */}
+          <TouchableOpacity
+            style={styles.viewCommentsButton}
+            onPress={() => setShowCommentSheet(true)}
+          >
+            <Ionicons name="chatbubble-outline" size={18} color={COLORS.muted} />
+            <Text style={styles.viewCommentsText}>
+              {comments.length > 0 ? `${comments.length} comments` : 'Comments'}
+            </Text>
+          </TouchableOpacity>
+
           <TextInput
             style={styles.commentInput}
             value={commentText}
@@ -1282,6 +1331,15 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
           <FloatingComment key={c.id} comment={c} index={i} total={arr.length} />
         ))}
       </View>
+
+      {/* Comment sheet modal */}
+      {currentResponse?.response_id && (
+        <CommentSheet
+          visible={showCommentSheet}
+          responseId={currentResponse.response_id}
+          onClose={() => setShowCommentSheet(false)}
+        />
+      )}
     </View>
   );
 }
@@ -1572,14 +1630,33 @@ const styles = StyleSheet.create({
     marginTop: 8,
     opacity: 0.6,
   },
+  reactionContainer: {
+    marginTop: 16,
+    alignSelf: "center",
+  },
   // Comments
   commentContainer: {
     flexDirection: "row",
+    flexWrap: "wrap",
     padding: 16,
     gap: 10,
     backgroundColor: COLORS.card,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
+    alignItems: "center",
+  },
+  viewCommentsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: COLORS.bg,
+    borderRadius: 16,
+  },
+  viewCommentsText: {
+    color: COLORS.muted,
+    fontSize: 13,
   },
   commentInput: {
     flex: 1,
