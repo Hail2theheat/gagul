@@ -530,7 +530,7 @@ export default function HomeGroupsScreen() {
                       <View style={{ flex: 1 }}>
                         {/* Name row */}
                         <View style={{ flexDirection: "row", alignItems: "center" }}>
-                          <Text style={{ color: TEXT_WARM, ...Typography.heading2, fontSize: 32, flex: 1 }} numberOfLines={1}>
+                          <Text style={{ color: TEXT_WARM, ...Typography.heading2, fontSize: 22, flex: 1 }} numberOfLines={1}>
                             {g.name ?? "(untitled)"}
                           </Text>
                           <PixelArrow size={12} />

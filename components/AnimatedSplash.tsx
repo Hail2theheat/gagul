@@ -324,62 +324,77 @@ function SplashCampfire() {
   }));
 
   return (
-    <View style={{ alignItems: "center", width: 80, height: 60 }}>
+    <View style={{ alignItems: "center", width: 110, height: 80 }}>
       {/* Glow */}
       <Animated.View
         style={[
           {
             position: "absolute",
-            width: 100,
-            height: 60,
-            borderRadius: 50,
+            width: 140,
+            height: 80,
+            borderRadius: 70,
             backgroundColor: FIRE_ORANGE,
             bottom: 5,
-            left: -10,
+            left: -15,
           },
           glowStyle,
         ]}
       />
-      {/* Rocks */}
-      <View style={{ position: "absolute", bottom: 0, left: 5, width: 8, height: 5, backgroundColor: ROCK, borderRadius: 2 }} />
-      <View style={{ position: "absolute", bottom: 0, left: 65, width: 10, height: 6, backgroundColor: ROCK_L, borderRadius: 3 }} />
-      <View style={{ position: "absolute", bottom: 0, left: 0, width: 7, height: 4, backgroundColor: ROCK_L, borderRadius: 2 }} />
-      <View style={{ position: "absolute", bottom: 0, left: 70, width: 8, height: 5, backgroundColor: ROCK, borderRadius: 2 }} />
+      {/* Fire ring rocks */}
+      <View style={{ position: "absolute", bottom: 0, left: 6, width: 11, height: 7, backgroundColor: ROCK, borderRadius: 3 }} />
+      <View style={{ position: "absolute", bottom: 0, left: 18, width: 9, height: 6, backgroundColor: ROCK_L, borderRadius: 3 }} />
+      <View style={{ position: "absolute", bottom: 0, left: 82, width: 12, height: 7, backgroundColor: ROCK_L, borderRadius: 4 }} />
+      <View style={{ position: "absolute", bottom: 0, left: 95, width: 10, height: 6, backgroundColor: ROCK, borderRadius: 3 }} />
+      <View style={{ position: "absolute", bottom: 0, left: 0, width: 9, height: 5, backgroundColor: ROCK_L, borderRadius: 3 }} />
+      <View style={{ position: "absolute", bottom: 0, left: 100, width: 9, height: 5, backgroundColor: ROCK, borderRadius: 3 }} />
       {/* Logs */}
       <View
         style={{
           position: "absolute",
-          bottom: 2,
-          left: 12,
-          width: 28,
-          height: 5,
+          bottom: 3,
+          left: 15,
+          width: 38,
+          height: 7,
           backgroundColor: LOG_DARK,
-          borderRadius: 2,
+          borderRadius: 3,
           transform: [{ rotate: "-15deg" }],
         }}
       />
       <View
         style={{
           position: "absolute",
-          bottom: 2,
-          left: 40,
-          width: 28,
-          height: 5,
+          bottom: 3,
+          left: 55,
+          width: 38,
+          height: 7,
           backgroundColor: LOG_LIGHT,
-          borderRadius: 2,
+          borderRadius: 3,
           transform: [{ rotate: "15deg" }],
         }}
       />
-      {/* Flames */}
-      <Animated.View style={[{ position: "absolute", bottom: 6, alignItems: "center" }, flame1Style]}>
+      {/* Small cross log */}
+      <View
+        style={{
+          position: "absolute",
+          bottom: 6,
+          left: 38,
+          width: 32,
+          height: 5,
+          backgroundColor: "#4E3422",
+          borderRadius: 2,
+          transform: [{ rotate: "5deg" }],
+        }}
+      />
+      {/* Flames (bigger) */}
+      <Animated.View style={[{ position: "absolute", bottom: 8, alignItems: "center" }, flame1Style]}>
         {/* Outer flame */}
-        <View style={{ width: 20, height: 28, backgroundColor: FIRE_RED, borderRadius: 10, marginBottom: -6 }} />
+        <View style={{ width: 30, height: 42, backgroundColor: FIRE_RED, borderRadius: 15, marginBottom: -8 }} />
         {/* Mid flame */}
-        <View style={{ position: "absolute", bottom: 0, width: 16, height: 24, backgroundColor: FIRE_ORANGE, borderRadius: 8 }} />
+        <View style={{ position: "absolute", bottom: 0, width: 24, height: 36, backgroundColor: FIRE_ORANGE, borderRadius: 12 }} />
         {/* Inner flame */}
-        <View style={{ position: "absolute", bottom: 2, width: 10, height: 18, backgroundColor: FIRE_YELLOW, borderRadius: 5 }} />
+        <View style={{ position: "absolute", bottom: 3, width: 16, height: 28, backgroundColor: FIRE_YELLOW, borderRadius: 8 }} />
         {/* Core */}
-        <View style={{ position: "absolute", bottom: 4, width: 6, height: 12, backgroundColor: FIRE_CORE, borderRadius: 3 }} />
+        <View style={{ position: "absolute", bottom: 6, width: 10, height: 18, backgroundColor: FIRE_CORE, borderRadius: 5 }} />
       </Animated.View>
     </View>
   );
@@ -722,21 +737,32 @@ export function AnimatedSplash({ onAnimationComplete }: AnimatedSplashProps) {
     return result;
   }, []);
 
-  // Forest trees along the ground edge
-  const trees = React.useMemo(() => [
+  // Forest trees — rendered IN FRONT of the lake
+  // Back row (smaller, lighter shade, peek above lake)
+  const backTrees = React.useMemo(() => [
     { x: -15, height: 55, shade: 0 },
-    { x: 15, height: 40, shade: 1 },
-    { x: 40, height: 65, shade: 0 },
-    { x: 70, height: 45, shade: 1 },
-    { x: W - 90, height: 50, shade: 0 },
-    { x: W - 60, height: 60, shade: 1 },
-    { x: W - 35, height: 42, shade: 0 },
-    { x: W - 10, height: 55, shade: 1 },
-    // Bigger foreground trees
-    { x: -20, height: 90, shade: 2 },
-    { x: 30, height: 100, shade: 3 },
-    { x: W - 70, height: 95, shade: 2 },
-    { x: W - 25, height: 85, shade: 3 },
+    { x: 18, height: 45, shade: 0 },
+    { x: 50, height: 60, shade: 1 },
+    { x: 80, height: 48, shade: 0 },
+    { x: 110, height: 52, shade: 1 },
+    { x: W - 120, height: 50, shade: 0 },
+    { x: W - 90, height: 55, shade: 1 },
+    { x: W - 60, height: 48, shade: 0 },
+    { x: W - 30, height: 58, shade: 1 },
+    { x: W - 5, height: 45, shade: 0 },
+  ], []);
+  // Front row (taller, darker shade, overlap the lake more)
+  const frontTrees = React.useMemo(() => [
+    { x: -25, height: 100, shade: 2 },
+    { x: 5, height: 85, shade: 3 },
+    { x: 35, height: 110, shade: 2 },
+    { x: 65, height: 78, shade: 3 },
+    { x: 95, height: 92, shade: 2 },
+    { x: W - 110, height: 88, shade: 3 },
+    { x: W - 80, height: 105, shade: 2 },
+    { x: W - 50, height: 95, shade: 3 },
+    { x: W - 20, height: 90, shade: 2 },
+    { x: W + 5, height: 80, shade: 3 },
   ], []);
 
   return (
@@ -830,47 +856,76 @@ export function AnimatedSplash({ onAnimationComplete }: AnimatedSplashProps) {
         ))}
       </View>
 
+      {/* ── Trees rendered IN FRONT of the lake ── */}
+      {/* Back row of trees — on top of lake zone */}
+      <View style={{ position: "absolute", top: lakeTop + lakeHeight - 55, left: 0, right: 0, height: 120, zIndex: 2 }} pointerEvents="none">
+        {backTrees.map((t, i) => (
+          <SplashTree key={`bt${i}`} x={t.x} height={t.height} shade={t.shade} />
+        ))}
+      </View>
+      {/* Front row of trees — taller, darker, more overlap */}
+      <View style={{ position: "absolute", top: lakeTop + lakeHeight - 80, left: 0, right: 0, height: 160, zIndex: 3 }} pointerEvents="none">
+        {frontTrees.map((t, i) => (
+          <SplashTree key={`ft${i}`} x={t.x} height={t.height} shade={t.shade} />
+        ))}
+      </View>
+
       {/* ── Ground + Campfire + Creatures ── */}
       <View style={[styles.zone, { height: groundHeight, backgroundColor: GROUND }]}>
-        {/* Grass edge */}
-        <View
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 4,
-            backgroundColor: "#254A22",
-          }}
-        />
-        <View
-          style={{
-            position: "absolute",
-            top: 4,
-            left: 0,
-            right: 0,
-            height: 2,
-            backgroundColor: "#1F3D1C",
-          }}
-        />
+        {/* Grass edge — layered for texture */}
+        <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: 5, backgroundColor: "#2E5828" }} />
+        <View style={{ position: "absolute", top: 5, left: 0, right: 0, height: 3, backgroundColor: "#254A22" }} />
+        <View style={{ position: "absolute", top: 8, left: 0, right: 0, height: 2, backgroundColor: "#1F3D1C" }} />
+        {/* Grass tufts for texture */}
+        {[12, 35, 58, 85, 115, 145, 175, 210, 245, 280, 315, 350].map((gx, i) => (
+          <View key={`gt${i}`} style={{
+            position: "absolute", top: -2 - (i % 3) * 2, left: gx % W,
+            width: 4 + (i % 2) * 2, height: 6 + (i % 3) * 3,
+            backgroundColor: i % 2 === 0 ? "#2E5828" : "#3A6832",
+            borderTopLeftRadius: 2, borderTopRightRadius: 2,
+          }} />
+        ))}
+        {/* Dirt patches */}
+        <View style={{ position: "absolute", top: 14, left: W * 0.2, width: 25, height: 6, backgroundColor: "#2A1F10", borderRadius: 3, opacity: 0.3 }} />
+        <View style={{ position: "absolute", top: 18, left: W * 0.6, width: 20, height: 5, backgroundColor: "#2A1F10", borderRadius: 3, opacity: 0.25 }} />
+        <View style={{ position: "absolute", top: 22, left: W * 0.4, width: 30, height: 4, backgroundColor: "#2A1F10", borderRadius: 2, opacity: 0.2 }} />
 
-        {/* Trees along the shoreline */}
-        <View style={{ position: "absolute", top: -60, left: 0, right: 0, height: 120 }}>
-          {trees.map((t, i) => (
-            <SplashTree key={i} x={t.x} height={t.height} shade={t.shade} />
-          ))}
+        {/* Rocks scattered on the ground */}
+        <View style={{ position: "absolute", top: 12, left: W * 0.12, width: 10, height: 6, backgroundColor: "#4A4A52", borderRadius: 3 }} />
+        <View style={{ position: "absolute", top: 14, left: W * 0.12 + 3, width: 6, height: 3, backgroundColor: "#5A5A62", borderRadius: 2 }} />
+        <View style={{ position: "absolute", top: 16, left: W * 0.78, width: 12, height: 7, backgroundColor: "#3E3E46", borderRadius: 4 }} />
+        <View style={{ position: "absolute", top: 17, left: W * 0.78 + 2, width: 8, height: 4, backgroundColor: "#4E4E56", borderRadius: 3 }} />
+        <View style={{ position: "absolute", top: 10, left: W * 0.35, width: 7, height: 5, backgroundColor: "#444450", borderRadius: 3 }} />
+        <View style={{ position: "absolute", top: 20, left: W * 0.55, width: 8, height: 5, backgroundColor: "#3A3A42", borderRadius: 3 }} />
+        <View style={{ position: "absolute", top: 24, left: W * 0.9, width: 9, height: 6, backgroundColor: "#4A4A52", borderRadius: 3 }} />
+
+        {/* Stumps around the campfire */}
+        {/* Left stump */}
+        <View style={{ position: "absolute", top: 36, left: W / 2 - 72 }}>
+          <View style={{ width: 18, height: 7, backgroundColor: "#D4A040", borderRadius: 9, zIndex: 2 }} />
+          <View style={{ width: 16, height: 12, backgroundColor: "#5C3820", borderBottomLeftRadius: 4, borderBottomRightRadius: 4, marginTop: -1, marginLeft: 1 }} />
+        </View>
+        {/* Right stump */}
+        <View style={{ position: "absolute", top: 34, left: W / 2 + 58 }}>
+          <View style={{ width: 16, height: 6, backgroundColor: "#D4A040", borderRadius: 8, zIndex: 2 }} />
+          <View style={{ width: 14, height: 10, backgroundColor: "#5C3820", borderBottomLeftRadius: 3, borderBottomRightRadius: 3, marginTop: -1, marginLeft: 1 }} />
+        </View>
+        {/* Small front stump */}
+        <View style={{ position: "absolute", top: 52, left: W / 2 - 20 }}>
+          <View style={{ width: 14, height: 5, backgroundColor: "#C89838", borderRadius: 7, zIndex: 2 }} />
+          <View style={{ width: 12, height: 8, backgroundColor: "#4A2810", borderBottomLeftRadius: 3, borderBottomRightRadius: 3, marginTop: -1, marginLeft: 1 }} />
         </View>
 
-        {/* Campfire (centered) */}
-        <View style={{ position: "absolute", top: 20, left: W / 2 - 40 }}>
+        {/* Campfire (centered, bigger) */}
+        <View style={{ position: "absolute", top: 8, left: W / 2 - 55 }}>
           <SplashCampfire />
         </View>
 
         {/* Woodland creatures */}
-        <PixelFox x={W / 2 - 70} bottom={groundHeight - 50} />
-        <PixelBunny x={W / 2 + 55} bottom={groundHeight - 44} />
-        <PixelBunny x={W / 2 + 75} bottom={groundHeight - 46} flip />
-        <PixelOwl x={W / 2 - 50} bottom={groundHeight - 28} />
+        <PixelFox x={W / 2 - 80} bottom={groundHeight - 50} />
+        <PixelBunny x={W / 2 + 65} bottom={groundHeight - 44} />
+        <PixelBunny x={W / 2 + 85} bottom={groundHeight - 46} flip />
+        <PixelOwl x={W / 2 - 60} bottom={groundHeight - 28} />
       </View>
 
       {/* ── STOKIE Title overlay ── */}
