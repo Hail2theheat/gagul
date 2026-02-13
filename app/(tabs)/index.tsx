@@ -248,7 +248,7 @@ function FireStreakBadge({ streak }: { streak: number }) {
         ...Typography.heading1,
         fontSize: streak >= 100 ? 22 : streak >= 10 ? 28 : 34,
         textAlign: "center",
-        top: 33,
+        top: 48,
         textShadowColor: "rgba(255, 220, 120, 0.8)",
         textShadowOffset: { width: 0, height: 0 },
         textShadowRadius: 4,
@@ -445,8 +445,8 @@ export default function HomeGroupsScreen() {
       {/* Shared forest ground: mountains + trees + ground + wildflowers */}
       <ForestGround showMountains showWildflowers showForest />
 
-      {/* Pixel lake - left of campfire */}
-      <View style={{ position: "absolute", bottom: 38, left: SCREEN_WIDTH / 2 - 170, zIndex: 1 }}>
+      {/* Pixel lake - left of campfire, behind trees */}
+      <View style={{ position: "absolute", bottom: 38, left: SCREEN_WIDTH / 2 - 170, zIndex: 0 }}>
         <PixelLake />
       </View>
 
@@ -530,7 +530,7 @@ export default function HomeGroupsScreen() {
                       <View style={{ flex: 1 }}>
                         {/* Name row */}
                         <View style={{ flexDirection: "row", alignItems: "center" }}>
-                          <Text style={{ color: TEXT_WARM, ...Typography.heading2, fontSize: 16, flex: 1 }} numberOfLines={1}>
+                          <Text style={{ color: TEXT_WARM, ...Typography.heading2, fontSize: 32, flex: 1 }} numberOfLines={1}>
                             {g.name ?? "(untitled)"}
                           </Text>
                           <PixelArrow size={12} />

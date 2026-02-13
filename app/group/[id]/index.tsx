@@ -1092,6 +1092,7 @@ function BigFiresideButton({ onPress }: { onPress: () => void }) {
           <Text
             style={{
               color: '#FFD93D',
+              fontFamily: 'Paaxel',
               fontWeight: '900',
               fontSize: 24,
               marginTop: 16,
@@ -1107,6 +1108,7 @@ function BigFiresideButton({ onPress }: { onPress: () => void }) {
           <Text
             style={{
               color: '#FFF8DC',
+              fontFamily: 'Paaxel',
               fontSize: 16,
               marginTop: 8,
               opacity: 0.9,
@@ -1646,11 +1648,11 @@ export default function GroupScreen() {
                   );
                 })}
                 {allMembers.length > 6 && (
-                  <Text style={{ color: MUTED, fontSize: 11, marginLeft: 4 }}>
+                  <Text style={{ color: MUTED, fontSize: 11, fontFamily: "Paaxel", marginLeft: 4 }}>
                     +{allMembers.length - 6}
                   </Text>
                 )}
-                <Text style={{ color: MUTED, fontSize: 12, opacity: 0.6, marginLeft: 6 }}>
+                <Text style={{ color: MUTED, fontSize: 12, fontFamily: "Paaxel", opacity: 0.6, marginLeft: 6 }}>
                   {memberCount} {memberCount === 1 ? "member" : "members"}
                 </Text>
               </Pressable>
@@ -1680,10 +1682,10 @@ export default function GroupScreen() {
                 <Text style={{ color: "#FFD93D", fontSize: 24, fontFamily: "Paaxel", marginTop: 16, textAlign: "center" }}>
                   Fireside is tonight!
                 </Text>
-                <Text style={{ color: TEXT, fontSize: 18, marginTop: 12, textAlign: "center" }}>
+                <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Paaxel", marginTop: 12, textAlign: "center" }}>
                   at {getFiresideLocalTime()}
                 </Text>
-                <Text style={{ color: MUTED, fontSize: 16, marginTop: 16, textAlign: "center", fontStyle: "italic" }}>
+                <Text style={{ color: MUTED, fontSize: 16, fontFamily: "Paaxel", marginTop: 16, textAlign: "center", fontStyle: "italic" }}>
                   Bring mellow.
                 </Text>
               </View>
@@ -1701,10 +1703,10 @@ export default function GroupScreen() {
                 <Text style={{ color: "#4ADE80", fontSize: 24, fontFamily: "Paaxel", textAlign: "center" }}>
                   Great week!
                 </Text>
-                <Text style={{ color: TEXT, fontSize: 18, marginTop: 16, textAlign: "center" }}>
+                <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Paaxel", marginTop: 16, textAlign: "center" }}>
                   Get your 8 hours champ
                 </Text>
-                <Text style={{ color: MUTED, fontSize: 16, marginTop: 8, textAlign: "center" }}>
+                <Text style={{ color: MUTED, fontSize: 16, fontFamily: "Paaxel", marginTop: 8, textAlign: "center" }}>
                   and remember to floss.
                 </Text>
               </View>
@@ -1724,7 +1726,7 @@ export default function GroupScreen() {
                       <Text style={{ color: "#4ADE80", fontSize: 22, fontFamily: "Paaxel", marginTop: 8, textAlign: "center" }}>
                         Relax, you already submitted.
                       </Text>
-                      <Text style={{ color: MUTED, fontSize: 16, marginTop: 8, textAlign: "center" }}>
+                      <Text style={{ color: MUTED, fontSize: 16, fontFamily: "Paaxel", marginTop: 8, textAlign: "center" }}>
                         Go call your mom.
                       </Text>
                       {/* Rating for responded prompt */}
@@ -1744,7 +1746,7 @@ export default function GroupScreen() {
                       <Text style={{ color: TEXT, fontSize: 22, fontFamily: "Paaxel", marginTop: 8, textAlign: "center" }}>
                         Dude, relax.
                       </Text>
-                      <Text style={{ color: MUTED, fontSize: 16, marginTop: 8, textAlign: "center" }}>
+                      <Text style={{ color: MUTED, fontSize: 16, fontFamily: "Paaxel", marginTop: 8, textAlign: "center" }}>
                         No prompts yet. Do 5 squats.
                       </Text>
                     </>
@@ -1754,7 +1756,7 @@ export default function GroupScreen() {
                       <Text style={{ color: TEXT, fontSize: 22, fontFamily: "Paaxel", marginTop: 16, textAlign: "center" }}>
                         Nothing here.
                       </Text>
-                      <Text style={{ color: MUTED, fontSize: 16, marginTop: 8, textAlign: "center" }}>
+                      <Text style={{ color: MUTED, fontSize: 16, fontFamily: "Paaxel", marginTop: 8, textAlign: "center" }}>
                         Go touch some grass.
                       </Text>
                     </>
