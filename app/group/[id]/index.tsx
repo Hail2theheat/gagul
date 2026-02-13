@@ -1,7 +1,7 @@
 // app/group/[id]/index.tsx
 import { useGlobalSearchParams, router } from "expo-router";
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { Alert, ScrollView, Text, View, Pressable, RefreshControl, Animated, Dimensions, Easing, Modal, Share } from "react-native";
+import { Alert, ScrollView, Text, View, Pressable, RefreshControl, Animated, Dimensions, Easing, Modal, Share, TextInput } from "react-native";
 import * as Clipboard from "expo-clipboard";
 
 import { supabase } from "../../../lib/supabase";
@@ -1176,6 +1176,14 @@ export default function GroupScreen() {
   const [codeCopied, setCodeCopied] = useState(false);
   const [leaving, setLeaving] = useState(false);
 
+  // Recommend prompt modal state
+  const [showRecommendModal, setShowRecommendModal] = useState(false);
+  const [recStep, setRecStep] = useState<'type' | 'prompt'>('type');
+  const [recType, setRecType] = useState<'text' | 'photo' | 'quiplash' | 'multiple_choice' | null>(null);
+  const [recPromptText, setRecPromptText] = useState('');
+  const [recOptions, setRecOptions] = useState<string[]>(['', '']);
+  const [recSubmitting, setRecSubmitting] = useState(false);
+
   const active = status?.active_prompt_instance ?? null;
   const hasResponded = status?.has_responded ?? false;
   const hasRated = status?.has_rated ?? false;
@@ -1521,6 +1529,44 @@ export default function GroupScreen() {
     loadStatus();
   };
 
+  const openRecommendModal = () => {
+    setRecStep('type');
+    setRecType(null);
+    setRecPromptText('');
+    setRecOptions(['', '']);
+    setShowRecommendModal(true);
+  };
+
+  const submitRecommendation = async () => {
+    if (!groupId || !recType || !recPromptText.trim()) return;
+    if (recType === 'multiple_choice') {
+      const validOptions = recOptions.filter(o => o.trim());
+      if (validOptions.length < 2) {
+        Alert.alert('Need at least 2 answers');
+        return;
+      }
+    }
+    setRecSubmitting(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) throw new Error('Not logged in');
+      const { error } = await supabase.from('prompt_recommendations').insert({
+        group_id: groupId,
+        user_id: userData.user.id,
+        prompt_type: recType,
+        prompt_text: recPromptText.trim(),
+        options: recType === 'multiple_choice' ? recOptions.filter(o => o.trim()) : null,
+      });
+      if (error) throw error;
+      setShowRecommendModal(false);
+      Alert.alert('Submitted!', 'Your prompt recommendation has been sent.');
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Failed to submit');
+    } finally {
+      setRecSubmitting(false);
+    }
+  };
+
   if (!groupId) {
     return (
       <ScrollView style={{ flex: 1, backgroundColor: BG }} contentContainerStyle={{ padding: 18 }}>
@@ -1766,6 +1812,12 @@ export default function GroupScreen() {
                 <View style={{ marginTop: 16 }}>
                   <Button title="Refresh" variant="outline" onPress={loadStatus} disabled={loading} />
                 </View>
+
+                <Pressable onPress={openRecommendModal} style={{ marginTop: 12, alignItems: "center" }}>
+                  <Text style={{ color: MUTED, fontSize: 13, fontFamily: "Paaxel", textDecorationLine: "underline" }}>
+                    Recommend a custom prompt
+                  </Text>
+                </Pressable>
               </Card>
 
               {/* Fireside Button - only show during fireside hours (fallback for non-sunday testing) */}
@@ -2084,6 +2136,19 @@ export default function GroupScreen() {
         <View style={{ height: 12 }} />
         <Button title="Refresh" variant="outline" onPress={loadStatus} disabled={loading} />
 
+        <Pressable
+          onPress={openRecommendModal}
+          style={{
+            marginTop: 10,
+            paddingVertical: 10,
+            alignItems: "center",
+          }}
+        >
+          <Text style={{ color: MUTED, fontSize: 13, fontFamily: "Paaxel", textDecorationLine: "underline" }}>
+            Recommend a custom prompt
+          </Text>
+        </Pressable>
+
         {/* Fireside Button - only show during fireside hours */}
         {showFireside && (
           <BigFiresideButton onPress={() => navigateWithFire(() => router.push(`/group/${groupId}/lowdown`))} />
@@ -2268,6 +2333,184 @@ export default function GroupScreen() {
         onClose={() => setShowMembersModal(false)}
         members={allMembers}
       />
+
+      {/* Recommend Prompt Modal */}
+      <Modal
+        visible={showRecommendModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowRecommendModal(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: "rgba(0, 0, 0, 0.85)", justifyContent: "flex-end" }}>
+          <View style={{
+            backgroundColor: BG,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            borderTopWidth: 2,
+            borderLeftWidth: 2,
+            borderRightWidth: 2,
+            borderColor: BORDER,
+            padding: 24,
+            paddingBottom: 40,
+            maxHeight: SCREEN_HEIGHT * 0.75,
+          }}>
+            {/* Header */}
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Paaxel" }}>
+                {recStep === 'type' ? 'Choose Prompt Type' : 'Write Your Prompt'}
+              </Text>
+              <Pressable
+                onPress={() => setShowRecommendModal(false)}
+                style={{ padding: 8, backgroundColor: CARD, borderRadius: 8 }}
+              >
+                <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Paaxel" }}>X</Text>
+              </Pressable>
+            </View>
+
+            {recStep === 'type' ? (
+              <View style={{ gap: 10 }}>
+                {([
+                  { key: 'quiplash' as const, label: 'Quiplash', desc: 'Funny fill-in-the-blank prompts' },
+                  { key: 'multiple_choice' as const, label: 'Multiple Choice', desc: 'Question with 2-4 answer options' },
+                  { key: 'text' as const, label: 'Text Response', desc: 'Open-ended text question' },
+                  { key: 'photo' as const, label: 'Photo', desc: 'Photo response prompt' },
+                ]).map((item) => (
+                  <Pressable
+                    key={item.key}
+                    onPress={() => {
+                      setRecType(item.key);
+                      setRecStep('prompt');
+                    }}
+                    style={{
+                      backgroundColor: CARD,
+                      borderColor: BORDER,
+                      borderWidth: 1,
+                      borderRadius: 14,
+                      padding: 16,
+                    }}
+                  >
+                    <Text style={{ color: TEXT, fontSize: 16, fontFamily: "Paaxel" }}>{item.label}</Text>
+                    <Text style={{ color: MUTED, fontSize: 12, fontFamily: "Paaxel", marginTop: 4 }}>{item.desc}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : (
+              <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: SCREEN_HEIGHT * 0.5 }}>
+                {/* Back to type selection */}
+                <Pressable onPress={() => setRecStep('type')} style={{ marginBottom: 16 }}>
+                  <Text style={{ color: MUTED, fontSize: 13, fontFamily: "Paaxel" }}>
+                    &lt; Back
+                  </Text>
+                </Pressable>
+
+                <Text style={{ color: MUTED, fontSize: 12, fontFamily: "Paaxel", marginBottom: 6 }}>
+                  {recType === 'quiplash' ? 'QUIPLASH PROMPT' :
+                   recType === 'multiple_choice' ? 'QUESTION' :
+                   recType === 'photo' ? 'PHOTO PROMPT' : 'TEXT PROMPT'}
+                </Text>
+                <TextInput
+                  value={recPromptText}
+                  onChangeText={setRecPromptText}
+                  placeholder={
+                    recType === 'quiplash' ? "e.g. The worst thing to say at a wedding..." :
+                    recType === 'multiple_choice' ? "e.g. What's the best pizza topping?" :
+                    recType === 'photo' ? "e.g. Show us your fridge right now" :
+                    "e.g. What's your hot take for the week?"
+                  }
+                  placeholderTextColor="#555"
+                  multiline
+                  style={{
+                    backgroundColor: CARD,
+                    borderColor: BORDER,
+                    borderWidth: 1,
+                    borderRadius: 12,
+                    padding: 14,
+                    color: TEXT,
+                    fontFamily: "Paaxel",
+                    fontSize: 15,
+                    minHeight: 60,
+                    textAlignVertical: "top",
+                  }}
+                />
+
+                {/* Multiple choice options */}
+                {recType === 'multiple_choice' && (
+                  <View style={{ marginTop: 16 }}>
+                    <Text style={{ color: MUTED, fontSize: 12, fontFamily: "Paaxel", marginBottom: 6 }}>
+                      ANSWERS ({recOptions.length}/4)
+                    </Text>
+                    {recOptions.map((opt, idx) => (
+                      <View key={idx} style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+                        <TextInput
+                          value={opt}
+                          onChangeText={(t) => {
+                            const next = [...recOptions];
+                            next[idx] = t;
+                            setRecOptions(next);
+                          }}
+                          placeholder={`Answer ${idx + 1}`}
+                          placeholderTextColor="#555"
+                          style={{
+                            flex: 1,
+                            backgroundColor: CARD,
+                            borderColor: BORDER,
+                            borderWidth: 1,
+                            borderRadius: 10,
+                            padding: 12,
+                            color: TEXT,
+                            fontFamily: "Paaxel",
+                            fontSize: 14,
+                          }}
+                        />
+                        {recOptions.length > 2 && (
+                          <Pressable
+                            onPress={() => setRecOptions(recOptions.filter((_, i) => i !== idx))}
+                            style={{ marginLeft: 8, padding: 6 }}
+                          >
+                            <Text style={{ color: DANGER, fontSize: 16, fontFamily: "Paaxel" }}>X</Text>
+                          </Pressable>
+                        )}
+                      </View>
+                    ))}
+                    {recOptions.length < 4 && (
+                      <Pressable
+                        onPress={() => setRecOptions([...recOptions, ''])}
+                        style={{
+                          borderColor: BORDER,
+                          borderWidth: 1,
+                          borderRadius: 10,
+                          borderStyle: "dashed",
+                          paddingVertical: 10,
+                          alignItems: "center",
+                        }}
+                      >
+                        <Text style={{ color: MUTED, fontSize: 13, fontFamily: "Paaxel" }}>+ Add Answer</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                )}
+
+                {/* Submit button */}
+                <Pressable
+                  onPress={submitRecommendation}
+                  disabled={recSubmitting || !recPromptText.trim()}
+                  style={{
+                    backgroundColor: BTN_ORANGE,
+                    borderRadius: 14,
+                    paddingVertical: 14,
+                    marginTop: 20,
+                    opacity: (recSubmitting || !recPromptText.trim()) ? 0.5 : 1,
+                  }}
+                >
+                  <Text style={{ color: TEXT, textAlign: "center", fontFamily: "Paaxel", fontSize: 16 }}>
+                    {recSubmitting ? "Submitting..." : "Submit Recommendation"}
+                  </Text>
+                </Pressable>
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
     </WeatherBackground>
   );
 }
