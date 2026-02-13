@@ -89,6 +89,7 @@ export default function RootLayout() {
     PressStart2P_400Regular,
     PixelifySans_700Bold,
     'Retro': require('../assets/fonts/retro.ttf'),
+    'Bitova': require('../assets/fonts/bitova.ttf'),
   });
 
   // Hide the native splash once our custom fonts are loaded

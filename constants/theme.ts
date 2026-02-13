@@ -108,38 +108,38 @@ export const Radii = {
 // ===== TYPOGRAPHY PRESETS =====
 export const Typography = {
   heading1: {
-    fontFamily: 'Retro',
+    fontFamily: 'Bitova',
     fontSize: 28,
     letterSpacing: 0.5,
   } as TextStyle,
   heading2: {
-    fontFamily: 'Retro',
+    fontFamily: 'Bitova',
     fontSize: 20,
   } as TextStyle,
   heading3: {
-    fontFamily: 'Retro',
+    fontFamily: 'Bitova',
     fontSize: 16,
   } as TextStyle,
   body: {
-    fontFamily: 'Retro',
+    fontFamily: 'Bitova',
     fontSize: 16,
   } as TextStyle,
   bodyBold: {
-    fontFamily: 'Retro',
+    fontFamily: 'Bitova',
     fontSize: 16,
   } as TextStyle,
   caption: {
-    fontFamily: 'Retro',
-    fontSize: 12,
+    fontFamily: 'Bitova',
+    fontSize: 13,
   } as TextStyle,
   button: {
-    fontFamily: 'Retro',
+    fontFamily: 'Bitova',
     fontSize: 16,
     letterSpacing: 0.5,
   } as TextStyle,
   tab: {
-    fontFamily: 'Retro',
-    fontSize: 11,
+    fontFamily: 'Bitova',
+    fontSize: 12,
   } as TextStyle,
 } as const;
 

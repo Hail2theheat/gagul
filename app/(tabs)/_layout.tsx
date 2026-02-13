@@ -114,8 +114,8 @@ export default function TabLayout() {
         tabBarActiveTintColor: "#FF8555",
         tabBarInactiveTintColor: "#6B6058",
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontFamily: "Retro",
+          fontSize: 12,
+          fontFamily: "Bitova",
         },
       }}
     >

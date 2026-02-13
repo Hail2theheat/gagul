@@ -244,7 +244,7 @@ function FloatingComment({ comment, index, total }: { comment: FiresideComment; 
         borderWidth: 1,
         borderColor: "#FFD93D",
       }}>
-        <Text style={{ color: "#FFF8DC", fontSize: 13, fontFamily: "Retro" }}>{comment.content}</Text>
+        <Text style={{ color: "#FFF8DC", fontSize: 13, fontFamily: "Bitova" }}>{comment.content}</Text>
       </View>
       {/* Little spark particles */}
       <View style={{
@@ -1524,7 +1524,7 @@ const styles = StyleSheet.create({
   // Locked screen
   lockedTitle: {
     fontSize: 32,
-    fontFamily: "Retro",
+    fontFamily: "Bitova",
     color: COLORS.text,
     textAlign: "center",
     marginTop: 20,
@@ -1549,7 +1549,7 @@ const styles = StyleSheet.create({
   backButtonText: {
     color: COLORS.accent,
     fontSize: 16,
-    fontFamily: "Retro",
+    fontFamily: "Bitova",
   },
   // Bonfire
   bonfireContainer: {
@@ -1569,7 +1569,7 @@ const styles = StyleSheet.create({
   },
   firesideTitle: {
     fontSize: 40,
-    fontFamily: "Retro",
+    fontFamily: "Bitova",
     color: COLORS.accent,
     marginTop: 40,
     textShadowColor: COLORS.accent,
@@ -1660,7 +1660,7 @@ const styles = StyleSheet.create({
   typeBadgeText: {
     color: COLORS.text,
     fontSize: 14,
-    fontFamily: "Retro",
+    fontFamily: "Bitova",
     textTransform: "capitalize",
   },
   promptContent: {
@@ -1668,7 +1668,7 @@ const styles = StyleSheet.create({
   },
   promptTitle: {
     fontSize: 28,
-    fontFamily: "Retro",
+    fontFamily: "Bitova",
     color: COLORS.text,
     textAlign: "center",
     lineHeight: 38,
@@ -1712,7 +1712,7 @@ const styles = StyleSheet.create({
   optionLetter: {
     color: COLORS.accent,
     fontSize: 18,
-    fontFamily: "Retro",
+    fontFamily: "Bitova",
     marginRight: 12,
     width: 24,
   },
@@ -1723,7 +1723,7 @@ const styles = StyleSheet.create({
   },
   optionTextCorrect: {
     color: COLORS.green,
-    fontFamily: "Retro",
+    fontFamily: "Bitova",
   },
   voterBadges: {
     flexDirection: "row",
@@ -1760,12 +1760,12 @@ const styles = StyleSheet.create({
   moreVotersTextSmall: {
     color: COLORS.text,
     fontSize: 8,
-    fontFamily: "Retro",
+    fontFamily: "Bitova",
   },
   checkMark: {
     color: COLORS.green,
     fontSize: 20,
-    fontFamily: "Retro",
+    fontFamily: "Bitova",
     marginLeft: 8,
   },
   // Quiplash
@@ -1799,7 +1799,7 @@ const styles = StyleSheet.create({
   quiplashVotes: {
     color: COLORS.muted,
     fontSize: 14,
-    fontFamily: "Retro",
+    fontFamily: "Bitova",
   },
   quiplashVotesWinner: {
     color: COLORS.gold,
@@ -1830,14 +1830,14 @@ const styles = StyleSheet.create({
   quiplashLabel: {
     color: COLORS.purple,
     fontSize: 20,
-    fontFamily: "Retro",
+    fontFamily: "Bitova",
     textAlign: "center",
     marginBottom: 8,
   },
   quiplashTie: {
     color: COLORS.purple,
     fontSize: 16,
-    fontFamily: "Retro",
+    fontFamily: "Bitova",
     textAlign: "center",
     marginTop: 8,
   },
@@ -1893,7 +1893,7 @@ const styles = StyleSheet.create({
   responseAuthorName: {
     color: COLORS.text,
     fontSize: 16,
-    fontFamily: "Retro",
+    fontFamily: "Bitova",
   },
   responseCount: {
     color: COLORS.muted,
@@ -1943,7 +1943,7 @@ const styles = StyleSheet.create({
   commentBadgeText: {
     color: "#FFF",
     fontSize: 11,
-    fontFamily: "Retro",
+    fontFamily: "Bitova",
   },
   commentsButtonText: {
     color: COLORS.text,
@@ -1959,7 +1959,7 @@ const styles = StyleSheet.create({
   },
   leaderboardTitle: {
     fontSize: 32,
-    fontFamily: "Retro",
+    fontFamily: "Bitova",
     color: COLORS.gold,
     textAlign: "center",
     marginBottom: 30,
@@ -2003,7 +2003,7 @@ const styles = StyleSheet.create({
   },
   leaderboardRankText: {
     fontSize: 18,
-    fontFamily: "Retro",
+    fontFamily: "Bitova",
     color: COLORS.muted,
   },
   leaderboardInfo: {
@@ -2012,7 +2012,7 @@ const styles = StyleSheet.create({
   leaderboardName: {
     color: COLORS.text,
     fontSize: 16,
-    fontFamily: "Retro",
+    fontFamily: "Bitova",
   },
   leaderboardBreakdown: {
     color: COLORS.muted,
@@ -2022,7 +2022,7 @@ const styles = StyleSheet.create({
   leaderboardPoints: {
     color: COLORS.gold,
     fontSize: 28,
-    fontFamily: "Retro",
+    fontFamily: "Bitova",
   },
   winnerSection: {
     marginTop: 30,
@@ -2035,7 +2035,7 @@ const styles = StyleSheet.create({
   winnerTitle: {
     color: COLORS.purple,
     fontSize: 16,
-    fontFamily: "Retro",
+    fontFamily: "Bitova",
     textAlign: "center",
   },
   doneButton: {
@@ -2048,7 +2048,7 @@ const styles = StyleSheet.create({
   doneButtonText: {
     color: COLORS.text,
     fontSize: 18,
-    fontFamily: "Retro",
+    fontFamily: "Bitova",
   },
   promptChoiceCard: {
     backgroundColor: COLORS.card,
@@ -2061,7 +2061,7 @@ const styles = StyleSheet.create({
   promptChoiceType: {
     color: COLORS.purple,
     fontSize: 11,
-    fontFamily: "Retro",
+    fontFamily: "Bitova",
     textTransform: "uppercase",
     marginBottom: 6,
   },
@@ -2078,7 +2078,7 @@ const styles = StyleSheet.create({
   customPromptButtonText: {
     color: COLORS.purple,
     fontSize: 14,
-    fontFamily: "Retro",
+    fontFamily: "Bitova",
     fontStyle: "italic",
   },
   customPromptInput: {
@@ -2105,6 +2105,6 @@ const styles = StyleSheet.create({
   customPromptSubmitText: {
     color: COLORS.text,
     fontSize: 16,
-    fontFamily: "Retro",
+    fontFamily: "Bitova",
   },
 });

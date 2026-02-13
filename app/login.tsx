@@ -296,7 +296,7 @@ export default function LoginScreen() {
           >
             <Text style={{ color: MUTED, fontSize: 14 }}>
               {mode === "login" ? "Don't have an account? " : "Already have an account? "}
-              <Text style={{ color: TEXT, fontFamily: "Retro" }}>
+              <Text style={{ color: TEXT, fontFamily: "Bitova" }}>
                 {mode === "login" ? "Sign Up" : "Sign In"}
               </Text>
             </Text>

@@ -233,7 +233,7 @@ export default function Settings() {
                   accessibilityRole="button"
                   accessibilityLabel="Save username"
                 >
-                  <Text style={{ color: "#000", fontFamily: "Retro", fontSize: 12 }}>{saving ? "..." : "Save"}</Text>
+                  <Text style={{ color: "#000", fontFamily: "Bitova", fontSize: 12 }}>{saving ? "..." : "Save"}</Text>
                 </Pressable>
               </View>
             ) : (
@@ -249,7 +249,7 @@ export default function Settings() {
 
             <View style={{ flexDirection: "row", alignItems: "center", marginTop: 6 }}>
               <View style={{ width: 8, height: 8, backgroundColor: CampfireColors.WARNING, borderRadius: 4, marginRight: 6 }} />
-              <Text style={{ color: CampfireColors.WARNING, fontSize: 13, fontFamily: "Retro" }}>{profile?.total_points || 0} points</Text>
+              <Text style={{ color: CampfireColors.WARNING, fontSize: 13, fontFamily: "Bitova" }}>{profile?.total_points || 0} points</Text>
             </View>
           </View>
         </View>
@@ -261,7 +261,7 @@ export default function Settings() {
           accessibilityLabel="Edit Avatar"
         >
           <PixelPencilIcon size={16} />
-          <Text style={{ color: TEXT, fontFamily: "Retro", marginLeft: 8 }}>Edit Avatar</Text>
+          <Text style={{ color: TEXT, fontFamily: "Bitova", marginLeft: 8 }}>Edit Avatar</Text>
         </Pressable>
       </View>
 
@@ -356,7 +356,7 @@ export default function Settings() {
               accessibilityRole="button"
               accessibilityLabel="Cancel"
             >
-              <Text style={{ color: MUTED, fontFamily: "Retro" }}>Cancel</Text>
+              <Text style={{ color: MUTED, fontFamily: "Bitova" }}>Cancel</Text>
             </Pressable>
           </View>
         </Pressable>

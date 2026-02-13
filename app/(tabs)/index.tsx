@@ -302,7 +302,7 @@ function PixelStump({ size = 50, label, onPress, icon }: { size?: number; label?
             <Text style={{
               color: "#3D1A00",
               fontSize: size * 0.30,
-              fontFamily: "Retro",
+              fontFamily: "Bitova",
               textShadowColor: "rgba(255, 245, 220, 0.9)",
               textShadowOffset: { width: 0, height: 0 },
               textShadowRadius: 3,
@@ -551,7 +551,7 @@ export default function HomeGroupsScreen() {
                               alignItems: "center",
                               justifyContent: "center",
                             }}>
-                              <Text style={{ color: MUTED, fontSize: 8, fontFamily: "Retro" }}>
+                              <Text style={{ color: MUTED, fontSize: 11, fontFamily: "Bitova" }}>
                                 +{memberCount - 4}
                               </Text>
                             </View>

@@ -502,7 +502,7 @@ const styles = StyleSheet.create({
     position: "absolute",
   },
   title: {
-    fontFamily: "Retro",
+    fontFamily: "Bitova",
     color: "#FFF8DC",
     textShadowOffset: { width: 0, height: 0 },
   },

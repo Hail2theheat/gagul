@@ -440,7 +440,7 @@ function TwigLetter({
     <Animated.View style={[{ marginHorizontal: 2 }, style]}>
       <Animated.Text
         style={{
-          fontFamily: "Retro",
+          fontFamily: "Bitova",
           fontSize: 48,
           color: "#8B5E3C", // bark brown
           textShadowColor: "#4A2810",
@@ -464,7 +464,7 @@ function TwigLetter({
       >
         <Animated.Text
           style={{
-            fontFamily: "Retro",
+            fontFamily: "Bitova",
             fontSize: 48,
             color: "#5A8C3C",
             textShadowColor: "transparent",
