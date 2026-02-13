@@ -1,10 +1,11 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, router, useSegments, useRootNavigationState } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Alert, View, ActivityIndicator } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Updates from 'expo-updates';
+import * as SplashScreen from 'expo-splash-screen';
 import { onlineManager } from '@tanstack/react-query';
 import { AppState } from 'react-native';
 import type { AppStateStatus } from 'react-native';
@@ -28,6 +29,11 @@ import { registerPushToken } from '@/lib/services/pushService';
 import { checkStreakBonus } from '@/lib/services/pointsService';
 import { PointsPopup } from '@/components/PointsPopup';
 import { OfflineBanner } from '@/components/OfflineBanner';
+import { AnimatedSplash } from '@/components/AnimatedSplash';
+import { FireTransition } from '@/components/FireTransition';
+
+// Keep native splash visible while we load fonts
+SplashScreen.preventAutoHideAsync();
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -71,6 +77,9 @@ export default function RootLayout() {
   const [authChecked, setAuthChecked] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
+  // Splash states: 'splash' → 'fire' → 'done'
+  const [splashPhase, setSplashPhase] = useState<'splash' | 'fire' | 'done'>('splash');
+
   const [fontsLoaded] = useFonts({
     Nunito_400Regular,
     Nunito_600SemiBold,
@@ -81,6 +90,23 @@ export default function RootLayout() {
     PixelifySans_700Bold,
     'Retro': require('../assets/fonts/retro.ttf'),
   });
+
+  // Hide the native splash once our custom fonts are loaded
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  // When animated splash completes its intro, start fire transition
+  const handleSplashComplete = useCallback(() => {
+    setSplashPhase('fire');
+  }, []);
+
+  // When fire transition fills the screen, dismiss splash
+  const handleFireComplete = useCallback(() => {
+    setSplashPhase('done');
+  }, []);
 
   // Check for OTA updates on launch
   useEffect(() => {
@@ -202,6 +228,9 @@ export default function RootLayout() {
     };
   }, [navigationState?.key]);
 
+  // Show nothing until fonts are ready (native splash is still visible)
+  if (!fontsLoaded) return null;
+
   return (
     <PersistQueryClientProvider
       client={queryClient}
@@ -249,6 +278,17 @@ export default function RootLayout() {
           <OfflineBanner />
           {/* Points popup overlay - shows +X animation when points awarded */}
           <PointsPopup />
+
+          {/* Animated splash overlay */}
+          {splashPhase !== 'done' && (
+            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998 }}>
+              <AnimatedSplash onAnimationComplete={handleSplashComplete} />
+              <FireTransition
+                active={splashPhase === 'fire'}
+                onComplete={handleFireComplete}
+              />
+            </View>
+          )}
         </View>
       </ThemeProvider>
     </PersistQueryClientProvider>
