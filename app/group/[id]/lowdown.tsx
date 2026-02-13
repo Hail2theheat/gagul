@@ -737,7 +737,7 @@ function PixelLock({ size = 40 }: { size?: number }) {
 
         {/* Title area */}
         <View style={{ position: "absolute", top: SCREEN_HEIGHT * 0.35, left: 0, right: 0, alignItems: "center" }}>
-          <PixelTitle fontSize={20}>Weekly Fireside</PixelTitle>
+          <PixelTitle fontSize={30}>Weekly Fireside</PixelTitle>
           <Text style={{
             fontSize: 16,
             color: "#B8A88A",

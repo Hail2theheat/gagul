@@ -399,7 +399,7 @@ export default function Settings() {
         <View style={{ flexDirection: "row", alignItems: "center", marginBottom: Spacing.sm, marginTop: 30 }}>
           <PixelGearIcon size={28} />
           <View style={{ width: 10 }} />
-          <PixelTitle fontSize={16}>Settings</PixelTitle>
+          <PixelTitle fontSize={26}>Settings</PixelTitle>
         </View>
 
         {sessionEmail ? renderLoggedInView() : renderLoggedOutView()}

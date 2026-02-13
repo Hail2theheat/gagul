@@ -11,9 +11,9 @@ type Props = {
   style?: TextStyle;
 };
 
-export function PixelTitle({ children, fontSize = 18, style }: Props) {
+export function PixelTitle({ children, fontSize = 24, style }: Props) {
   const baseStyle: TextStyle = {
-    fontFamily: "PressStart2P_400Regular",
+    fontFamily: "PixelifySans_700Bold",
     fontSize,
     color: "#E05A1A",
     textShadowColor: "#2A1506",

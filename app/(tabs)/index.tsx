@@ -480,7 +480,7 @@ export default function HomeGroupsScreen() {
         <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 6 }}>
           <SmallFireIcon size={28} />
           <View style={{ width: 10 }} />
-          <PixelTitle fontSize={16}>Your Circles</PixelTitle>
+          <PixelTitle fontSize={26}>Your Circles</PixelTitle>
         </View>
         <Text style={{ color: MUTED, marginBottom: 22, letterSpacing: 0.3, ...Typography.body, fontSize: 14 }}>
           Gather 'round the fire with friends
@@ -674,7 +674,7 @@ export default function HomeGroupsScreen() {
             <PixelCheckmark size={60} />
 
             <View style={{ marginTop: 16 }}>
-              <PixelTitle fontSize={14}>Circle Created!</PixelTitle>
+              <PixelTitle fontSize={22}>Circle Created!</PixelTitle>
             </View>
 
             <Text style={{ color: MUTED, marginTop: 8, textAlign: "center", ...Typography.body, fontSize: 14 }}>

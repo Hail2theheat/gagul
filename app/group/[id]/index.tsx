@@ -34,7 +34,7 @@ const DANGER = "#EF4444";
 function FireText({ children, style }: { children: React.ReactNode; style?: any }) {
   return (
     <View style={[{ position: "relative" }, style]}>
-      <PixelTitle fontSize={14}>{String(children)}</PixelTitle>
+      <PixelTitle fontSize={22}>{String(children)}</PixelTitle>
     </View>
   );
 }

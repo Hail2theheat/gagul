@@ -18,6 +18,7 @@ import {
   Nunito_900Black,
 } from '@expo-google-fonts/nunito';
 import { PressStart2P_400Regular } from '@expo-google-fonts/press-start-2p';
+import { PixelifySans_700Bold } from '@expo-google-fonts/pixelify-sans';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { queryClient, asyncStoragePersister, shouldDehydrateQuery } from '@/lib/queryClient';
 
@@ -77,6 +78,7 @@ export default function RootLayout() {
     Nunito_800ExtraBold,
     Nunito_900Black,
     PressStart2P_400Regular,
+    PixelifySans_700Bold,
   });
 
   // Check for OTA updates on launch
