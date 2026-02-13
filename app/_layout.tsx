@@ -5,8 +5,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Platform, Alert, View, ActivityIndicator } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Updates from 'expo-updates';
-import NetInfo from '@react-native-community/netinfo';
 import { onlineManager } from '@tanstack/react-query';
+import { AppState } from 'react-native';
+import type { AppStateStatus } from 'react-native';
 import 'react-native-reanimated';
 import {
   useFonts,
@@ -41,12 +42,23 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// Wire up real network state so onlineManager (and OfflineBanner) work in RN
-onlineManager.setEventListener((setOnline) =>
-  NetInfo.addEventListener((state) => {
-    setOnline(!!state.isConnected);
+// Ping-based online detection that works without native modules (OTA-safe).
+// On app foreground, try to reach Supabase; if it works we're online.
+onlineManager.setOnline(true); // assume online at startup
+
+function checkOnline() {
+  fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/`, {
+    method: 'HEAD',
+    headers: { apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '' },
   })
-);
+    .then(() => onlineManager.setOnline(true))
+    .catch(() => onlineManager.setOnline(false));
+}
+
+AppState.addEventListener('change', (status: AppStateStatus) => {
+  if (status === 'active') checkOnline();
+});
+checkOnline();
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
