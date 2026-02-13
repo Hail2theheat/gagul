@@ -13,6 +13,7 @@ import { TelephoneCard } from "../../../components/prompts/TelephoneCard";
 import { getMyQuiplash, getQuiplashMatchups, QuiplashAssignment, QuiplashMatchup } from "../../../lib/services/quiplashService";
 import { getMyTelephone, TelephoneAssignment } from "../../../lib/services/telephoneService";
 import { PixelCharacter, CharacterConfig, DEFAULT_CHARACTER } from "../../../components/PixelCharacter";
+import { MembersCircleModal } from "../../../components/MembersCircleModal";
 import { DetailedCampfire, DetailedPineTree, DetailedGrass } from "../../../components/PixelArt";
 import { WeatherBackground } from "../../../components/WeatherBackground";
 import type { GroupStatus, GroupPrompt } from "../../../lib/types/prompts";
@@ -1181,7 +1182,8 @@ export default function GroupScreen() {
   const [memberCount, setMemberCount] = useState<number>(0);
   const [userStreak, setUserStreak] = useState<number>(0);
   const [myAvatar, setMyAvatar] = useState<CharacterConfig | null>(null);
-  const [allMembers, setAllMembers] = useState<Array<{ user_id: string; avatar_config: CharacterConfig | null }>>([]);
+  const [allMembers, setAllMembers] = useState<Array<{ user_id: string; avatar_config: CharacterConfig | null; username: string | null }>>([]);
+  const [showMembersModal, setShowMembersModal] = useState(false);
   const [memberStatuses, setMemberStatuses] = useState<Record<string, 'not_seen' | 'seen' | 'responded'>>({});
   const [quiplashAssignment, setQuiplashAssignment] = useState<QuiplashAssignment | null>(null);
   const [pendingQuiplashVotes, setPendingQuiplashVotes] = useState<QuiplashMatchup[]>([]);
@@ -1407,7 +1409,7 @@ export default function GroupScreen() {
         const userIds = members.map((m: any) => m.user_id);
         const { data: profiles, error: profilesError } = await supabase
           .from("profiles")
-          .select("id, avatar_config")
+          .select("id, avatar_config, username")
           .in("id", userIds);
 
         if (profilesError) {
@@ -1420,6 +1422,7 @@ export default function GroupScreen() {
           return {
             user_id: m.user_id,
             avatar_config: profile?.avatar_config as CharacterConfig | null,
+            username: (profile as any)?.username as string | null ?? null,
           };
         });
         setAllMembers(membersWithAvatars);
@@ -1643,7 +1646,7 @@ export default function GroupScreen() {
                 </FireText>
                 <FireStreakBadge streak={groupStreak} />
               </View>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Pressable onPress={() => setShowMembersModal(true)} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                 {/* Show all member avatars with status dots */}
                 {allMembers.slice(0, 6).map((member, idx) => {
                   const promptStatus = memberStatuses[member.user_id];
@@ -1679,7 +1682,7 @@ export default function GroupScreen() {
                 <Text style={{ color: MUTED, fontSize: 12, opacity: 0.6, marginLeft: 6 }}>
                   {memberCount} {memberCount === 1 ? "member" : "members"}
                 </Text>
-              </View>
+              </Pressable>
             </View>
             <Pressable
               onPress={() => {
@@ -1971,6 +1974,13 @@ export default function GroupScreen() {
             </View>
           </View>
         </Modal>
+
+        {/* Members Circle Modal */}
+        <MembersCircleModal
+          visible={showMembersModal}
+          onClose={() => setShowMembersModal(false)}
+          members={allMembers}
+        />
       </WeatherBackground>
     );
   }
@@ -2010,7 +2020,7 @@ export default function GroupScreen() {
               </FireText>
               <FireStreakBadge streak={groupStreak} />
             </View>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <Pressable onPress={() => setShowMembersModal(true)} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
               {/* Show all member avatars */}
               {allMembers.slice(0, 6).map((member, idx) => (
                 <View key={member.user_id} style={{ marginLeft: idx > 0 ? -6 : 0, zIndex: allMembers.length - idx }}>
@@ -2028,7 +2038,7 @@ export default function GroupScreen() {
               <Text style={{ color: MUTED, fontSize: 12, opacity: 0.6, marginLeft: 6 }}>
                 {memberCount} {memberCount === 1 ? "member" : "members"}
               </Text>
-            </View>
+            </Pressable>
           </View>
           <Pressable
             onPress={() => {
@@ -2278,6 +2288,13 @@ export default function GroupScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Members Circle Modal */}
+      <MembersCircleModal
+        visible={showMembersModal}
+        onClose={() => setShowMembersModal(false)}
+        members={allMembers}
+      />
     </WeatherBackground>
   );
 }
