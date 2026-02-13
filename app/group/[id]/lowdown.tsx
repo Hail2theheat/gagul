@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useFireNavigation } from "../../../components/FireNavigationProvider";
 
 import {
   getFiresideData,
@@ -290,6 +291,7 @@ type ScreenState = "loading" | "locked" | "bonfire" | "prompts" | "leaderboard";
 export default function LowdownScreen() {
   const params = useGlobalSearchParams();
   const groupId = typeof params.id === "string" ? params.id : undefined;
+  const { navigateWithFire } = useFireNavigation();
 
   const [screenState, setScreenState] = useState<ScreenState>("loading");
   const [firesideData, setFiresideData] = useState<FiresideData | null>(null);
@@ -667,7 +669,7 @@ function PixelLock({ size = 40 }: { size?: number }) {
         <Text style={styles.lockedText}>
           The Weekly Fireside unlocks Sunday at 8pm ET
         </Text>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigateWithFire(() => router.back())}>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             <View style={{ width: 0, height: 0, borderTopWidth: 6, borderBottomWidth: 6, borderRightWidth: 8, borderTopColor: "transparent", borderBottomColor: "transparent", borderRightColor: COLORS.accent, marginRight: 6 }} />
             <Text style={styles.backButtonText}>Back to Group</Text>
@@ -1050,7 +1052,7 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
           );
         })()}
 
-        <TouchableOpacity style={styles.doneButton} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.doneButton} onPress={() => navigateWithFire(() => router.back())}>
           <Text style={styles.doneButtonText}>Done</Text>
         </TouchableOpacity>
         </ScrollView>
@@ -1063,7 +1065,7 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
     return (
       <View style={styles.container}>
         <Text style={styles.lockedText}>No prompts this week</Text>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigateWithFire(() => router.back())}>
           <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
       </View>
@@ -1205,7 +1207,7 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
       </View>
 
       {/* Close button */}
-      <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
+      <TouchableOpacity style={styles.closeButton} onPress={() => navigateWithFire(() => router.back())}>
         <Ionicons name="close" size={28} color={COLORS.text} />
       </TouchableOpacity>
 

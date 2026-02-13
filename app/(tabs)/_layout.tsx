@@ -1,6 +1,6 @@
 // app/(tabs)/_layout.tsx
-import { Tabs } from "expo-router";
-import React, { useEffect } from "react";
+import { Tabs, router } from "expo-router";
+import React, { useEffect, useRef } from "react";
 import { View } from "react-native";
 import Animated, {
   useSharedValue,
@@ -9,6 +9,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { HapticTab } from "../../components/haptic-tab";
 import { SPRING_BOUNCY } from "../../constants/animations";
+import { useFireNavigation } from "../../components/FireNavigationProvider";
 
 // Animated tab icon wrapper - scales up when active
 function AnimatedTabIcon({ children, focused }: { children: React.ReactNode; focused: boolean }) {
@@ -98,6 +99,10 @@ function PixelGearIcon({ color, size }: { color: string; size: number }) {
 }
 
 export default function TabLayout() {
+  const { navigateWithFire } = useFireNavigation();
+  // Track which tab is currently active so we skip fire when tapping the same tab
+  const activeTab = useRef("index");
+
   return (
     <Tabs
       screenOptions={{
@@ -129,6 +134,17 @@ export default function TabLayout() {
             </AnimatedTabIcon>
           ),
         }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            if (activeTab.current === "index") return;
+            e.preventDefault();
+            navigateWithFire(() => {
+              activeTab.current = "index";
+              navigation.navigate("index");
+            });
+          },
+          focus: () => { activeTab.current = "index"; },
+        })}
       />
       <Tabs.Screen
         name="explore"
@@ -146,6 +162,17 @@ export default function TabLayout() {
             </AnimatedTabIcon>
           ),
         }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            if (activeTab.current === "settings") return;
+            e.preventDefault();
+            navigateWithFire(() => {
+              activeTab.current = "settings";
+              navigation.navigate("settings");
+            });
+          },
+          focus: () => { activeTab.current = "settings"; },
+        })}
       />
     </Tabs>
   );

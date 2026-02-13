@@ -17,6 +17,7 @@ import { MembersCircleModal } from "../../../components/MembersCircleModal";
 import { DetailedCampfire, DetailedPineTree, DetailedGrass } from "../../../components/PixelArt";
 import { WeatherBackground } from "../../../components/WeatherBackground";
 import { PixelTitle } from "../../../components/PixelTitle";
+import { useFireNavigation } from "../../../components/FireNavigationProvider";
 import type { GroupStatus, GroupPrompt } from "../../../lib/types/prompts";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -1141,6 +1142,7 @@ export default function GroupScreen() {
   const params = useGlobalSearchParams();
   const raw = (params as any)?.id ?? (params as any)?.Id;
   const groupId = typeof raw === "string" ? raw : undefined;
+  const { navigateWithFire } = useFireNavigation();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -1477,11 +1479,10 @@ export default function GroupScreen() {
 
               setShowSettingsModal(false);
               // Navigate to home with refresh timestamp to force data reload
-              // Use the href object form for expo-router
-              router.replace({
+              navigateWithFire(() => router.replace({
                 pathname: "/(tabs)",
                 params: { refresh: Date.now().toString() }
-              });
+              }));
             } catch (e: any) {
               Alert.alert("Error", e?.message ?? "Failed to leave circle");
             } finally {
@@ -1597,7 +1598,7 @@ export default function GroupScreen() {
         >
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
             <Pressable
-              onPress={() => router.back()}
+              onPress={() => navigateWithFire(() => router.back())}
               style={{
                 padding: 10,
                 backgroundColor: CARD,
@@ -1690,7 +1691,7 @@ export default function GroupScreen() {
           )}
 
           {sundayState === 'during-fireside' && (
-            <BigFiresideButton onPress={() => router.push(`/group/${groupId}/lowdown`)} />
+            <BigFiresideButton onPress={() => navigateWithFire(() => router.push(`/group/${groupId}/lowdown`))} />
           )}
 
           {sundayState === 'post-fireside' && (
@@ -1767,7 +1768,7 @@ export default function GroupScreen() {
 
               {/* Fireside Button - only show during fireside hours (fallback for non-sunday testing) */}
               {showFireside && (
-                <BigFiresideButton onPress={() => router.push(`/group/${groupId}/lowdown`)} />
+                <BigFiresideButton onPress={() => navigateWithFire(() => router.push(`/group/${groupId}/lowdown`))} />
               )}
             </>
           )}
@@ -1971,7 +1972,7 @@ export default function GroupScreen() {
       >
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => navigateWithFire(() => router.back())}
             style={{
               padding: 10,
               backgroundColor: CARD,
@@ -2083,7 +2084,7 @@ export default function GroupScreen() {
 
         {/* Fireside Button - only show during fireside hours */}
         {showFireside && (
-          <BigFiresideButton onPress={() => router.push(`/group/${groupId}/lowdown`)} />
+          <BigFiresideButton onPress={() => navigateWithFire(() => router.push(`/group/${groupId}/lowdown`))} />
         )}
       </ScrollView>
 

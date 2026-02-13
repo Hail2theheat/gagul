@@ -31,6 +31,7 @@ import { PointsPopup } from '@/components/PointsPopup';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { AnimatedSplash } from '@/components/AnimatedSplash';
 import { FireTransition } from '@/components/FireTransition';
+import { FireNavigationProvider } from '@/components/FireNavigationProvider';
 
 // Keep native splash visible while we load fonts
 SplashScreen.preventAutoHideAsync();
@@ -238,59 +239,61 @@ export default function RootLayout() {
       persistOptions={{ persister: asyncStoragePersister, maxAge: 1000 * 60 * 60 * 24, dehydrateOptions: { shouldDehydrateQuery } }}
     >
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <View style={{ flex: 1 }}>
-          <Stack>
-            <Stack.Screen
-              name="login"
-              options={{
-                headerShown: false,
-                gestureEnabled: false,
-                animation: 'fade',
-              }}
-            />
-            <Stack.Screen
-              name="(tabs)"
-              options={{
-                headerShown: false,
-                title: 'Home',
-                animation: 'fade',
-              }}
-            />
-            <Stack.Screen
-              name="create-character"
-              options={{
-                headerShown: false,
-                presentation: 'fullScreenModal',
-                gestureEnabled: false,
-                animationTypeForReplace: 'pop',
-              }}
-            />
-            <Stack.Screen
-              name="group/[id]"
-              options={{
-                headerShown: false,
-                animation: 'slide_from_right',
-              }}
-            />
-            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-          </Stack>
-          <StatusBar style="light" />
-          {/* Offline banner - slides in when no connection */}
-          <OfflineBanner />
-          {/* Points popup overlay - shows +X animation when points awarded */}
-          <PointsPopup />
-
-          {/* Animated splash overlay */}
-          {splashPhase !== 'done' && (
-            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998 }}>
-              <AnimatedSplash onAnimationComplete={handleSplashComplete} />
-              <FireTransition
-                active={splashPhase === 'fire'}
-                onComplete={handleFireComplete}
+        <FireNavigationProvider>
+          <View style={{ flex: 1 }}>
+            <Stack>
+              <Stack.Screen
+                name="login"
+                options={{
+                  headerShown: false,
+                  gestureEnabled: false,
+                  animation: 'fade',
+                }}
               />
-            </View>
-          )}
-        </View>
+              <Stack.Screen
+                name="(tabs)"
+                options={{
+                  headerShown: false,
+                  title: 'Home',
+                  animation: 'fade',
+                }}
+              />
+              <Stack.Screen
+                name="create-character"
+                options={{
+                  headerShown: false,
+                  presentation: 'fullScreenModal',
+                  gestureEnabled: false,
+                  animationTypeForReplace: 'pop',
+                }}
+              />
+              <Stack.Screen
+                name="group/[id]"
+                options={{
+                  headerShown: false,
+                  animation: 'none',
+                }}
+              />
+              <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+            </Stack>
+            <StatusBar style="light" />
+            {/* Offline banner - slides in when no connection */}
+            <OfflineBanner />
+            {/* Points popup overlay - shows +X animation when points awarded */}
+            <PointsPopup />
+
+            {/* Animated splash overlay */}
+            {splashPhase !== 'done' && (
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998 }}>
+                <AnimatedSplash onAnimationComplete={handleSplashComplete} />
+                <FireTransition
+                  active={splashPhase === 'fire'}
+                  onComplete={handleFireComplete}
+                />
+              </View>
+            )}
+          </View>
+        </FireNavigationProvider>
       </ThemeProvider>
     </PersistQueryClientProvider>
   );
