@@ -16,6 +16,7 @@ import { PixelCharacter, CharacterConfig, DEFAULT_CHARACTER } from "../../../com
 import { MembersCircleModal } from "../../../components/MembersCircleModal";
 import { DetailedCampfire, DetailedPineTree, DetailedGrass } from "../../../components/PixelArt";
 import { WeatherBackground } from "../../../components/WeatherBackground";
+import { PixelTitle } from "../../../components/PixelTitle";
 import type { GroupStatus, GroupPrompt } from "../../../lib/types/prompts";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -29,42 +30,11 @@ const BTN = "#1E4ED8";
 const BTN_ORANGE = "#FF6B35";
 const DANGER = "#EF4444";
 
-// Soft glowing text component
+// Soft glowing text component — now uses pixel two-tone font
 function FireText({ children, style }: { children: React.ReactNode; style?: any }) {
   return (
     <View style={[{ position: "relative" }, style]}>
-      {/* Soft outer glow */}
-      <Text style={{
-        color: "transparent",
-        fontSize: 28,
-        fontFamily: "Nunito_900Black",
-        textShadowColor: "#F59E0B",
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 20,
-        position: "absolute",
-      }}>
-        {children}
-      </Text>
-      {/* Inner glow */}
-      <Text style={{
-        color: "transparent",
-        fontSize: 28,
-        fontFamily: "Nunito_900Black",
-        textShadowColor: "#FCD34D",
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 10,
-        position: "absolute",
-      }}>
-        {children}
-      </Text>
-      {/* Main text - soft yellow */}
-      <Text style={{
-        color: "#FEF3C7",
-        fontSize: 28,
-        fontFamily: "Nunito_900Black",
-      }}>
-        {children}
-      </Text>
+      <PixelTitle fontSize={14}>{String(children)}</PixelTitle>
     </View>
   );
 }

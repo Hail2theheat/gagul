@@ -39,6 +39,7 @@ import { VideoPlayer } from "../../../components/prompts/VideoPlayer";
 import { trackViewStart, trackViewEnd } from "../../../lib/services/metricsService";
 import { PixelCharacter, CharacterConfig, DEFAULT_CHARACTER } from "../../../components/PixelCharacter";
 import { DetailedCampfire } from "../../../components/PixelArt";
+import { PixelTitle } from "../../../components/PixelTitle";
 import { NightSky } from "../../../components/sky";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -736,17 +737,7 @@ function PixelLock({ size = 40 }: { size?: number }) {
 
         {/* Title area */}
         <View style={{ position: "absolute", top: SCREEN_HEIGHT * 0.35, left: 0, right: 0, alignItems: "center" }}>
-          <Text style={{
-            fontSize: 36,
-            fontFamily: "Nunito_900Black",
-            color: "#FFE4B5",
-            textShadowColor: "#FF6B35",
-            textShadowOffset: { width: 0, height: 0 },
-            textShadowRadius: 20,
-            letterSpacing: 2,
-          }}>
-            Weekly Fireside
-          </Text>
+          <PixelTitle fontSize={20}>Weekly Fireside</PixelTitle>
           <Text style={{
             fontSize: 16,
             color: "#B8A88A",

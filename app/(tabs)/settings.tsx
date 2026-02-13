@@ -7,6 +7,7 @@ import { getUserEmojis, updateUserEmojis, UserEmojis, DEFAULT_EMOJIS } from "../
 import { useProfile } from "../../lib/hooks/useProfile";
 import { PixelCharacter, CharacterConfig, DEFAULT_CHARACTER } from "../../components/PixelCharacter";
 import { NightSky } from "../../components/sky";
+import { PixelTitle } from "../../components/PixelTitle";
 import { CampfireColors, Spacing, Radii, Typography, Shadows } from "../../constants/theme";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -398,13 +399,7 @@ export default function Settings() {
         <View style={{ flexDirection: "row", alignItems: "center", marginBottom: Spacing.sm, marginTop: 30 }}>
           <PixelGearIcon size={28} />
           <View style={{ width: 10 }} />
-          <Text style={{
-            color: TEXT,
-            ...Typography.heading1,
-            ...Shadows.fireGlow,
-          }}>
-            Settings
-          </Text>
+          <PixelTitle fontSize={16}>Settings</PixelTitle>
         </View>
 
         {sessionEmail ? renderLoggedInView() : renderLoggedOutView()}

@@ -17,6 +17,7 @@ import {
   Nunito_800ExtraBold,
   Nunito_900Black,
 } from '@expo-google-fonts/nunito';
+import { PressStart2P_400Regular } from '@expo-google-fonts/press-start-2p';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { queryClient, asyncStoragePersister, shouldDehydrateQuery } from '@/lib/queryClient';
 
@@ -75,6 +76,7 @@ export default function RootLayout() {
     Nunito_700Bold,
     Nunito_800ExtraBold,
     Nunito_900Black,
+    PressStart2P_400Regular,
   });
 
   // Check for OTA updates on launch
