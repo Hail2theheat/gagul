@@ -13,7 +13,7 @@ type Props = {
 
 export function PixelTitle({ children, fontSize = 24, style }: Props) {
   const baseStyle: TextStyle = {
-    fontFamily: "PixelifySans_700Bold",
+    fontFamily: "Retro",
     fontSize,
     color: "#E05A1A",
     textShadowColor: "#2A1506",

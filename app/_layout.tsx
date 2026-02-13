@@ -79,6 +79,7 @@ export default function RootLayout() {
     Nunito_900Black,
     PressStart2P_400Regular,
     PixelifySans_700Bold,
+    'Retro': require('../assets/fonts/retro.ttf'),
   });
 
   // Check for OTA updates on launch
