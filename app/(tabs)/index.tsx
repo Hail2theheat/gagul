@@ -201,57 +201,57 @@ function PixelShareIcon({ size = 20 }: { size?: number }) {
   );
 }
 
-// Fire streak badge
+// Fire streak badge (3x size for prominent display)
 function FireStreakBadge({ streak }: { streak: number }) {
   if (streak === 0) return null;
 
   return (
-    <View style={{ width: 30, height: 34, alignItems: "center", justifyContent: "center" }}>
+    <View style={{ width: 90, height: 102, alignItems: "center", justifyContent: "center" }}>
       <View style={{
         position: "absolute",
-        width: 28, height: 32,
+        width: 84, height: 96,
         backgroundColor: "rgba(255, 107, 53, 0.25)",
-        borderRadius: 14,
+        borderRadius: 42,
         transform: [{ scaleY: 1.1 }],
       }} />
       <View style={{
         position: "absolute", bottom: 0,
-        width: 22, height: 28,
+        width: 66, height: 84,
         backgroundColor: CampfireColors.FIRE_RED,
-        borderTopLeftRadius: 11, borderTopRightRadius: 11,
-        borderBottomLeftRadius: 8, borderBottomRightRadius: 8,
+        borderTopLeftRadius: 33, borderTopRightRadius: 33,
+        borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
       }} />
       <View style={{
-        position: "absolute", bottom: 1,
-        width: 18, height: 22,
+        position: "absolute", bottom: 3,
+        width: 54, height: 66,
         backgroundColor: CampfireColors.FIRE_ORANGE,
-        borderTopLeftRadius: 9, borderTopRightRadius: 9,
-        borderBottomLeftRadius: 6, borderBottomRightRadius: 6,
+        borderTopLeftRadius: 27, borderTopRightRadius: 27,
+        borderBottomLeftRadius: 18, borderBottomRightRadius: 18,
       }} />
       <View style={{
-        position: "absolute", bottom: 2,
-        width: 14, height: 16,
+        position: "absolute", bottom: 6,
+        width: 42, height: 48,
         backgroundColor: CampfireColors.FIRE_YELLOW,
-        borderTopLeftRadius: 7, borderTopRightRadius: 7,
-        borderBottomLeftRadius: 4, borderBottomRightRadius: 4,
+        borderTopLeftRadius: 21, borderTopRightRadius: 21,
+        borderBottomLeftRadius: 12, borderBottomRightRadius: 12,
       }} />
       <View style={{
-        position: "absolute", bottom: 4,
-        width: 8, height: 8,
+        position: "absolute", bottom: 12,
+        width: 24, height: 24,
         backgroundColor: CampfireColors.FIRE_CORE,
-        borderTopLeftRadius: 4, borderTopRightRadius: 4,
-        borderBottomLeftRadius: 2, borderBottomRightRadius: 2,
+        borderTopLeftRadius: 12, borderTopRightRadius: 12,
+        borderBottomLeftRadius: 6, borderBottomRightRadius: 6,
       }} />
       <Text style={{
         position: "absolute",
         color: "#4A1508",
         ...Typography.heading1,
-        fontSize: streak >= 100 ? 9 : streak >= 10 ? 11 : 13,
+        fontSize: streak >= 100 ? 22 : streak >= 10 ? 28 : 34,
         textAlign: "center",
-        top: 11,
+        top: 33,
         textShadowColor: "rgba(255, 220, 120, 0.8)",
         textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 3,
+        textShadowRadius: 4,
       }}>
         {streak}
       </Text>
@@ -520,47 +520,61 @@ export default function HomeGroupsScreen() {
                       borderBottomLeftRadius: Radii.card,
                     }} />
 
-                    <View style={{ flex: 1, padding: Spacing.lg }}>
-                      {/* Name row + streak */}
-                      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                        <Text style={{ color: TEXT_WARM, ...Typography.heading2, fontSize: 18, flex: 1 }} numberOfLines={1}>
-                          {g.name ?? "(untitled)"}
-                        </Text>
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                          {hasStreak && <FireStreakBadge streak={g.current_streak ?? 0} />}
+                    <View style={{ flex: 1, padding: Spacing.lg, flexDirection: "row" }}>
+                      {/* Left content */}
+                      <View style={{ flex: 1 }}>
+                        {/* Name row */}
+                        <View style={{ flexDirection: "row", alignItems: "center" }}>
+                          <Text style={{ color: TEXT_WARM, ...Typography.heading2, fontSize: 18, flex: 1 }} numberOfLines={1}>
+                            {g.name ?? "(untitled)"}
+                          </Text>
                           <PixelArrow size={14} />
                         </View>
+
+                        {/* Member count */}
+                        {memberCount > 0 && (
+                          <Text style={{ color: MUTED, ...Typography.caption, marginTop: 4 }}>
+                            {memberCount} member{memberCount !== 1 ? "s" : ""}
+                          </Text>
+                        )}
+
+                        {/* Mini avatar row */}
+                        {avatars.length > 0 && (
+                          <View style={{ flexDirection: "row", marginTop: 8 }}>
+                            {avatars.slice(0, 4).map((avatar: any, i: number) => (
+                              <View key={i} style={{ marginLeft: i > 0 ? -6 : 0, zIndex: 4 - i }}>
+                                <PixelCharacter config={avatar ?? DEFAULT_CHARACTER} size={18} />
+                              </View>
+                            ))}
+                            {memberCount > 4 && (
+                              <View style={{
+                                marginLeft: -4,
+                                width: 18, height: 18,
+                                borderRadius: 9,
+                                backgroundColor: "rgba(255, 255, 255, 0.1)",
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}>
+                                <Text style={{ color: MUTED, fontSize: 11, fontFamily: "Bitova" }}>
+                                  +{memberCount - 4}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        )}
+
+                        {/* Created time - smaller, at the bottom */}
+                        {lastActive ? (
+                          <Text style={{ color: MUTED, fontSize: 10, fontFamily: "Bitova", marginTop: 8, opacity: 0.7 }}>
+                            created {lastActive}
+                          </Text>
+                        ) : null}
                       </View>
 
-                      {/* Subtitle: member count + last active */}
-                      <Text style={{ color: MUTED, ...Typography.caption, marginTop: 4 }}>
-                        {memberCount > 0 ? `${memberCount} member${memberCount !== 1 ? "s" : ""}` : ""}
-                        {memberCount > 0 && lastActive ? " · " : ""}
-                        {lastActive ? `created ${lastActive}` : ""}
-                      </Text>
-
-                      {/* Mini avatar row */}
-                      {avatars.length > 0 && (
-                        <View style={{ flexDirection: "row", marginTop: 8 }}>
-                          {avatars.slice(0, 4).map((avatar: any, i: number) => (
-                            <View key={i} style={{ marginLeft: i > 0 ? -6 : 0, zIndex: 4 - i }}>
-                              <PixelCharacter config={avatar ?? DEFAULT_CHARACTER} size={18} />
-                            </View>
-                          ))}
-                          {memberCount > 4 && (
-                            <View style={{
-                              marginLeft: -4,
-                              width: 18, height: 18,
-                              borderRadius: 9,
-                              backgroundColor: "rgba(255, 255, 255, 0.1)",
-                              alignItems: "center",
-                              justifyContent: "center",
-                            }}>
-                              <Text style={{ color: MUTED, fontSize: 11, fontFamily: "Bitova" }}>
-                                +{memberCount - 4}
-                              </Text>
-                            </View>
-                          )}
+                      {/* Fire streak badge - middle right */}
+                      {hasStreak && (
+                        <View style={{ justifyContent: "center", marginLeft: 8 }}>
+                          <FireStreakBadge streak={g.current_streak ?? 0} />
                         </View>
                       )}
                     </View>
