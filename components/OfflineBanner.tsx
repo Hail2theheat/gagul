@@ -1,5 +1,5 @@
 // components/OfflineBanner.tsx
-import React from 'react';
+import React, { useSyncExternalStore } from 'react';
 import { Text } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -10,9 +10,16 @@ import { useIsRestoring } from '@tanstack/react-query';
 import { onlineManager } from '@tanstack/react-query';
 import { CampfireColors, Typography } from '../constants/theme';
 
+function useIsOnline() {
+  return useSyncExternalStore(
+    (callback) => onlineManager.subscribe(callback),
+    () => onlineManager.isOnline(),
+  );
+}
+
 export function OfflineBanner() {
   const isRestoring = useIsRestoring();
-  const isOnline = onlineManager.isOnline();
+  const isOnline = useIsOnline();
   const show = !isOnline || isRestoring;
 
   const translateY = useSharedValue(show ? 0 : -50);

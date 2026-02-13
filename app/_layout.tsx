@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Platform, Alert, View, ActivityIndicator } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Updates from 'expo-updates';
+import NetInfo from '@react-native-community/netinfo';
+import { onlineManager } from '@tanstack/react-query';
 import 'react-native-reanimated';
 import {
   useFonts,
@@ -38,6 +40,13 @@ Notifications.setNotificationHandler({
     shouldSetBadge: true,
   }),
 });
+
+// Wire up real network state so onlineManager (and OfflineBanner) work in RN
+onlineManager.setEventListener((setOnline) =>
+  NetInfo.addEventListener((state) => {
+    setOnline(!!state.isConnected);
+  })
+);
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
