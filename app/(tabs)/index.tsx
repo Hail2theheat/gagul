@@ -20,7 +20,7 @@ import { useMyGroups, useCreateGroup, useJoinGroup, GroupRow } from "../../lib/h
 import { DetailedCampfire, SmallFireIcon } from "../../components/PixelArt";
 import { useFireNavigation } from "../../components/FireNavigationProvider";
 import { PixelCharacter, DEFAULT_CHARACTER } from "../../components/PixelCharacter";
-import { PixelLake } from "../../components/PixelLake";
+import { PixelLake, LakeCreatures } from "../../components/PixelLake";
 import { NightSky, ForestGround } from "../../components/sky";
 import { PixelTitle } from "../../components/PixelTitle";
 import { CampfireColors, Spacing, Radii, Typography, Shadows } from "../../constants/theme";
@@ -261,9 +261,9 @@ function FireStreakBadge({ streak }: { streak: number }) {
 
 // Stump button component
 function PixelStump({ size = 50, label, onPress, icon }: { size?: number; label?: string; onPress?: () => void; icon?: React.ReactNode }) {
-  const w = size * 1.3;
-  const topH = size * 0.38;
-  const barkH = size * 0.5;
+  const w = size * 1.55;
+  const topH = size * 0.46;
+  const barkH = size * 0.42;
   const pressScale = useSharedValue(1);
 
   const animatedPressStyle = useAnimatedStyle(() => ({
@@ -302,7 +302,7 @@ function PixelStump({ size = 50, label, onPress, icon }: { size?: number; label?
             {icon}
             <Text style={{
               color: "#3D1A00",
-              fontSize: size * 0.30,
+              fontSize: size * 0.28,
               fontFamily: "Bitova",
               textShadowColor: "rgba(255, 245, 220, 0.9)",
               textShadowOffset: { width: 0, height: 0 },
@@ -450,6 +450,11 @@ export default function HomeGroupsScreen() {
         <PixelLake />
       </View>
 
+      {/* Fish + monster - centered above the campfire */}
+      <View style={{ position: "absolute", bottom: 120, left: "50%", marginLeft: -70, zIndex: 4 }}>
+        <LakeCreatures />
+      </View>
+
       {/* Campfire warm ground glow */}
       <View style={{
         position: "absolute", bottom: 10,
@@ -482,12 +487,12 @@ export default function HomeGroupsScreen() {
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} tintColor={MUTED} />}
       >
         {/* Title with pixel fire */}
-        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 6 }}>
-          <SmallFireIcon size={28} />
-          <View style={{ width: 10 }} />
-          <PixelTitle fontSize={26}>Your Circles</PixelTitle>
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
+          <SmallFireIcon size={24} />
+          <View style={{ width: 8 }} />
+          <PixelTitle fontSize={22}>Your Circles</PixelTitle>
         </View>
-        <Text style={{ color: MUTED, marginBottom: 22, letterSpacing: 0.3, ...Typography.body, fontSize: 14 }}>
+        <Text style={{ color: MUTED, marginBottom: 16, letterSpacing: 0.3, ...Typography.body, fontSize: 13 }}>
           Gather 'round the fire with friends
         </Text>
 
@@ -507,7 +512,7 @@ export default function HomeGroupsScreen() {
                   borderWidth: 1,
                   borderRadius: Radii.card,
                   padding: 0,
-                  marginBottom: 14,
+                  marginBottom: 10,
                   overflow: "hidden",
                   ...(hasStreak ? Shadows.cardGlow : {}),
                 }}>
@@ -520,37 +525,37 @@ export default function HomeGroupsScreen() {
                       borderBottomLeftRadius: Radii.card,
                     }} />
 
-                    <View style={{ flex: 1, padding: Spacing.lg, flexDirection: "row" }}>
+                    <View style={{ flex: 1, padding: Spacing.md, flexDirection: "row" }}>
                       {/* Left content */}
                       <View style={{ flex: 1 }}>
                         {/* Name row */}
                         <View style={{ flexDirection: "row", alignItems: "center" }}>
-                          <Text style={{ color: TEXT_WARM, ...Typography.heading2, fontSize: 18, flex: 1 }} numberOfLines={1}>
+                          <Text style={{ color: TEXT_WARM, ...Typography.heading2, fontSize: 16, flex: 1 }} numberOfLines={1}>
                             {g.name ?? "(untitled)"}
                           </Text>
-                          <PixelArrow size={14} />
+                          <PixelArrow size={12} />
                         </View>
 
                         {/* Member count */}
                         {memberCount > 0 && (
-                          <Text style={{ color: MUTED, ...Typography.caption, marginTop: 4 }}>
+                          <Text style={{ color: MUTED, ...Typography.caption, marginTop: 2, fontSize: 12 }}>
                             {memberCount} member{memberCount !== 1 ? "s" : ""}
                           </Text>
                         )}
 
                         {/* Mini avatar row */}
                         {avatars.length > 0 && (
-                          <View style={{ flexDirection: "row", marginTop: 8 }}>
+                          <View style={{ flexDirection: "row", marginTop: 6 }}>
                             {avatars.slice(0, 4).map((avatar: any, i: number) => (
                               <View key={i} style={{ marginLeft: i > 0 ? -6 : 0, zIndex: 4 - i }}>
-                                <PixelCharacter config={avatar ?? DEFAULT_CHARACTER} size={18} />
+                                <PixelCharacter config={avatar ?? DEFAULT_CHARACTER} size={16} />
                               </View>
                             ))}
                             {memberCount > 4 && (
                               <View style={{
                                 marginLeft: -4,
-                                width: 18, height: 18,
-                                borderRadius: 9,
+                                width: 16, height: 16,
+                                borderRadius: 8,
                                 backgroundColor: "rgba(255, 255, 255, 0.1)",
                                 alignItems: "center",
                                 justifyContent: "center",
@@ -565,7 +570,7 @@ export default function HomeGroupsScreen() {
 
                         {/* Created time - smaller, at the bottom */}
                         {lastActive ? (
-                          <Text style={{ color: MUTED, fontSize: 10, fontFamily: "Bitova", marginTop: 8, opacity: 0.7 }}>
+                          <Text style={{ color: MUTED, fontSize: 10, fontFamily: "Bitova", marginTop: 6, opacity: 0.7 }}>
                             created {lastActive}
                           </Text>
                         ) : null}
@@ -600,12 +605,12 @@ export default function HomeGroupsScreen() {
       </ScrollView>
 
       {/* ===== STUMP BUTTONS ===== */}
-      <View style={{ position: "absolute", bottom: 22, left: SCREEN_WIDTH / 2 - 128, zIndex: 20 }}>
-        <PixelStump size={44} label="Create" icon={<PixelSparkle size={10} />}
+      <View style={{ position: "absolute", bottom: 22, left: SCREEN_WIDTH / 2 - 150, zIndex: 20 }}>
+        <PixelStump size={56} label="Create" icon={<PixelSparkle size={12} />}
           onPress={() => { setNewName(""); setShowCreateModal(true); }} />
       </View>
-      <View style={{ position: "absolute", bottom: 22, left: SCREEN_WIDTH / 2 + 82, zIndex: 20 }}>
-        <PixelStump size={44} label="Join" icon={<PixelCompassIcon size={10} />}
+      <View style={{ position: "absolute", bottom: 22, left: SCREEN_WIDTH / 2 + 80, zIndex: 20 }}>
+        <PixelStump size={56} label="Join" icon={<PixelCompassIcon size={12} />}
           onPress={() => { setJoinId(""); setShowJoinModal(true); }} />
       </View>
 

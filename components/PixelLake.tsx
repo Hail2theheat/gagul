@@ -13,8 +13,7 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 
-// ===== PIXEL LAKE =====
-// Oval lake with subtle ripple animations and campfire reflection
+// ===== PIXEL LAKE (just the water body, no creatures) =====
 export function PixelLake() {
   const ripple1 = useSharedValue(0);
   const ripple2 = useSharedValue(0);
@@ -159,37 +158,108 @@ export function PixelLake() {
           }}
         />
       </View>
+    </View>
+  );
+}
 
-      {/* Fish and sea monster render above the lake */}
+// ===== LAKE CREATURES (fish + monster, positioned independently) =====
+export function LakeCreatures() {
+  return (
+    <View style={{ width: 140, height: 65 }}>
       <JumpingFish />
       <SeaMonster />
     </View>
   );
 }
 
-// ===== JUMPING FISH =====
-// Small pixel fish that periodically leaps from the lake
+// ===== JUMPING FISH WITH WATER DROPLETS =====
 function JumpingFish() {
   const fishY = useSharedValue(0);
   const fishX = useSharedValue(0);
   const fishRotate = useSharedValue(0);
   const fishOpacity = useSharedValue(0);
-  const splashOpacity = useSharedValue(0);
+
+  // Entry splash droplets (when fish exits water)
+  const entryOp = useSharedValue(0);
+  const entry1Y = useSharedValue(0);
+  const entry2Y = useSharedValue(0);
+  const entry3Y = useSharedValue(0);
+  const entry4Y = useSharedValue(0);
+
+  // Landing splash droplets (when fish re-enters water)
+  const landOp = useSharedValue(0);
+  const land1Y = useSharedValue(0);
+  const land2Y = useSharedValue(0);
+  const land3Y = useSharedValue(0);
 
   const triggerJump = useCallback(() => {
-    const startX = 20 + Math.random() * 60;
+    const startX = 25 + Math.random() * 70;
     const jumpDuration = 600 + Math.random() * 300;
 
     fishX.value = startX;
     fishRotate.value = 0;
 
-    // Splash at start
-    splashOpacity.value = withSequence(
-      withTiming(0.8, { duration: 100 }),
-      withTiming(0, { duration: 300 })
+    // --- Entry water droplets (fish exits) ---
+    entryOp.value = withSequence(
+      withTiming(0.9, { duration: 50 }),
+      withDelay(380, withTiming(0, { duration: 150 }))
+    );
+    entry1Y.value = 0;
+    entry1Y.value = withSequence(
+      withTiming(-14, { duration: 200, easing: Easing.out(Easing.quad) }),
+      withTiming(5, { duration: 250, easing: Easing.in(Easing.quad) })
+    );
+    entry2Y.value = 0;
+    entry2Y.value = withSequence(
+      withTiming(-20, { duration: 230, easing: Easing.out(Easing.quad) }),
+      withTiming(5, { duration: 270, easing: Easing.in(Easing.quad) })
+    );
+    entry3Y.value = 0;
+    entry3Y.value = withSequence(
+      withTiming(-10, { duration: 170, easing: Easing.out(Easing.quad) }),
+      withTiming(5, { duration: 210, easing: Easing.in(Easing.quad) })
+    );
+    entry4Y.value = 0;
+    entry4Y.value = withSequence(
+      withTiming(-17, { duration: 210, easing: Easing.out(Easing.quad) }),
+      withTiming(5, { duration: 250, easing: Easing.in(Easing.quad) })
     );
 
-    // Fish arc
+    // --- Landing water droplets (fish re-enters) ---
+    const landTime = jumpDuration + jumpDuration * 0.6;
+    landOp.value = withDelay(
+      landTime,
+      withSequence(
+        withTiming(0.85, { duration: 50 }),
+        withDelay(320, withTiming(0, { duration: 150 }))
+      )
+    );
+    land1Y.value = 0;
+    land1Y.value = withDelay(
+      landTime,
+      withSequence(
+        withTiming(-11, { duration: 180, easing: Easing.out(Easing.quad) }),
+        withTiming(5, { duration: 220, easing: Easing.in(Easing.quad) })
+      )
+    );
+    land2Y.value = 0;
+    land2Y.value = withDelay(
+      landTime,
+      withSequence(
+        withTiming(-16, { duration: 200, easing: Easing.out(Easing.quad) }),
+        withTiming(5, { duration: 240, easing: Easing.in(Easing.quad) })
+      )
+    );
+    land3Y.value = 0;
+    land3Y.value = withDelay(
+      landTime,
+      withSequence(
+        withTiming(-8, { duration: 160, easing: Easing.out(Easing.quad) }),
+        withTiming(5, { duration: 200, easing: Easing.in(Easing.quad) })
+      )
+    );
+
+    // --- Fish arc ---
     fishOpacity.value = withSequence(
       withTiming(1, { duration: 80 }),
       withDelay(jumpDuration * 1.6, withTiming(0, { duration: 80 }))
@@ -248,50 +318,63 @@ function JumpingFish() {
     ],
   }));
 
-  const splashStyle = useAnimatedStyle(() => ({
-    opacity: splashOpacity.value,
-    transform: [{ translateX: fishX.value - 3 }],
+  // Entry droplet animated styles
+  const entryDrop1Style = useAnimatedStyle(() => ({
+    opacity: entryOp.value,
+    transform: [{ translateX: fishX.value - 5 }, { translateY: entry1Y.value }],
+  }));
+  const entryDrop2Style = useAnimatedStyle(() => ({
+    opacity: entryOp.value,
+    transform: [{ translateX: fishX.value + 3 }, { translateY: entry2Y.value }],
+  }));
+  const entryDrop3Style = useAnimatedStyle(() => ({
+    opacity: entryOp.value,
+    transform: [{ translateX: fishX.value + 10 }, { translateY: entry3Y.value }],
+  }));
+  const entryDrop4Style = useAnimatedStyle(() => ({
+    opacity: entryOp.value,
+    transform: [{ translateX: fishX.value - 9 }, { translateY: entry4Y.value }],
+  }));
+
+  // Landing droplet animated styles
+  const landDrop1Style = useAnimatedStyle(() => ({
+    opacity: landOp.value,
+    transform: [{ translateX: fishX.value - 6 }, { translateY: land1Y.value }],
+  }));
+  const landDrop2Style = useAnimatedStyle(() => ({
+    opacity: landOp.value,
+    transform: [{ translateX: fishX.value + 4 }, { translateY: land2Y.value }],
+  }));
+  const landDrop3Style = useAnimatedStyle(() => ({
+    opacity: landOp.value,
+    transform: [{ translateX: fishX.value + 11 }, { translateY: land3Y.value }],
   }));
 
   return (
     <>
-      {/* Splash dots */}
-      <Animated.View
-        style={[
-          {
-            position: "absolute",
-            bottom: 8,
-            left: 0,
-            flexDirection: "row",
-            gap: 3,
-          },
-          splashStyle,
-        ]}
-      >
-        <View
-          style={{
-            width: 2,
-            height: 2,
-            backgroundColor: "#A0C8E8",
-            borderRadius: 1,
-          }}
-        />
-        <View
-          style={{
-            width: 3,
-            height: 3,
-            backgroundColor: "#B0D4F0",
-            borderRadius: 1.5,
-          }}
-        />
-        <View
-          style={{
-            width: 2,
-            height: 2,
-            backgroundColor: "#A0C8E8",
-            borderRadius: 1,
-          }}
-        />
+      {/* Entry water droplets */}
+      <Animated.View style={[{ position: "absolute", bottom: 8, left: 0 }, entryDrop1Style]}>
+        <View style={{ width: 3, height: 3, backgroundColor: "#A0C8E8", borderRadius: 1.5 }} />
+      </Animated.View>
+      <Animated.View style={[{ position: "absolute", bottom: 8, left: 0 }, entryDrop2Style]}>
+        <View style={{ width: 2.5, height: 2.5, backgroundColor: "#B0D4F0", borderRadius: 1.25 }} />
+      </Animated.View>
+      <Animated.View style={[{ position: "absolute", bottom: 8, left: 0 }, entryDrop3Style]}>
+        <View style={{ width: 2, height: 2, backgroundColor: "#90B8D8", borderRadius: 1 }} />
+      </Animated.View>
+      <Animated.View style={[{ position: "absolute", bottom: 8, left: 0 }, entryDrop4Style]}>
+        <View style={{ width: 2.5, height: 2.5, backgroundColor: "#A0C8E8", borderRadius: 1.25 }} />
+      </Animated.View>
+
+      {/* Landing water droplets */}
+      <Animated.View style={[{ position: "absolute", bottom: 8, left: 0 }, landDrop1Style]}>
+        <View style={{ width: 2.5, height: 2.5, backgroundColor: "#A0C8E8", borderRadius: 1.25 }} />
+      </Animated.View>
+      <Animated.View style={[{ position: "absolute", bottom: 8, left: 0 }, landDrop2Style]}>
+        <View style={{ width: 3, height: 3, backgroundColor: "#B0D4F0", borderRadius: 1.5 }} />
+      </Animated.View>
+      <Animated.View style={[{ position: "absolute", bottom: 8, left: 0 }, landDrop3Style]}>
+        <View style={{ width: 2, height: 2, backgroundColor: "#90B8D8", borderRadius: 1 }} />
       </Animated.View>
 
       {/* Fish body */}
@@ -307,7 +390,7 @@ function JumpingFish() {
           fishStyle,
         ]}
       >
-        {/* Body - simple triangle shape */}
+        {/* Body */}
         <View
           style={{
             width: 8,
