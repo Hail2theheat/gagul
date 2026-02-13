@@ -328,7 +328,7 @@ export default function CreateCharacterScreen() {
           accessibilityLabel="Go back"
         >
           <PixelArrowBack size={20} />
-          <Text style={{ color: TEXT, marginLeft: 8, fontFamily: "Nunito_600SemiBold" }}>Back</Text>
+          <Text style={{ color: TEXT, marginLeft: 8, fontFamily: "Retro" }}>Back</Text>
         </Pressable>
       )}
 

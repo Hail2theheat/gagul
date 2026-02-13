@@ -108,37 +108,37 @@ export const Radii = {
 // ===== TYPOGRAPHY PRESETS =====
 export const Typography = {
   heading1: {
-    fontFamily: 'Nunito_900Black',
+    fontFamily: 'Retro',
     fontSize: 28,
     letterSpacing: 0.5,
   } as TextStyle,
   heading2: {
-    fontFamily: 'Nunito_800ExtraBold',
+    fontFamily: 'Retro',
     fontSize: 20,
   } as TextStyle,
   heading3: {
-    fontFamily: 'Nunito_700Bold',
+    fontFamily: 'Retro',
     fontSize: 16,
   } as TextStyle,
   body: {
-    fontFamily: 'Nunito_400Regular',
+    fontFamily: 'Retro',
     fontSize: 16,
   } as TextStyle,
   bodyBold: {
-    fontFamily: 'Nunito_700Bold',
+    fontFamily: 'Retro',
     fontSize: 16,
   } as TextStyle,
   caption: {
-    fontFamily: 'Nunito_400Regular',
+    fontFamily: 'Retro',
     fontSize: 12,
   } as TextStyle,
   button: {
-    fontFamily: 'Nunito_800ExtraBold',
+    fontFamily: 'Retro',
     fontSize: 16,
     letterSpacing: 0.5,
   } as TextStyle,
   tab: {
-    fontFamily: 'Nunito_700Bold',
+    fontFamily: 'Retro',
     fontSize: 11,
   } as TextStyle,
 } as const;

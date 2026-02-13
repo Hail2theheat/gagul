@@ -10,6 +10,8 @@ export type GroupRow = {
   code?: string;
   created_at?: string;
   current_streak?: number;
+  member_count?: number;
+  member_avatars?: any[];
 };
 
 async function fetchMyGroups(): Promise<GroupRow[]> {
@@ -36,7 +38,38 @@ async function fetchMyGroups(): Promise<GroupRow[]> {
     .order('created_at', { ascending: false });
 
   if (gErr) throw gErr;
-  return (gs ?? []) as GroupRow[];
+  const groups = (gs ?? []) as GroupRow[];
+
+  // Fetch member counts and first 4 avatars per group
+  await Promise.all(
+    groups.map(async (group) => {
+      // Get member count
+      const { count } = await supabase
+        .from('group_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('group_id', group.id);
+      group.member_count = count ?? 0;
+
+      // Get first 4 member avatar configs
+      const { data: members } = await supabase
+        .from('group_members')
+        .select('user_id')
+        .eq('group_id', group.id)
+        .limit(4);
+
+      if (members && members.length > 0) {
+        const userIds = members.map((m: any) => m.user_id);
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, avatar_config')
+          .in('id', userIds);
+
+        group.member_avatars = (profiles ?? []).map((p: any) => p.avatar_config).filter(Boolean);
+      }
+    })
+  );
+
+  return groups;
 }
 
 export function useMyGroups() {

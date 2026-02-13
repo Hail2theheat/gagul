@@ -302,7 +302,7 @@ function PixelStump({ size = 50, label, onPress, icon }: { size?: number; label?
             <Text style={{
               color: "#3D1A00",
               fontSize: size * 0.30,
-              fontFamily: "Nunito_800ExtraBold",
+              fontFamily: "Retro",
               textShadowColor: "rgba(255, 245, 220, 0.9)",
               textShadowOffset: { width: 0, height: 0 },
               textShadowRadius: 3,
@@ -551,7 +551,7 @@ export default function HomeGroupsScreen() {
                               alignItems: "center",
                               justifyContent: "center",
                             }}>
-                              <Text style={{ color: MUTED, fontSize: 8, fontFamily: "Nunito_700Bold" }}>
+                              <Text style={{ color: MUTED, fontSize: 8, fontFamily: "Retro" }}>
                                 +{memberCount - 4}
                               </Text>
                             </View>

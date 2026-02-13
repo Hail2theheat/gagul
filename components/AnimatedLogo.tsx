@@ -502,7 +502,7 @@ const styles = StyleSheet.create({
     position: "absolute",
   },
   title: {
-    fontFamily: "Nunito_900Black",
+    fontFamily: "Retro",
     color: "#FFF8DC",
     textShadowOffset: { width: 0, height: 0 },
   },

@@ -115,7 +115,7 @@ export default function TabLayout() {
         tabBarInactiveTintColor: "#6B6058",
         tabBarLabelStyle: {
           fontSize: 11,
-          fontFamily: "Nunito_700Bold",
+          fontFamily: "Retro",
         },
       }}
     >

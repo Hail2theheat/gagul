@@ -126,7 +126,7 @@ function DancingMember({
         style={{
           color: TEXT_COLOR,
           fontSize: 11,
-          fontFamily: "Nunito_700Bold",
+          fontFamily: "Retro",
           textAlign: "center",
           marginTop: 2,
           maxWidth: 70,
@@ -292,7 +292,7 @@ export function MembersCircleModal({
             style={{
               color: TEXT_COLOR,
               fontSize: 22,
-              fontFamily: "Nunito_900Black",
+              fontFamily: "Retro",
             }}
           >
             Your Circle
@@ -309,7 +309,7 @@ export function MembersCircleModal({
               style={{
                 color: TEXT_COLOR,
                 fontSize: 18,
-                fontFamily: "Nunito_700Bold",
+                fontFamily: "Retro",
               }}
             >
               X
@@ -322,7 +322,7 @@ export function MembersCircleModal({
           style={{
             color: MUTED,
             fontSize: 13,
-            fontFamily: "Nunito_600SemiBold",
+            fontFamily: "Retro",
             textAlign: "center",
             marginBottom: 8,
           }}
