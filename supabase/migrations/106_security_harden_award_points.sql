@@ -9,6 +9,15 @@
 -- ============================================================
 -- Prevents the same user from getting points twice for the same event+reference.
 -- reference_id is nullable, so we use COALESCE to handle NULL values in the unique index.
+-- First, deduplicate existing rows keeping the earliest entry per (user, event_type, reference).
+DELETE FROM point_events
+WHERE id NOT IN (
+  SELECT DISTINCT ON (user_id, event_type, COALESCE(reference_id, '00000000-0000-0000-0000-000000000000'::uuid))
+    id
+  FROM point_events
+  ORDER BY user_id, event_type, COALESCE(reference_id, '00000000-0000-0000-0000-000000000000'::uuid), created_at ASC
+);
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_point_events_idempotent
   ON point_events (user_id, event_type, COALESCE(reference_id, '00000000-0000-0000-0000-000000000000'::uuid));
 

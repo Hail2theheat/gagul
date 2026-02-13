@@ -58,6 +58,7 @@ DROP POLICY IF EXISTS "Authenticated users can read uploads" ON storage.objects;
 
 -- Users can upload to their own folder: uploads/{user_id}/*
 -- Also allow telephone/* folder (used for telephone game drawings)
+DROP POLICY IF EXISTS "Users upload to own folder" ON storage.objects;
 CREATE POLICY "Users upload to own folder" ON storage.objects
 FOR INSERT
 TO authenticated
@@ -73,12 +74,14 @@ WITH CHECK (
 
 -- Authenticated users can read all uploads in their groups' context
 -- (Keeping broad read access since responses/photos need to be visible to group members)
+DROP POLICY IF EXISTS "Authenticated users can read uploads" ON storage.objects;
 CREATE POLICY "Authenticated users can read uploads" ON storage.objects
 FOR SELECT
 TO authenticated
 USING (bucket_id = 'uploads');
 
 -- Users can update their own uploads
+DROP POLICY IF EXISTS "Users can update own uploads" ON storage.objects;
 CREATE POLICY "Users can update own uploads" ON storage.objects
 FOR UPDATE
 TO authenticated
@@ -88,6 +91,7 @@ USING (
 );
 
 -- Users can delete their own uploads
+DROP POLICY IF EXISTS "Users can delete own uploads" ON storage.objects;
 CREATE POLICY "Users can delete own uploads" ON storage.objects
 FOR DELETE
 TO authenticated
