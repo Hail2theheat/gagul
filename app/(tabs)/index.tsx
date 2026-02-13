@@ -1,6 +1,6 @@
 // app/(tabs)/index.tsx
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   Alert,
   Pressable,
@@ -13,56 +13,35 @@ import {
   Share,
   RefreshControl,
 } from "react-native";
-import Animated, { FadeInDown, FadeIn, SlideInUp, SlideOutDown } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeIn, SlideInUp, SlideOutDown, useSharedValue, useAnimatedStyle, withTiming } from "react-native-reanimated";
 import * as Clipboard from "expo-clipboard";
 
 import { useMyGroups, useCreateGroup, useJoinGroup, GroupRow } from "../../lib/hooks/useMyGroups";
 import { DetailedCampfire, SmallFireIcon } from "../../components/PixelArt";
+import { PixelCharacter, DEFAULT_CHARACTER } from "../../components/PixelCharacter";
+import { PixelLake } from "../../components/PixelLake";
 import { NightSky, ForestGround } from "../../components/sky";
 import { CampfireColors, Spacing, Radii, Typography, Shadows } from "../../constants/theme";
 import { Stagger } from "../../constants/animations";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
+function relativeTime(dateStr?: string): string {
+  if (!dateStr) return "";
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return "yesterday";
+  if (days < 7) return `${days}d ago`;
+  return `${Math.floor(days / 7)}w ago`;
+}
+
 // Use centralized colors
 const { TEXT, TEXT_WARM, MUTED, BTN_PRIMARY: BTN, BTN_HOVER, BTN_OUTLINE, CARD, CARD_BORDER } = CampfireColors;
-
-// Cute pixel tent icon (for circle cards)
-function PixelTentIcon({ size = 24 }: { size?: number }) {
-  return (
-    <View style={{ width: size, height: size * 0.8, alignItems: "center", justifyContent: "flex-end" }}>
-      <View style={{
-        width: 0, height: 0,
-        borderLeftWidth: size * 0.5,
-        borderRightWidth: size * 0.5,
-        borderBottomWidth: size * 0.7,
-        borderLeftColor: "transparent",
-        borderRightColor: "transparent",
-        borderBottomColor: "#C4956A",
-      }}>
-        <View style={{
-          position: "absolute",
-          bottom: -size * 0.7,
-          left: -size * 0.15,
-          width: size * 0.3,
-          height: size * 0.4,
-          backgroundColor: "#8B6B4A",
-          borderTopLeftRadius: size * 0.15,
-          borderTopRightRadius: size * 0.15,
-        }} />
-        <View style={{
-          position: "absolute",
-          top: -size * 0.1,
-          left: -size * 0.08,
-          width: size * 0.16,
-          height: size * 0.12,
-          backgroundColor: "#FF6B35",
-          borderRadius: 1,
-        }} />
-      </View>
-    </View>
-  );
-}
 
 // Cute sparkle star icon (for create button)
 function PixelSparkle({ size = 16 }: { size?: number }) {
@@ -283,8 +262,22 @@ function PixelStump({ size = 50, label, onPress, icon }: { size?: number; label?
   const w = size * 1.3;
   const topH = size * 0.38;
   const barkH = size * 0.5;
+  const pressScale = useSharedValue(1);
+
+  const animatedPressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }));
+
   const content = (
-    <View style={{ alignItems: "center", width: w + 10 }}>
+    <Animated.View style={[{ alignItems: "center", width: w + 10 }, onPress ? animatedPressStyle : undefined]}>
+      {/* Warm glow under stump */}
+      <View style={{
+        position: "absolute", bottom: -4, left: "50%", marginLeft: -(w * 0.6),
+        width: w * 1.2, height: size * 0.18,
+        borderRadius: w * 0.6,
+        backgroundColor: "#FF6B35",
+        opacity: 0.15,
+      }} />
       <View style={{
         width: w, height: topH,
         borderRadius: w / 2,
@@ -307,11 +300,11 @@ function PixelStump({ size = 50, label, onPress, icon }: { size?: number; label?
             {icon}
             <Text style={{
               color: "#3D1A00",
-              fontSize: size * 0.26,
+              fontSize: size * 0.30,
               fontFamily: "Nunito_800ExtraBold",
-              textShadowColor: "rgba(220, 180, 80, 0.7)",
-              textShadowOffset: { width: 0, height: 1 },
-              textShadowRadius: 2,
+              textShadowColor: "rgba(255, 245, 220, 0.9)",
+              textShadowOffset: { width: 0, height: 0 },
+              textShadowRadius: 3,
             }}>{label}</Text>
           </View>
         )}
@@ -338,9 +331,20 @@ function PixelStump({ size = 50, label, onPress, icon }: { size?: number; label?
         <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: barkH * 0.3, backgroundColor: "rgba(20, 10, 0, 0.25)", borderBottomLeftRadius: size * 0.15, borderBottomRightRadius: size * 0.15 }} />
       </View>
       <View style={{ width: w * 1.08, height: size * 0.08, borderRadius: w / 2, backgroundColor: "rgba(20, 10, 0, 0.4)", marginTop: -2, zIndex: 0 }} />
-    </View>
+    </Animated.View>
   );
-  if (onPress) return <Pressable onPress={onPress} style={{ alignItems: "center" }} accessibilityRole="button" accessibilityLabel={label}>{content}</Pressable>;
+  if (onPress) return (
+    <Pressable
+      onPressIn={() => { pressScale.value = withTiming(0.95, { duration: 80 }); }}
+      onPressOut={() => { pressScale.value = withTiming(1, { duration: 120 }); }}
+      onPress={onPress}
+      style={{ alignItems: "center" }}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      {content}
+    </Pressable>
+  );
   return content;
 }
 
@@ -435,6 +439,11 @@ export default function HomeGroupsScreen() {
       {/* Shared forest ground: mountains + trees + ground + wildflowers */}
       <ForestGround showMountains showWildflowers showForest />
 
+      {/* Pixel lake - left of campfire */}
+      <View style={{ position: "absolute", bottom: 38, left: SCREEN_WIDTH / 2 - 170, zIndex: 1 }}>
+        <PixelLake />
+      </View>
+
       {/* Campfire warm ground glow */}
       <View style={{
         position: "absolute", bottom: 10,
@@ -460,20 +469,6 @@ export default function HomeGroupsScreen() {
         <DetailedCampfire size={120} />
       </View>
 
-      {/* Decorative stumps */}
-      <View style={{ position: "absolute", bottom: 18, left: SCREEN_WIDTH / 2 - 120, zIndex: 4 }}>
-        <PixelStump size={22} />
-      </View>
-      <View style={{ position: "absolute", bottom: 18, left: SCREEN_WIDTH / 2 + 100, zIndex: 4 }}>
-        <PixelStump size={20} />
-      </View>
-      <View style={{ position: "absolute", bottom: 55, left: SCREEN_WIDTH / 2 - 55, zIndex: 4 }}>
-        <PixelStump size={18} />
-      </View>
-      <View style={{ position: "absolute", bottom: 55, left: SCREEN_WIDTH / 2 + 40, zIndex: 4 }}>
-        <PixelStump size={18} />
-      </View>
-
       {/* ===== MAIN SCROLLVIEW ===== */}
       <ScrollView
         style={{ flex: 1, zIndex: 10 }}
@@ -497,34 +492,84 @@ export default function HomeGroupsScreen() {
         </Text>
 
         {/* Group cards */}
-        {groups.map((g, index) => (
-          <Animated.View key={g.id} entering={FadeInDown.delay(index * Stagger.CARD).duration(400).springify().damping(18)}>
-            <Pressable onPress={() => openGroup(g.id)} disabled={loading} accessibilityRole="button" accessibilityLabel={`Open group ${g.name}`}>
-              <Card>
-                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <PixelTentIcon size={28} />
-                  <View style={{ width: 12 }} />
-                  <View style={{ flex: 1 }}>
-                    <View style={{ flexDirection: "row", alignItems: "center" }}>
-                      <Text style={{ color: TEXT_WARM, ...Typography.heading2, fontSize: 18 }}>
-                        {g.name ?? "(untitled)"}
+        {groups.map((g, index) => {
+          const hasStreak = (g.current_streak ?? 0) > 0;
+          const memberCount = g.member_count ?? 0;
+          const avatars = g.member_avatars ?? [];
+          const lastActive = relativeTime(g.created_at);
+
+          return (
+            <Animated.View key={g.id} entering={FadeInDown.delay(index * Stagger.CARD).duration(400).springify().damping(18)}>
+              <Pressable onPress={() => openGroup(g.id)} disabled={loading} accessibilityRole="button" accessibilityLabel={`Open group ${g.name}`}>
+                <View style={{
+                  backgroundColor: CARD,
+                  borderColor: hasStreak ? "rgba(255, 107, 53, 0.3)" : CARD_BORDER,
+                  borderWidth: 1,
+                  borderRadius: Radii.card,
+                  padding: 0,
+                  marginBottom: 14,
+                  overflow: "hidden",
+                  ...(hasStreak ? Shadows.cardGlow : {}),
+                }}>
+                  <View style={{ flexDirection: "row" }}>
+                    {/* Warm left-edge accent */}
+                    <View style={{
+                      width: 3,
+                      backgroundColor: hasStreak ? CampfireColors.FIRE_ORANGE : "rgba(255, 107, 53, 0.4)",
+                      borderTopLeftRadius: Radii.card,
+                      borderBottomLeftRadius: Radii.card,
+                    }} />
+
+                    <View style={{ flex: 1, padding: Spacing.lg }}>
+                      {/* Name row + streak */}
+                      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                        <Text style={{ color: TEXT_WARM, ...Typography.heading2, fontSize: 18, flex: 1 }} numberOfLines={1}>
+                          {g.name ?? "(untitled)"}
+                        </Text>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                          {hasStreak && <FireStreakBadge streak={g.current_streak ?? 0} />}
+                          <PixelArrow size={14} />
+                        </View>
+                      </View>
+
+                      {/* Subtitle: member count + last active */}
+                      <Text style={{ color: MUTED, ...Typography.caption, marginTop: 4 }}>
+                        {memberCount > 0 ? `${memberCount} member${memberCount !== 1 ? "s" : ""}` : ""}
+                        {memberCount > 0 && lastActive ? " · " : ""}
+                        {lastActive ? `created ${lastActive}` : ""}
                       </Text>
-                      {(g.current_streak ?? 0) > 0 && (
-                        <View style={{ marginLeft: 8 }}>
-                          <FireStreakBadge streak={g.current_streak ?? 0} />
+
+                      {/* Mini avatar row */}
+                      {avatars.length > 0 && (
+                        <View style={{ flexDirection: "row", marginTop: 8 }}>
+                          {avatars.slice(0, 4).map((avatar: any, i: number) => (
+                            <View key={i} style={{ marginLeft: i > 0 ? -6 : 0, zIndex: 4 - i }}>
+                              <PixelCharacter config={avatar ?? DEFAULT_CHARACTER} size={18} />
+                            </View>
+                          ))}
+                          {memberCount > 4 && (
+                            <View style={{
+                              marginLeft: -4,
+                              width: 18, height: 18,
+                              borderRadius: 9,
+                              backgroundColor: "rgba(255, 255, 255, 0.1)",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}>
+                              <Text style={{ color: MUTED, fontSize: 8, fontFamily: "Nunito_700Bold" }}>
+                                +{memberCount - 4}
+                              </Text>
+                            </View>
+                          )}
                         </View>
                       )}
                     </View>
-                    <Text style={{ color: MUTED, ...Typography.caption, marginTop: 3 }}>
-                      Tap to enter
-                    </Text>
                   </View>
-                  <PixelArrow size={16} />
                 </View>
-              </Card>
-            </Pressable>
-          </Animated.View>
-        ))}
+              </Pressable>
+            </Animated.View>
+          );
+        })}
 
         {/* Empty state */}
         {groups.length === 0 && !loading && (
