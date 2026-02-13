@@ -5,7 +5,8 @@ import { Alert, ScrollView, Text, View, Pressable, RefreshControl, Animated, Dim
 import * as Clipboard from "expo-clipboard";
 
 import { supabase } from "../../../lib/supabase";
-import { PromptCard } from "../../../components/prompts";
+import { PromptCard, PromptRating } from "../../../components/prompts";
+import { recordPromptView, getMemberPromptStatuses } from "../../../lib/services/promptService";
 import { QuiplashCard } from "../../../components/prompts/QuiplashCard";
 import { QuiplashVotingCard } from "../../../components/prompts/QuiplashVotingCard";
 import { TelephoneCard } from "../../../components/prompts/TelephoneCard";
@@ -35,7 +36,7 @@ function FireText({ children, style }: { children: React.ReactNode; style?: any 
       <Text style={{
         color: "transparent",
         fontSize: 28,
-        fontWeight: "900",
+        fontFamily: "Nunito_900Black",
         textShadowColor: "#F59E0B",
         textShadowOffset: { width: 0, height: 0 },
         textShadowRadius: 20,
@@ -47,7 +48,7 @@ function FireText({ children, style }: { children: React.ReactNode; style?: any 
       <Text style={{
         color: "transparent",
         fontSize: 28,
-        fontWeight: "900",
+        fontFamily: "Nunito_900Black",
         textShadowColor: "#FCD34D",
         textShadowOffset: { width: 0, height: 0 },
         textShadowRadius: 10,
@@ -59,7 +60,7 @@ function FireText({ children, style }: { children: React.ReactNode; style?: any 
       <Text style={{
         color: "#FEF3C7",
         fontSize: 28,
-        fontWeight: "900",
+        fontFamily: "Nunito_900Black",
       }}>
         {children}
       </Text>
@@ -664,12 +665,8 @@ function FallingLog({ finalX, delay, finalRotation, onLanded }: { finalX: number
       position: 'absolute',
       top: 0,
       left: 0,
-      width: 22,
-      height: 11,
-      backgroundColor: '#5D3A1A',
-      borderRadius: 5,
-      borderWidth: 1,
-      borderColor: '#3D2510',
+      width: 28,
+      height: 14,
       zIndex: 90,
       transform: [
         { translateX: horizontalAnim },
@@ -677,9 +674,43 @@ function FallingLog({ finalX, delay, finalRotation, onLanded }: { finalX: number
         { rotate: rotateInterpolate },
       ],
     }}>
-      {/* Wood grain */}
-      <View style={{ position: 'absolute', top: 2, left: 3, width: 5, height: 3, backgroundColor: '#4A2E15', borderRadius: 1 }} />
-      <View style={{ position: 'absolute', top: 5, left: 11, width: 4, height: 2, backgroundColor: '#4A2E15', borderRadius: 1 }} />
+      {/* Main log body - cylinder */}
+      <View style={{
+        position: 'absolute',
+        top: 1,
+        left: 0,
+        width: 22,
+        height: 12,
+        backgroundColor: '#5D3A1A',
+        borderRadius: 3,
+        borderWidth: 1,
+        borderColor: '#3D2510',
+      }}>
+        {/* Top highlight for 3D effect */}
+        <View style={{ position: 'absolute', top: 1, left: 2, right: 2, height: 3, backgroundColor: '#7A4D2A', borderRadius: 2, opacity: 0.6 }} />
+        {/* Bottom shadow for 3D effect */}
+        <View style={{ position: 'absolute', bottom: 1, left: 2, right: 2, height: 2, backgroundColor: '#3D2510', borderRadius: 1, opacity: 0.5 }} />
+        {/* Wood grain lines */}
+        <View style={{ position: 'absolute', top: 5, left: 4, width: 6, height: 1, backgroundColor: '#4A2E15', borderRadius: 1 }} />
+        <View style={{ position: 'absolute', top: 7, left: 10, width: 5, height: 1, backgroundColor: '#4A2E15', borderRadius: 1 }} />
+      </View>
+      {/* Circular end cap - smaller */}
+      <View style={{
+        position: 'absolute',
+        top: 1,
+        right: 1,
+        width: 10,
+        height: 10,
+        backgroundColor: '#C4A574',
+        borderRadius: 5,
+        borderWidth: 1,
+        borderColor: '#8B7355',
+      }}>
+        {/* Tree rings */}
+        <View style={{ position: 'absolute', top: 2, left: 2, width: 6, height: 6, borderRadius: 3, borderWidth: 1, borderColor: '#A08060', backgroundColor: 'transparent' }} />
+        {/* Center dot */}
+        <View style={{ position: 'absolute', top: 3.5, left: 3.5, width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#6B5040' }} />
+      </View>
     </Animated.View>
   );
 }
@@ -894,7 +925,7 @@ function Button({
         opacity: disabled ? 0.5 : 1,
       }}
     >
-      <Text style={{ color: TEXT, textAlign: "center", fontWeight: "800", fontSize: 16 }}>
+      <Text style={{ color: TEXT, textAlign: "center", fontFamily: "Nunito_800ExtraBold", fontSize: 16 }}>
         {title}
       </Text>
     </Pressable>
@@ -904,7 +935,7 @@ function Button({
 // Sunday state types
 type SundayState = 'not-sunday' | 'pre-fireside' | 'during-fireside' | 'post-fireside';
 
-// Get Sunday state based on current time (Fireside only on Sundays 9PM-3AM EST)
+// Get Sunday state based on current time (Fireside only on Sundays 8PM-3AM EST)
 function getSundayState(): SundayState {
   const now = new Date();
 
@@ -916,36 +947,45 @@ function getSundayState(): SundayState {
   const day = estTime.getDay(); // 0 = Sunday, 1 = Monday
   const hour = estTime.getHours();
 
-  // Sunday before 9 PM EST: pre-fireside
-  if (day === 0 && hour < 21) return 'pre-fireside';
+  // Sunday before 8 PM EST: pre-fireside
+  if (day === 0 && hour < 20) return 'pre-fireside';
 
-  // Sunday 9 PM onwards OR Monday before 3 AM: during-fireside
-  if (day === 0 && hour >= 21) return 'during-fireside';
+  // Sunday 8 PM onwards OR Monday before 3 AM: during-fireside
+  if (day === 0 && hour >= 20) return 'during-fireside';
   if (day === 1 && hour < 3) return 'during-fireside';
 
-  // Monday 3 AM to end of day: post-fireside
-  if (day === 1 && hour >= 3) return 'post-fireside';
-
+  // All other times (including Monday after 3am): not-sunday
+  // This will show "Dude, relax" before prompt time or "Nothing here" after
   return 'not-sunday';
 }
 
-// Check if fireside should be visible (Sunday 9 PM EST to Monday 3 AM EST)
+// Check if fireside should be visible (Sunday 8 PM EST to Monday 3 AM EST)
 function isFiresideTime(): boolean {
   return getSundayState() === 'during-fireside';
 }
 
+// Check if it's before the daily prompt time (3pm EST = 15:00 EST = 20:00 UTC)
+function isBeforePromptTime(): boolean {
+  const now = new Date();
+  const estOffset = -5 * 60;
+  const localOffset = now.getTimezoneOffset();
+  const estTime = new Date(now.getTime() + (localOffset + estOffset) * 60 * 1000);
+  const hour = estTime.getHours();
+  return hour < 15; // Before 3pm EST
+}
+
 // Get fireside time in user's local timezone
 function getFiresideLocalTime(): string {
-  // Fireside is 9 PM EST - convert to local time
+  // Fireside is 8 PM EST - convert to local time
   const now = new Date();
   const estOffset = -5 * 60; // EST is UTC-5 in minutes
 
-  // Create a date for 9 PM EST today (or next Sunday)
-  const estNine = new Date();
-  estNine.setUTCHours(21 + 5, 0, 0, 0); // 9 PM EST = 2 AM UTC next day, but we want same day
+  // Create a date for 8 PM EST today (or next Sunday)
+  const estEight = new Date();
+  estEight.setUTCHours(20 + 5, 0, 0, 0); // 8 PM EST = 1 AM UTC next day
 
   // Format in user's local time
-  return estNine.toLocaleTimeString('en-US', {
+  return estEight.toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true
@@ -1131,7 +1171,7 @@ export default function GroupScreen() {
   const raw = (params as any)?.id ?? (params as any)?.Id;
   const groupId = typeof raw === "string" ? raw : undefined;
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [status, setStatus] = useState<GroupStatus | null>(null);
   const [groupName, setGroupName] = useState<string | null>(null);
@@ -1142,11 +1182,13 @@ export default function GroupScreen() {
   const [userStreak, setUserStreak] = useState<number>(0);
   const [myAvatar, setMyAvatar] = useState<CharacterConfig | null>(null);
   const [allMembers, setAllMembers] = useState<Array<{ user_id: string; avatar_config: CharacterConfig | null }>>([]);
+  const [memberStatuses, setMemberStatuses] = useState<Record<string, 'not_seen' | 'seen' | 'responded'>>({});
   const [quiplashAssignment, setQuiplashAssignment] = useState<QuiplashAssignment | null>(null);
   const [pendingQuiplashVotes, setPendingQuiplashVotes] = useState<QuiplashMatchup[]>([]);
   const [telephoneAssignment, setTelephoneAssignment] = useState<TelephoneAssignment | null>(null);
   const [showFireside, setShowFireside] = useState(isFiresideTime());
   const [sundayState, setSundayState] = useState<SundayState>(getSundayState());
+  const [respondedPromptId, setRespondedPromptId] = useState<string | null>(null);
 
   // Presence state - other users on this screen
   const [otherUsers, setOtherUsers] = useState<UserPresence[]>([]);
@@ -1277,7 +1319,26 @@ export default function GroupScreen() {
       // Load regular prompt status
       const { data, error } = await supabase.rpc("get_group_status", { p_group_id: groupId });
       if (error) throw error;
-      setStatus(data as GroupStatus);
+      const groupStatus = data as GroupStatus;
+      setStatus(groupStatus);
+
+      // Store prompt_id for rating (even if user has responded)
+      if (groupStatus?.active_prompt_instance?.prompts?.id) {
+        setRespondedPromptId(groupStatus.active_prompt_instance.prompts.id);
+      }
+
+      // Record that this user has seen the active prompt (await so status query reflects it)
+      if (groupStatus?.active_prompt_instance?.id) {
+        await recordPromptView(groupStatus.active_prompt_instance.id);
+      }
+
+      // Fetch member prompt statuses (for status dots)
+      const statuses = await getMemberPromptStatuses(groupId);
+      const statusMap: Record<string, 'not_seen' | 'seen' | 'responded'> = {};
+      for (const s of statuses) {
+        statusMap[s.user_id] = s.status;
+      }
+      setMemberStatuses(statusMap);
 
       // Load quiplash assignment (for submitting)
       const quiplash = await getMyQuiplash(groupId);
@@ -1432,7 +1493,7 @@ export default function GroupScreen() {
               // Verify the delete actually happened
               const { data: verifyData } = await supabase
                 .from("group_members")
-                .select("id")
+                .select("group_id,user_id")
                 .eq("group_id", groupId)
                 .eq("user_id", userData.user.id)
                 .maybeSingle();
@@ -1487,11 +1548,20 @@ export default function GroupScreen() {
   if (!groupId) {
     return (
       <ScrollView style={{ flex: 1, backgroundColor: BG }} contentContainerStyle={{ padding: 18 }}>
-        <Text style={{ color: TEXT, fontSize: 18, fontWeight: "900" }}>
+        <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Nunito_900Black" }}>
           Missing group id. Go back and tap the group again.
         </Text>
         <Text style={{ color: MUTED, marginTop: 12 }}>Debug params: {JSON.stringify(params)}</Text>
       </ScrollView>
+    );
+  }
+
+  // Show simple loading screen while data loads
+  if (loading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: BG, alignItems: "center", justifyContent: "center" }}>
+        <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Nunito_700Bold" }}>Loading...</Text>
+      </View>
     );
   }
 
@@ -1537,7 +1607,7 @@ export default function GroupScreen() {
     return (
       <WeatherBackground>
         {/* Streak logs on grass */}
-        <StreakLogs streak={userStreak} />
+        <StreakLogs streak={groupStreak} />
         {/* Other users on this screen */}
         {otherUsers.map((user) => (
           <OtherUserCharacter key={user.userId} presence={user} />
@@ -1574,15 +1644,33 @@ export default function GroupScreen() {
                 <FireStreakBadge streak={groupStreak} />
               </View>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                {/* Show all member avatars */}
-                {allMembers.slice(0, 6).map((member, idx) => (
-                  <View key={member.user_id} style={{ marginLeft: idx > 0 ? -6 : 0, zIndex: allMembers.length - idx }}>
-                    <PixelCharacter
-                      config={member.avatar_config || DEFAULT_CHARACTER}
-                      size={22}
-                    />
-                  </View>
-                ))}
+                {/* Show all member avatars with status dots */}
+                {allMembers.slice(0, 6).map((member, idx) => {
+                  const promptStatus = memberStatuses[member.user_id];
+                  const dotColor = promptStatus === 'responded' ? '#4ADE80'
+                    : promptStatus === 'seen' ? '#60A5FA'
+                    : '#EF4444';
+                  return (
+                    <View key={member.user_id} style={{ marginLeft: idx > 0 ? -6 : 0, zIndex: allMembers.length - idx, alignItems: 'center' }}>
+                      <PixelCharacter
+                        config={member.avatar_config || DEFAULT_CHARACTER}
+                        size={22}
+                      />
+                      {Object.keys(memberStatuses).length > 0 && (
+                        <View style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: 4,
+                          backgroundColor: dotColor,
+                          marginTop: 1,
+                          zIndex: 999,
+                          borderWidth: 1,
+                          borderColor: BG,
+                        }} />
+                      )}
+                    </View>
+                  );
+                })}
                 {allMembers.length > 6 && (
                   <Text style={{ color: MUTED, fontSize: 11, marginLeft: 4 }}>
                     +{allMembers.length - 6}
@@ -1615,7 +1703,7 @@ export default function GroupScreen() {
             <Card>
               <View style={{ alignItems: "center", paddingVertical: 30 }}>
                 <DetailedCampfire size={80} showSmoke={false} />
-                <Text style={{ color: "#FFD93D", fontSize: 24, fontWeight: "900", marginTop: 16, textAlign: "center" }}>
+                <Text style={{ color: "#FFD93D", fontSize: 24, fontFamily: "Nunito_900Black", marginTop: 16, textAlign: "center" }}>
                   Fireside is tonight!
                 </Text>
                 <Text style={{ color: TEXT, fontSize: 18, marginTop: 12, textAlign: "center" }}>
@@ -1636,7 +1724,7 @@ export default function GroupScreen() {
             <Card>
               <View style={{ alignItems: "center", paddingVertical: 30 }}>
                 <Text style={{ fontSize: 48, marginBottom: 8 }}>🌙</Text>
-                <Text style={{ color: "#4ADE80", fontSize: 24, fontWeight: "900", textAlign: "center" }}>
+                <Text style={{ color: "#4ADE80", fontSize: 24, fontFamily: "Nunito_900Black", textAlign: "center" }}>
                   Great week!
                 </Text>
                 <Text style={{ color: TEXT, fontSize: 18, marginTop: 16, textAlign: "center" }}>
@@ -1659,17 +1747,37 @@ export default function GroupScreen() {
                       <View style={{ marginBottom: 8 }}>
                         <DetailedCampfire size={70} showSmoke={false} />
                       </View>
-                      <Text style={{ color: "#4ADE80", fontSize: 22, fontWeight: "900", marginTop: 8, textAlign: "center" }}>
+                      <Text style={{ color: "#4ADE80", fontSize: 22, fontFamily: "Nunito_900Black", marginTop: 8, textAlign: "center" }}>
                         Relax, you already submitted.
                       </Text>
                       <Text style={{ color: MUTED, fontSize: 16, marginTop: 8, textAlign: "center" }}>
                         Go call your mom.
                       </Text>
+                      {/* Rating for responded prompt */}
+                      {respondedPromptId && !hasRated && (
+                        <View style={{ marginTop: 16, width: '100%' }}>
+                          <PromptRating
+                            promptId={respondedPromptId}
+                            hasRated={hasRated}
+                            initialRating={userRating}
+                          />
+                        </View>
+                      )}
+                    </>
+                  ) : isBeforePromptTime() ? (
+                    <>
+                      <Text style={{ fontSize: 48, marginBottom: 8 }}>🧘</Text>
+                      <Text style={{ color: TEXT, fontSize: 22, fontFamily: "Nunito_900Black", marginTop: 8, textAlign: "center" }}>
+                        Dude, relax.
+                      </Text>
+                      <Text style={{ color: MUTED, fontSize: 16, marginTop: 8, textAlign: "center" }}>
+                        No prompts yet. Do 5 squats.
+                      </Text>
                     </>
                   ) : (
                     <>
                       <DetailedGrass size={60} variant={1} />
-                      <Text style={{ color: TEXT, fontSize: 22, fontWeight: "900", marginTop: 16, textAlign: "center" }}>
+                      <Text style={{ color: TEXT, fontSize: 22, fontFamily: "Nunito_900Black", marginTop: 16, textAlign: "center" }}>
                         Nothing here.
                       </Text>
                       <Text style={{ color: MUTED, fontSize: 16, marginTop: 8, textAlign: "center" }}>
@@ -1717,7 +1825,7 @@ export default function GroupScreen() {
             }}>
               {/* Header */}
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-                <Text style={{ color: TEXT, fontSize: 22, fontWeight: "900" }}>
+                <Text style={{ color: TEXT, fontSize: 22, fontFamily: "Nunito_900Black" }}>
                   Circle Settings
                 </Text>
                 <Pressable
@@ -1728,7 +1836,7 @@ export default function GroupScreen() {
                     borderRadius: 8,
                   }}
                 >
-                  <Text style={{ color: TEXT, fontSize: 18, fontWeight: "700" }}>X</Text>
+                  <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Nunito_700Bold" }}>X</Text>
                 </Pressable>
               </View>
 
@@ -1741,7 +1849,7 @@ export default function GroupScreen() {
                 padding: 16,
                 marginBottom: 16,
               }}>
-                <Text style={{ color: MUTED, fontSize: 12, fontWeight: "600", marginBottom: 8 }}>
+                <Text style={{ color: MUTED, fontSize: 12, fontFamily: "Nunito_600SemiBold", marginBottom: 8 }}>
                   INVITE CODE
                 </Text>
                 <View style={{
@@ -1757,7 +1865,6 @@ export default function GroupScreen() {
                   <Text style={{
                     color: TEXT,
                     fontSize: 28,
-                    fontWeight: "900",
                     letterSpacing: 4,
                     fontFamily: "monospace",
                   }}>
@@ -1783,7 +1890,7 @@ export default function GroupScreen() {
                     }}
                   >
                     <PixelCopyIcon size={16} />
-                    <Text style={{ color: TEXT, fontWeight: "700", fontSize: 14 }}>
+                    <Text style={{ color: TEXT, fontFamily: "Nunito_700Bold", fontSize: 14 }}>
                       {codeCopied ? "Copied!" : "Copy"}
                     </Text>
                   </Pressable>
@@ -1802,7 +1909,7 @@ export default function GroupScreen() {
                     }}
                   >
                     <PixelShareIcon size={16} />
-                    <Text style={{ color: TEXT, fontWeight: "700", fontSize: 14 }}>
+                    <Text style={{ color: TEXT, fontFamily: "Nunito_700Bold", fontSize: 14 }}>
                       Share
                     </Text>
                   </Pressable>
@@ -1821,8 +1928,8 @@ export default function GroupScreen() {
                 <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
                   <PixelPersonIcon size={20} />
                   <View style={{ marginLeft: 12 }}>
-                    <Text style={{ color: MUTED, fontSize: 11, fontWeight: "600" }}>MEMBERS</Text>
-                    <Text style={{ color: TEXT, fontSize: 18, fontWeight: "700" }}>
+                    <Text style={{ color: MUTED, fontSize: 11, fontFamily: "Nunito_600SemiBold" }}>MEMBERS</Text>
+                    <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Nunito_700Bold" }}>
                       {memberCount} {memberCount === 1 ? "person" : "people"}
                     </Text>
                   </View>
@@ -1831,8 +1938,8 @@ export default function GroupScreen() {
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
                   <PixelCalendarIcon size={20} />
                   <View style={{ marginLeft: 12 }}>
-                    <Text style={{ color: MUTED, fontSize: 11, fontWeight: "600" }}>STARTED</Text>
-                    <Text style={{ color: TEXT, fontSize: 18, fontWeight: "700" }}>
+                    <Text style={{ color: MUTED, fontSize: 11, fontFamily: "Nunito_600SemiBold" }}>STARTED</Text>
+                    <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Nunito_700Bold" }}>
                       {formatDate(groupCreatedAt)}
                     </Text>
                   </View>
@@ -1857,7 +1964,7 @@ export default function GroupScreen() {
                 }}
               >
                 <PixelDoorIcon size={20} />
-                <Text style={{ color: DANGER, fontWeight: "700", fontSize: 14 }}>
+                <Text style={{ color: DANGER, fontFamily: "Nunito_700Bold", fontSize: 14 }}>
                   {leaving ? "Leaving..." : "Leave Circle"}
                 </Text>
               </Pressable>
@@ -1871,7 +1978,7 @@ export default function GroupScreen() {
   return (
     <WeatherBackground>
       {/* Streak logs on grass */}
-      <StreakLogs streak={userStreak} />
+      <StreakLogs streak={groupStreak} />
       {/* Walking character */}
       <UserWalkingCharacter />
 
@@ -1942,7 +2049,7 @@ export default function GroupScreen() {
 
         {loading ? (
           <Card>
-            <Text style={{ color: TEXT, fontSize: 18, fontWeight: "700", textAlign: "center" }}>
+            <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Nunito_700Bold", textAlign: "center" }}>
               Loading...
             </Text>
           </Card>
@@ -2025,7 +2132,7 @@ export default function GroupScreen() {
           }}>
             {/* Header */}
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-              <Text style={{ color: TEXT, fontSize: 22, fontWeight: "900" }}>
+              <Text style={{ color: TEXT, fontSize: 22, fontFamily: "Nunito_900Black" }}>
                 Circle Settings
               </Text>
               <Pressable
@@ -2036,7 +2143,7 @@ export default function GroupScreen() {
                   borderRadius: 8,
                 }}
               >
-                <Text style={{ color: TEXT, fontSize: 18, fontWeight: "700" }}>X</Text>
+                <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Nunito_700Bold" }}>X</Text>
               </Pressable>
             </View>
 
@@ -2049,7 +2156,7 @@ export default function GroupScreen() {
               padding: 16,
               marginBottom: 16,
             }}>
-              <Text style={{ color: MUTED, fontSize: 12, fontWeight: "600", marginBottom: 8 }}>
+              <Text style={{ color: MUTED, fontSize: 12, fontFamily: "Nunito_600SemiBold", marginBottom: 8 }}>
                 INVITE CODE
               </Text>
               <View style={{
@@ -2065,7 +2172,6 @@ export default function GroupScreen() {
                 <Text style={{
                   color: TEXT,
                   fontSize: 28,
-                  fontWeight: "900",
                   letterSpacing: 4,
                   fontFamily: "monospace",
                 }}>
@@ -2091,7 +2197,7 @@ export default function GroupScreen() {
                   }}
                 >
                   <PixelCopyIcon size={16} />
-                  <Text style={{ color: TEXT, fontWeight: "700", fontSize: 14 }}>
+                  <Text style={{ color: TEXT, fontFamily: "Nunito_700Bold", fontSize: 14 }}>
                     {codeCopied ? "Copied!" : "Copy"}
                   </Text>
                 </Pressable>
@@ -2110,7 +2216,7 @@ export default function GroupScreen() {
                   }}
                 >
                   <PixelShareIcon size={16} />
-                  <Text style={{ color: TEXT, fontWeight: "700", fontSize: 14 }}>
+                  <Text style={{ color: TEXT, fontFamily: "Nunito_700Bold", fontSize: 14 }}>
                     Share
                   </Text>
                 </Pressable>
@@ -2129,8 +2235,8 @@ export default function GroupScreen() {
               <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
                 <PixelPersonIcon size={20} />
                 <View style={{ marginLeft: 12 }}>
-                  <Text style={{ color: MUTED, fontSize: 11, fontWeight: "600" }}>MEMBERS</Text>
-                  <Text style={{ color: TEXT, fontSize: 18, fontWeight: "700" }}>
+                  <Text style={{ color: MUTED, fontSize: 11, fontFamily: "Nunito_600SemiBold" }}>MEMBERS</Text>
+                  <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Nunito_700Bold" }}>
                     {memberCount} {memberCount === 1 ? "person" : "people"}
                   </Text>
                 </View>
@@ -2139,8 +2245,8 @@ export default function GroupScreen() {
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <PixelCalendarIcon size={20} />
                 <View style={{ marginLeft: 12 }}>
-                  <Text style={{ color: MUTED, fontSize: 11, fontWeight: "600" }}>STARTED</Text>
-                  <Text style={{ color: TEXT, fontSize: 18, fontWeight: "700" }}>
+                  <Text style={{ color: MUTED, fontSize: 11, fontFamily: "Nunito_600SemiBold" }}>STARTED</Text>
+                  <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Nunito_700Bold" }}>
                     {formatDate(groupCreatedAt)}
                   </Text>
                 </View>
@@ -2165,7 +2271,7 @@ export default function GroupScreen() {
               }}
             >
               <PixelDoorIcon size={20} />
-              <Text style={{ color: DANGER, fontWeight: "700", fontSize: 14 }}>
+              <Text style={{ color: DANGER, fontFamily: "Nunito_700Bold", fontSize: 14 }}>
                 {leaving ? "Leaving..." : "Leave Circle"}
               </Text>
             </Pressable>

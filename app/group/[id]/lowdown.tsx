@@ -11,132 +11,48 @@ import {
   Dimensions,
   StyleSheet,
   ActivityIndicator,
+  Alert,
 } from "react-native";
-import { Image } from "expo-image";
+import { Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import {
   getFiresideData,
   isFiresideUnlocked,
-  addComment,
   getComments,
   subscribeToComments,
   getSignedImageUrl,
+  finalizeWeek,
+  winnerChoosePrompt,
   FiresideData,
   FiresidePrompt,
   FiresideComment,
+  WeeklyWinner,
 } from "../../../lib/services/firesideService";
+import { awardPoints } from "../../../lib/services/pointsService";
+import { supabase } from "../../../lib/supabase";
 import { MultipleChoiceResults } from "../../../components/prompts/MultipleChoiceResults";
-import { ReactionBar } from "../../../components/prompts/ReactionBar";
+import { FiresideReactions } from "../../../components/prompts/FiresideReactions";
 import { CommentSheet } from "../../../components/prompts/CommentSheet";
 import { AudioPlayer } from "../../../components/prompts/AudioPlayer";
 import { VideoPlayer } from "../../../components/prompts/VideoPlayer";
 import { trackViewStart, trackViewEnd } from "../../../lib/services/metricsService";
+import { PixelCharacter, CharacterConfig, DEFAULT_CHARACTER } from "../../../components/PixelCharacter";
+import { DetailedCampfire } from "../../../components/PixelArt";
+import { NightSky } from "../../../components/sky";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-// Pixel art star that twinkles
-function PixelStar({ x, y, size, delay }: { x: number; y: number; size: number; delay: number }) {
-  const twinkle = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const startAnimation = () => {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(twinkle, { toValue: 1, duration: 800, useNativeDriver: true }),
-          Animated.timing(twinkle, { toValue: 0.3, duration: 800, useNativeDriver: true }),
-        ])
-      ).start();
-    };
-    const timer = setTimeout(startAnimation, delay);
-    return () => clearTimeout(timer);
-  }, []);
-
-  return (
-    <Animated.View
-      style={{
-        position: "absolute",
-        left: x,
-        top: y,
-        width: size,
-        height: size,
-        backgroundColor: "#FFF",
-        opacity: twinkle,
-        shadowColor: "#FFF",
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.8,
-        shadowRadius: size,
-      }}
-    />
-  );
-}
-
-// Shooting star animation
-function ShootingStar({ delay }: { delay: number }) {
-  const progress = useRef(new Animated.Value(0)).current;
-  const [visible, setVisible] = useState(false);
-  const startY = useRef(30 + Math.random() * 100).current;
-  const startX = useRef(Math.random() * SCREEN_WIDTH * 0.6).current;
-
-  useEffect(() => {
-    const animate = () => {
-      setVisible(true);
-      progress.setValue(0);
-      Animated.timing(progress, {
-        toValue: 1,
-        duration: 1200,
-        useNativeDriver: true,
-      }).start(() => {
-        setVisible(false);
-        // Repeat after random interval
-        setTimeout(animate, 5000 + Math.random() * 10000);
-      });
-    };
-    const timer = setTimeout(animate, delay);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (!visible) return null;
-
-  return (
-    <Animated.View
-      style={{
-        position: "absolute",
-        left: startX,
-        top: startY,
-        width: 3,
-        height: 3,
-        backgroundColor: "#FFF",
-        borderRadius: 1.5,
-        opacity: progress.interpolate({
-          inputRange: [0, 0.2, 0.8, 1],
-          outputRange: [0, 1, 1, 0],
-        }),
-        transform: [
-          { translateX: progress.interpolate({ inputRange: [0, 1], outputRange: [0, 180] }) },
-          { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [0, 120] }) },
-        ],
-        shadowColor: "#FFF",
-        shadowOffset: { width: -10, height: -5 },
-        shadowOpacity: 0.9,
-        shadowRadius: 8,
-      }}
-    />
-  );
-}
-
-// Pixel art pine tree
+// Simple tree for lowdown background
 function PixelTree({ x, height, shade }: { x: number; height: number; shade: number }) {
   const treeColor = `rgba(15, ${30 + shade * 15}, ${20 + shade * 10}, 1)`;
   const trunkColor = `rgba(40, ${25 + shade * 5}, 15, 1)`;
 
   return (
     <View style={{ position: "absolute", bottom: 0, left: x, alignItems: "center" }}>
-      {/* Tree layers - pixel art style triangles using Views */}
       <View style={{ width: 0, height: 0, borderLeftWidth: height * 0.4, borderRightWidth: height * 0.4, borderBottomWidth: height * 0.35, borderLeftColor: "transparent", borderRightColor: "transparent", borderBottomColor: treeColor, marginBottom: -8 }} />
       <View style={{ width: 0, height: 0, borderLeftWidth: height * 0.5, borderRightWidth: height * 0.5, borderBottomWidth: height * 0.4, borderLeftColor: "transparent", borderRightColor: "transparent", borderBottomColor: treeColor, marginBottom: -10 }} />
       <View style={{ width: 0, height: 0, borderLeftWidth: height * 0.6, borderRightWidth: height * 0.6, borderBottomWidth: height * 0.45, borderLeftColor: "transparent", borderRightColor: "transparent", borderBottomColor: treeColor }} />
-      {/* Trunk */}
       <View style={{ width: height * 0.15, height: height * 0.2, backgroundColor: trunkColor }} />
     </View>
   );
@@ -327,7 +243,7 @@ function FloatingComment({ comment, index, total }: { comment: FiresideComment; 
         borderWidth: 1,
         borderColor: "#FFD93D",
       }}>
-        <Text style={{ color: "#FFF8DC", fontSize: 13, fontWeight: "600" }}>{comment.content}</Text>
+        <Text style={{ color: "#FFF8DC", fontSize: 13, fontFamily: "Nunito_600SemiBold" }}>{comment.content}</Text>
       </View>
       {/* Little spark particles */}
       <View style={{
@@ -380,10 +296,15 @@ export default function LowdownScreen() {
   const [currentResponseIndex, setCurrentResponseIndex] = useState(-1); // -1 = show prompt
   const [revealStep, setRevealStep] = useState(0); // For quiz/MC reveals
   const [comments, setComments] = useState<FiresideComment[]>([]);
-  const [commentText, setCommentText] = useState("");
   const [signedPhotoUrl, setSignedPhotoUrl] = useState<string | null>(null);
   const [showCommentSheet, setShowCommentSheet] = useState(false);
+  const [quiplashRevealed, setQuiplashRevealed] = useState(false);
+  const [showCustomPrompt, setShowCustomPrompt] = useState(false);
+  const [customPromptText, setCustomPromptText] = useState("");
+  const [choosingPrompt, setChoosingPrompt] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const viewStartTime = useRef<number | null>(null);
+  const hasAwardedFiresidePoints = useRef(false);
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -395,14 +316,24 @@ export default function LowdownScreen() {
 
   // Fetch signed URL when showing a photo response
   useEffect(() => {
+    let cancelled = false;
     const fetchSignedUrl = async () => {
       const prompt = firesideData?.prompts[currentPromptIndex];
       if (currentResponseIndex >= 0 && prompt) {
         const response = prompt.responses?.[currentResponseIndex];
         if (response?.media_url) {
+          console.log('[Fireside] Fetching signed URL for media:', response.media_url);
           setSignedPhotoUrl(null);
-          const signedUrl = await getSignedImageUrl(response.media_url);
-          setSignedPhotoUrl(signedUrl);
+          try {
+            const signedUrl = await getSignedImageUrl(response.media_url);
+            if (!cancelled) {
+              console.log('[Fireside] Got signed URL:', signedUrl ? 'success' : 'null');
+              setSignedPhotoUrl(signedUrl);
+            }
+          } catch (error) {
+            console.error('[Fireside] Failed to fetch signed URL:', error);
+            if (!cancelled) setSignedPhotoUrl(null);
+          }
         } else {
           setSignedPhotoUrl(null);
         }
@@ -411,6 +342,7 @@ export default function LowdownScreen() {
       }
     };
     fetchSignedUrl();
+    return () => { cancelled = true; };
   }, [currentResponseIndex, currentPromptIndex, firesideData]);
 
   // Track view time for responses
@@ -442,11 +374,12 @@ export default function LowdownScreen() {
     const prompt = firesideData?.prompts[currentPromptIndex];
     const promptResponses = prompt?.responses || [];
     const isQuizOrMCPrompt = prompt && ["quiz", "multiple_choice"].includes(prompt.type);
+    const isQuiplashPrompt = prompt?.type === "quiplash";
 
-    // For quiz/MC, use first response as anchor; for others, use current response
+    // For quiz/MC/quiplash, use first response as anchor; for others, use current response
     let response;
-    if (isQuizOrMCPrompt && promptResponses.length > 0) {
-      response = promptResponses[0]; // Use first response for quiz/MC
+    if ((isQuizOrMCPrompt || isQuiplashPrompt) && promptResponses.length > 0) {
+      response = promptResponses[0]; // Use first response for quiz/MC/quiplash
     } else if (currentResponseIndex >= 0) {
       response = promptResponses[currentResponseIndex];
     }
@@ -482,15 +415,29 @@ export default function LowdownScreen() {
   const loadData = async () => {
     if (!groupId) return;
 
-    // For testing, skip the unlock check
-    // In production: if (!isFiresideUnlocked()) { setScreenState("locked"); return; }
+    try {
+      // Get current user ID
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData?.user) {
+        setCurrentUserId(userData.user.id);
+      }
 
-    const data = await getFiresideData(groupId);
-    if (data) {
-      setFiresideData(data);
-      setScreenState("bonfire");
-      startFireAnimation();
-    } else {
+      // For testing, skip the unlock check
+      // In production: if (!isFiresideUnlocked()) { setScreenState("locked"); return; }
+
+      // Finalize the week (idempotent - safe to call multiple times)
+      await finalizeWeek(groupId);
+
+      const data = await getFiresideData(groupId);
+      if (data) {
+        setFiresideData(data);
+        setScreenState("bonfire");
+        startFireAnimation();
+      } else {
+        setScreenState("locked");
+      }
+    } catch (error) {
+      console.error('[Fireside] Failed to load data:', error);
       setScreenState("locked");
     }
   };
@@ -522,7 +469,17 @@ export default function LowdownScreen() {
     ).start();
   };
 
-  const enterFireside = () => {
+  const enterFireside = async () => {
+    // Award 5 points for attending fireside (only once per session)
+    try {
+      if (!hasAwardedFiresidePoints.current) {
+        hasAwardedFiresidePoints.current = true;
+        await awardPoints('fireside', groupId);
+      }
+    } catch (error) {
+      console.error('[Fireside] Failed to award points:', error);
+    }
+
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 300,
@@ -543,6 +500,12 @@ export default function LowdownScreen() {
     const isQuizOrMC = ["quiz", "multiple_choice"].includes(currentPrompt.type);
     const isQuiplash = currentPrompt.type === "quiplash";
 
+    // Quiplash: at Fireside we show results immediately, tap goes to next prompt
+    if (isQuiplash) {
+      goToNextPrompt();
+      return;
+    }
+
     // Quiz/MC: tap through reveal steps
     if (isQuizOrMC && currentResponseIndex === -1) {
       if (revealStep < 3) {
@@ -551,19 +514,19 @@ export default function LowdownScreen() {
       }
     }
 
-    // Showing prompt - move to responses
+    // Showing prompt - move to responses (but NOT for quiz/MC/quiplash)
     if (currentResponseIndex === -1) {
-      if (responses.length > 0 && !isQuizOrMC) {
+      if (responses.length > 0 && !isQuizOrMC && !isQuiplash) {
         setCurrentResponseIndex(0);
       } else {
-        // No responses or quiz done, next prompt
+        // No responses or quiz/quiplash done, next prompt
         goToNextPrompt();
       }
       return;
     }
 
-    // Showing responses - move to next or next prompt
-    if (currentResponseIndex < responses.length - 1) {
+    // Showing responses - move to next or next prompt (never for quiplash)
+    if (!isQuiplash && currentResponseIndex < responses.length - 1) {
       setCurrentResponseIndex(currentResponseIndex + 1);
     } else {
       goToNextPrompt();
@@ -575,6 +538,7 @@ export default function LowdownScreen() {
       setCurrentPromptIndex(currentPromptIndex + 1);
       setCurrentResponseIndex(-1);
       setRevealStep(0);
+      setQuiplashRevealed(false);
       // Comments will be loaded by useEffect when response changes
     } else {
       setScreenState("leaderboard");
@@ -586,15 +550,27 @@ export default function LowdownScreen() {
 
     const responses = currentPrompt.responses || [];
     const isQuizOrMC = ["quiz", "multiple_choice"].includes(currentPrompt.type);
+    const isQuiplash = currentPrompt.type === "quiplash";
 
-    // If showing responses, go to previous response or back to prompt
-    if (currentResponseIndex > 0) {
+    // SAFEGUARD: Quiplash should NEVER be in response mode
+    if (isQuiplash) {
+      if (quiplashRevealed) {
+        // Go back to unrevealed
+        setQuiplashRevealed(false);
+        setCurrentResponseIndex(-1); // Ensure we're in prompt mode
+        return;
+      }
+      // Not revealed, go to previous prompt (handled below)
+    }
+
+    // If showing responses (not for quiplash), go to previous response or back to prompt
+    if (!isQuiplash && currentResponseIndex > 0) {
       setCurrentResponseIndex(currentResponseIndex - 1);
       return;
     }
 
-    // If showing first response, go back to prompt view
-    if (currentResponseIndex === 0) {
+    // If showing first response (not for quiplash), go back to prompt view
+    if (!isQuiplash && currentResponseIndex === 0) {
       setCurrentResponseIndex(-1);
       return;
     }
@@ -611,59 +587,35 @@ export default function LowdownScreen() {
       const prevPrompt = firesideData?.prompts[prevPromptIndex];
       const prevResponses = prevPrompt?.responses || [];
       const prevIsQuizOrMC = prevPrompt && ["quiz", "multiple_choice"].includes(prevPrompt.type);
+      const prevIsQuiplash = prevPrompt?.type === "quiplash";
 
       setCurrentPromptIndex(prevPromptIndex);
       setComments([]);
 
-      // Go to last response of previous prompt (or prompt itself for quiz/MC)
+      // Go to last response of previous prompt (or prompt itself for quiz/MC/quiplash)
       if (prevIsQuizOrMC) {
         setCurrentResponseIndex(-1);
         setRevealStep(3); // Show fully revealed
+        setQuiplashRevealed(false);
+      } else if (prevIsQuiplash) {
+        setCurrentResponseIndex(-1);
+        setQuiplashRevealed(true); // Show revealed results
+        setRevealStep(0);
       } else if (prevResponses.length > 0) {
         setCurrentResponseIndex(prevResponses.length - 1);
+        setQuiplashRevealed(false);
       } else {
         setCurrentResponseIndex(-1);
+        setQuiplashRevealed(false);
       }
     }
   };
-
-  const submitComment = async () => {
-    if (!commentText.trim() || !currentPrompt) return;
-
-    const responses = currentPrompt.responses || [];
-    const isQuizOrMCPrompt = ["quiz", "multiple_choice"].includes(currentPrompt.type);
-
-    // For quiz/MC, use first response; for others, use current response
-    const response = isQuizOrMCPrompt ? responses[0] : responses[Math.max(0, currentResponseIndex)];
-    if (!response?.response_id) return;
-
-    const text = commentText.trim();
-    setCommentText(""); // Clear immediately for UX
-
-    const comment = await addComment(response.response_id, text);
-    if (!comment) {
-      setCommentText(text); // Restore on failure
-    }
-    // Real-time subscription will add the comment to state
-  };
-
-  // Stars for locked/loading screens
-  const lockedStars = [
-    { x: 40, y: 80, size: 2, delay: 0 },
-    { x: 120, y: 50, size: 3, delay: 300 },
-    { x: 200, y: 100, size: 2, delay: 150 },
-    { x: 280, y: 60, size: 2, delay: 450 },
-    { x: 60, y: 150, size: 3, delay: 200 },
-    { x: 320, y: 120, size: 2, delay: 500 },
-  ];
 
   // Loading
   if (screenState === "loading") {
     return (
       <View style={[styles.container, { backgroundColor: "#0B1026" }]}>
-        {lockedStars.map((star, i) => (
-          <PixelStar key={i} x={star.x} y={star.y} size={star.size} delay={star.delay} />
-        ))}
+        <NightSky density="minimal" showMoon={false} showShootingStars={false} showFireflies={false} showGradient={false} />
         <ActivityIndicator size="large" color={COLORS.accent} />
       </View>
     );
@@ -705,17 +657,14 @@ function PixelLock({ size = 40 }: { size?: number }) {
   if (screenState === "locked") {
     return (
       <View style={[styles.container, { backgroundColor: "#0B1026" }]}>
-        {lockedStars.map((star, i) => (
-          <PixelStar key={i} x={star.x} y={star.y} size={star.size} delay={star.delay} />
-        ))}
-        <ShootingStar delay={2000} />
+        <NightSky density="minimal" showMoon={false} showShootingStars showFireflies={false} showGradient={false} />
         <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 30, backgroundColor: "#1a2f1a" }} />
         <View style={{ alignItems: "center", marginTop: 100 }}>
           <PixelLock size={50} />
         </View>
         <Text style={[styles.lockedTitle, { marginTop: 20 }]}>Fireside Locked</Text>
         <Text style={styles.lockedText}>
-          The Weekly Fireside unlocks Sunday at 9pm ET
+          The Weekly Fireside unlocks Sunday at 8pm ET
         </Text>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -729,28 +678,6 @@ function PixelLock({ size = 40 }: { size?: number }) {
 
   // Bonfire Entry - Stardew Valley style pixel art scene
   if (screenState === "bonfire") {
-    // Generate stars at fixed positions
-    const stars = [
-      { x: 20, y: 40, size: 2, delay: 0 },
-      { x: 80, y: 70, size: 3, delay: 200 },
-      { x: 150, y: 30, size: 2, delay: 400 },
-      { x: 200, y: 90, size: 2, delay: 100 },
-      { x: 260, y: 50, size: 3, delay: 300 },
-      { x: 320, y: 80, size: 2, delay: 500 },
-      { x: 50, y: 120, size: 2, delay: 600 },
-      { x: 120, y: 150, size: 3, delay: 150 },
-      { x: 180, y: 100, size: 2, delay: 250 },
-      { x: 240, y: 140, size: 2, delay: 350 },
-      { x: 300, y: 110, size: 3, delay: 450 },
-      { x: 350, y: 60, size: 2, delay: 550 },
-      { x: 40, y: 180, size: 2, delay: 700 },
-      { x: 100, y: 200, size: 2, delay: 50 },
-      { x: 280, y: 170, size: 3, delay: 650 },
-      { x: 340, y: 130, size: 2, delay: 750 },
-      { x: 70, y: 250, size: 2, delay: 800 },
-      { x: 220, y: 220, size: 2, delay: 850 },
-    ];
-
     // Generate trees at various positions
     const trees = [
       { x: -20, height: 120, shade: 0 },
@@ -769,30 +696,8 @@ function PixelLock({ size = 40 }: { size?: number }) {
         onPress={enterFireside}
         activeOpacity={0.95}
       >
-        {/* Gradient sky overlay */}
-        <View style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          height: SCREEN_HEIGHT * 0.7,
-          backgroundColor: "transparent",
-          opacity: 0.8,
-        }}>
-          <View style={{ flex: 1, backgroundColor: "#0B1026" }} />
-          <View style={{ flex: 1, backgroundColor: "#1a1a3e" }} />
-          <View style={{ flex: 1, backgroundColor: "#2d1f4e" }} />
-        </View>
-
-        {/* Stars */}
-        {stars.map((star, i) => (
-          <PixelStar key={i} x={star.x} y={star.y} size={star.size} delay={star.delay} />
-        ))}
-
-        {/* Shooting stars */}
-        <ShootingStar delay={2000} />
-        <ShootingStar delay={8000} />
-        <ShootingStar delay={15000} />
+        {/* Shared sky: stars + moon + shooting stars + fireflies */}
+        <NightSky density="minimal" showMoon={false} showShootingStars showFireflies showGradient={false} />
 
         {/* Forest tree line */}
         <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 200 }}>
@@ -824,32 +729,16 @@ function PixelLock({ size = 40 }: { size?: number }) {
           opacity: fireAnim.interpolate({ inputRange: [0, 1], outputRange: [0.15, 0.25] }),
         }} />
 
-        {/* Campfire area */}
-        <View style={{ position: "absolute", bottom: 50, left: 0, right: 0, alignItems: "center" }}>
-          {/* Logs */}
-          <View style={{ flexDirection: "row", marginTop: 60 }}>
-            <View style={{ width: 60, height: 14, backgroundColor: "#4a3728", borderRadius: 7, transform: [{ rotate: "-20deg" }], marginRight: -15 }} />
-            <View style={{ width: 60, height: 14, backgroundColor: "#3d2d20", borderRadius: 7, transform: [{ rotate: "20deg" }], marginLeft: -15 }} />
-          </View>
-
-          {/* Fire */}
-          <View style={{ position: "absolute", bottom: 20 }}>
-            <PixelFlame scale={fireAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] })} flicker={fireAnim} />
-          </View>
-
-          {/* Embers */}
-          <Ember delay={0} side="left" />
-          <Ember delay={500} side="right" />
-          <Ember delay={1000} side="center" />
-          <Ember delay={1500} side="left" />
-          <Ember delay={2000} side="right" />
+        {/* Campfire area - using DetailedCampfire */}
+        <View style={{ position: "absolute", bottom: 30, left: 0, right: 0, alignItems: "center" }}>
+          <DetailedCampfire size={120} showSmoke={false} />
         </View>
 
         {/* Title area */}
         <View style={{ position: "absolute", top: SCREEN_HEIGHT * 0.35, left: 0, right: 0, alignItems: "center" }}>
           <Text style={{
             fontSize: 36,
-            fontWeight: "900",
+            fontFamily: "Nunito_900Black",
             color: "#FFE4B5",
             textShadowColor: "#FF6B35",
             textShadowOffset: { width: 0, height: 0 },
@@ -942,23 +831,10 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
     const leaderboard = firesideData?.leaderboard || [];
     const winner = firesideData?.winner;
 
-    const leaderboardStars = [
-      { x: 30, y: 40, size: 2, delay: 0 },
-      { x: 100, y: 70, size: 3, delay: 200 },
-      { x: 180, y: 30, size: 2, delay: 400 },
-      { x: 250, y: 90, size: 2, delay: 100 },
-      { x: 320, y: 50, size: 3, delay: 300 },
-      { x: 60, y: 120, size: 2, delay: 500 },
-      { x: 280, y: 110, size: 2, delay: 350 },
-    ];
-
     return (
       <View style={{ flex: 1, backgroundColor: "#0B1026" }}>
-        {/* Stars */}
-        {leaderboardStars.map((star, i) => (
-          <PixelStar key={i} x={star.x} y={star.y} size={star.size} delay={star.delay} />
-        ))}
-        <ShootingStar delay={4000} />
+        {/* Stars + shooting star */}
+        <NightSky density="minimal" showMoon={false} showShootingStars showFireflies={false} showGradient={false} />
 
         {/* Ground glow */}
         <View style={{
@@ -979,41 +855,209 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
         {leaderboard.length === 0 ? (
           <Text style={styles.noDataText}>No points recorded this week</Text>
         ) : (
-          leaderboard.map((entry, index) => (
-            <View
-              key={entry.user_id}
-              style={[
-                styles.leaderboardRow,
-                index === 0 && styles.leaderboardWinner,
-              ]}
-            >
-              <View style={styles.leaderboardRankContainer}>
-                {index === 0 ? <PixelCrown size={28} /> : index === 1 ? <PixelMedal color="#C0C0C0" size={24} /> : index === 2 ? <PixelMedal color="#CD7F32" size={24} /> : <Text style={styles.leaderboardRankText}>{index + 1}</Text>}
-              </View>
-              <View style={styles.leaderboardInfo}>
-                <Text style={styles.leaderboardName}>
-                  Player {entry.user_id.slice(0, 6)}
+          leaderboard.map((entry, index) => {
+            const isGold = index === 0;
+            const isSilver = index === 1;
+            const isBronze = index === 2;
+            const medalColor = isGold ? "#FFD700" : isSilver ? "#C0C0C0" : isBronze ? "#CD7F32" : null;
+
+            return (
+              <View
+                key={entry.user_id}
+                style={[
+                  styles.leaderboardRow,
+                  isGold && styles.leaderboardGold,
+                  isSilver && styles.leaderboardSilver,
+                  isBronze && styles.leaderboardBronze,
+                ]}
+              >
+                <View style={styles.leaderboardRankContainer}>
+                  {isGold ? (
+                    <PixelCrown size={28} />
+                  ) : isSilver ? (
+                    <PixelMedal color="#C0C0C0" size={24} />
+                  ) : isBronze ? (
+                    <PixelMedal color="#CD7F32" size={24} />
+                  ) : (
+                    <Text style={styles.leaderboardRankText}>{index + 1}</Text>
+                  )}
+                </View>
+                <View style={styles.leaderboardAvatar}>
+                  <PixelCharacter
+                    config={(entry.avatar_config as unknown as CharacterConfig) || DEFAULT_CHARACTER}
+                    size={36}
+                  />
+                </View>
+                <View style={styles.leaderboardInfo}>
+                  <Text style={[
+                    styles.leaderboardName,
+                    isGold && { color: "#FFD700" },
+                    isSilver && { color: "#E8E8E8" },
+                    isBronze && { color: "#CD7F32" },
+                  ]}>
+                    {entry.username || 'Anonymous'}
+                  </Text>
+                  <Text style={styles.leaderboardBreakdown}>
+                    A: {entry.points_answering} | V: {entry.points_voting} | Q: {entry.points_quiplash_wins}
+                  </Text>
+                </View>
+                <Text style={[
+                  styles.leaderboardPoints,
+                  isGold && { color: "#FFD700" },
+                  isSilver && { color: "#E8E8E8" },
+                  isBronze && { color: "#CD7F32" },
+                ]}>
+                  {entry.total_points}
                 </Text>
-                <Text style={styles.leaderboardBreakdown}>
-                  A: {entry.points_answering} | V: {entry.points_voting} | Q: {entry.points_quiplash_wins}
-                </Text>
               </View>
-              <Text style={styles.leaderboardPoints}>{entry.total_points}</Text>
-            </View>
-          ))
+            );
+          })
         )}
 
-        {winner && !winner.has_chosen && (
-          <View style={styles.winnerSection}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
-              <PixelStarIcon size={20} />
-              <Text style={[styles.winnerTitle, { marginHorizontal: 10 }]}>
-                Winner gets to choose next week's prompt!
-              </Text>
-              <PixelStarIcon size={20} />
+        {winner && (() => {
+          const isMVP = currentUserId === winner.user_id;
+          const winnerName = winner.username || "The MVP";
+
+          // MVP hasn't chosen yet and current user IS the MVP
+          if (isMVP && !winner.has_chosen) {
+            return (
+              <View style={styles.winnerSection}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+                  <PixelStarIcon size={20} />
+                  <Text style={[styles.winnerTitle, { marginHorizontal: 10 }]}>
+                    You're the MVP! Pick next week's prompt
+                  </Text>
+                  <PixelStarIcon size={20} />
+                </View>
+
+                {/* Prompt choices */}
+                {(winner.prompt_choices || []).map((prompt) => (
+                  <TouchableOpacity
+                    key={prompt.id}
+                    style={styles.promptChoiceCard}
+                    onPress={async () => {
+                      if (choosingPrompt) return;
+                      setChoosingPrompt(true);
+                      try {
+                        const result = await winnerChoosePrompt(
+                          groupId!,
+                          firesideData!.week_of,
+                          prompt.id
+                        );
+                        if (result.success && firesideData) {
+                          setFiresideData({
+                            ...firesideData,
+                            winner: { ...winner, has_chosen: true, chosen_prompt_id: prompt.id },
+                          });
+                        }
+                      } catch (error) {
+                        console.error('[Fireside] Failed to choose prompt:', error);
+                        Alert.alert('Oops', 'Could not submit your choice. Try again!');
+                      } finally {
+                        setChoosingPrompt(false);
+                      }
+                    }}
+                    disabled={choosingPrompt}
+                  >
+                    <Text style={styles.promptChoiceType}>{prompt.type.replace("_", " ")}</Text>
+                    <Text style={styles.promptChoiceContent}>{prompt.content || prompt.title}</Text>
+                  </TouchableOpacity>
+                ))}
+
+                {/* Write your own */}
+                {!showCustomPrompt ? (
+                  <TouchableOpacity
+                    style={styles.customPromptButton}
+                    onPress={() => setShowCustomPrompt(true)}
+                  >
+                    <Text style={styles.customPromptButtonText}>Or write your own...</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={styles.customPromptInput}>
+                    <TextInput
+                      style={styles.customPromptTextInput}
+                      placeholder="Write a prompt for next week..."
+                      placeholderTextColor={COLORS.muted}
+                      value={customPromptText}
+                      onChangeText={setCustomPromptText}
+                      multiline
+                      maxLength={200}
+                    />
+                    <TouchableOpacity
+                      style={[
+                        styles.customPromptSubmit,
+                        (!customPromptText.trim() || choosingPrompt) && { opacity: 0.5 },
+                      ]}
+                      onPress={async () => {
+                        if (!customPromptText.trim() || choosingPrompt) return;
+                        setChoosingPrompt(true);
+                        try {
+                          const result = await winnerChoosePrompt(
+                            groupId!,
+                            firesideData!.week_of,
+                            undefined,
+                            customPromptText.trim(),
+                            "short_text"
+                          );
+                          if (result.success && firesideData) {
+                            setFiresideData({
+                              ...firesideData,
+                              winner: {
+                                ...winner,
+                                has_chosen: true,
+                                custom_prompt_content: customPromptText.trim(),
+                              },
+                            });
+                          }
+                        } catch (error) {
+                          console.error('[Fireside] Failed to submit custom prompt:', error);
+                          Alert.alert('Oops', 'Could not submit your prompt. Try again!');
+                        } finally {
+                          setChoosingPrompt(false);
+                        }
+                      }}
+                      disabled={!customPromptText.trim() || choosingPrompt}
+                    >
+                      {choosingPrompt ? (
+                        <ActivityIndicator size="small" color={COLORS.text} />
+                      ) : (
+                        <Text style={styles.customPromptSubmitText}>Submit</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            );
+          }
+
+          // MVP has already chosen
+          if (winner.has_chosen) {
+            return (
+              <View style={styles.winnerSection}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
+                  <PixelStarIcon size={20} />
+                  <Text style={[styles.winnerTitle, { marginHorizontal: 10 }]}>
+                    {isMVP ? "Your prompt is locked in!" : `${winnerName} picked next week's prompt!`}
+                  </Text>
+                  <PixelStarIcon size={20} />
+                </View>
+              </View>
+            );
+          }
+
+          // Current user is NOT the MVP and MVP hasn't chosen
+          return (
+            <View style={styles.winnerSection}>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
+                <PixelStarIcon size={20} />
+                <Text style={[styles.winnerTitle, { marginHorizontal: 10 }]}>
+                  {winnerName} gets to pick next week's prompt!
+                </Text>
+                <PixelStarIcon size={20} />
+              </View>
             </View>
-          </View>
-        )}
+          );
+        })()}
 
         <TouchableOpacity style={styles.doneButton} onPress={() => router.back()}>
           <Text style={styles.doneButtonText}>Done</Text>
@@ -1041,19 +1085,86 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
   const isQuizOrMC = ["quiz", "multiple_choice"].includes(currentPrompt.type);
   const isQuiplash = currentPrompt.type === "quiplash";
 
-  // Stars for prompts view
-  const promptStars = [
-    { x: 20, y: 60, size: 2, delay: 0 },
-    { x: 80, y: 90, size: 2, delay: 200 },
-    { x: 150, y: 50, size: 3, delay: 400 },
-    { x: 200, y: 110, size: 2, delay: 100 },
-    { x: 260, y: 70, size: 2, delay: 300 },
-    { x: 320, y: 100, size: 3, delay: 500 },
-    { x: 50, y: 140, size: 2, delay: 600 },
-    { x: 120, y: 170, size: 2, delay: 150 },
-    { x: 280, y: 130, size: 2, delay: 350 },
-    { x: 340, y: 80, size: 2, delay: 450 },
-  ];
+  // Helper to determine media type
+  const getMediaType = (promptType: string, mediaUrl?: string): 'photo' | 'video' | 'audio' | null => {
+    if (!mediaUrl) return null;
+
+    // First check prompt type
+    if (promptType === 'video') return 'video';
+    if (promptType === 'voice') return 'audio';
+    if (promptType === 'photo') return 'photo';
+
+    // Fallback to extension check (strip query string first)
+    const urlPath = mediaUrl.split('?')[0].toLowerCase();
+    if (urlPath.match(/\.(mp4|mov|m4v|webm)$/)) return 'video';
+    if (urlPath.match(/\.(m4a|mp3|wav|aac|ogg)$/)) return 'audio';
+    if (urlPath.match(/\.(jpg|jpeg|png|gif|webp|heic)$/)) return 'photo';
+
+    // Default to photo
+    return 'photo';
+  };
+
+  const mediaType = getMediaType(currentPrompt.type, currentResponse?.media_url);
+
+  // Calculate MC results from responses
+  const calculateMcResults = () => {
+    if (!isQuizOrMC || responses.length === 0) return null;
+
+    const options = currentPrompt.options || [];
+    const totalResponses = responses.length;
+
+    // Count votes per option
+    const voteCounts: Record<string, number> = {};
+    options.forEach(opt => { voteCounts[opt] = 0; });
+    responses.forEach(r => {
+      if (r.selected_option && voteCounts[r.selected_option] !== undefined) {
+        voteCounts[r.selected_option]++;
+      }
+    });
+
+    // Find majority
+    let majorityOption: string | null = null;
+    let majorityCount = 0;
+    Object.entries(voteCounts).forEach(([opt, count]) => {
+      if (count > majorityCount) {
+        majorityCount = count;
+        majorityOption = opt;
+      }
+    });
+
+    // Build results array sorted by vote count
+    const results = options.map(option => {
+      const count = voteCounts[option] || 0;
+      const voter = responses.find(r => r.selected_option === option);
+      return {
+        option,
+        count,
+        percentage: totalResponses > 0 ? Math.round((count / totalResponses) * 100) : 0,
+        is_correct: option === currentPrompt.correct_answer,
+        user_id: voter?.user_id,
+        username: voter?.username,
+        avatar_config: voter?.avatar_config,
+      };
+    }).sort((a, b) => b.count - a.count);
+
+    return {
+      group_prompt_id: currentPrompt.group_prompt_id,
+      prompt_type: currentPrompt.type,
+      is_most_likely: currentPrompt.is_most_likely || false,
+      total_responses: totalResponses,
+      results,
+      majority_option: majorityOption,
+      majority_count: majorityCount,
+      correct_answer: currentPrompt.correct_answer,
+    };
+  };
+
+  const mcResults = calculateMcResults();
+
+  // Get the response ID for comments - for quiz/MC/quiplash use first response, otherwise current
+  const commentResponseId = (isQuizOrMC || isQuiplash) && responses.length > 0
+    ? responses[0].response_id
+    : currentResponse?.response_id;
 
   const promptTrees = [
     { x: -15, height: 100, shade: 0 },
@@ -1064,14 +1175,8 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
 
   return (
     <View style={[styles.container, { backgroundColor: "#0B1026" }]}>
-      {/* Starry sky background */}
-      {promptStars.map((star, i) => (
-        <PixelStar key={i} x={star.x} y={star.y} size={star.size} delay={star.delay} />
-      ))}
-
-      {/* Shooting stars */}
-      <ShootingStar delay={3000} />
-      <ShootingStar delay={12000} />
+      {/* Starry sky + shooting stars + fireflies */}
+      <NightSky density="minimal" showMoon={false} showShootingStars showFireflies showGradient={false} />
 
       {/* Forest silhouettes */}
       <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 150, zIndex: 1 }}>
@@ -1104,18 +1209,8 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
       }} />
 
       {/* Small campfire at bottom */}
-      <View style={{ position: "absolute", bottom: 25, left: "50%", marginLeft: -20, zIndex: 3 }}>
-        <Animated.View style={{
-          transform: [{ scale: fireAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.1] }) }],
-        }}>
-          <View style={{ width: 40, height: 50, alignItems: "center" }}>
-            <View style={{ width: 30, height: 40, backgroundColor: "#FF4500", borderRadius: 15, borderTopLeftRadius: 18, borderTopRightRadius: 18 }}>
-              <View style={{ position: "absolute", bottom: 0, left: 5, width: 20, height: 30, backgroundColor: "#FF6B35", borderRadius: 10 }}>
-                <View style={{ position: "absolute", bottom: 0, left: 4, width: 12, height: 18, backgroundColor: "#FFD93D", borderRadius: 6 }} />
-              </View>
-            </View>
-          </View>
-        </Animated.View>
+      <View style={{ position: "absolute", bottom: 15, left: "50%", marginLeft: -30, zIndex: 3 }}>
+        <DetailedCampfire size={60} showSmoke={false} />
       </View>
 
       {/* Close button */}
@@ -1159,25 +1254,39 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
       </View>
 
       <TouchableOpacity style={styles.promptContainer} onPress={handleTap} activeOpacity={0.9}>
-        {/* Prompt type badge */}
-        <View style={[styles.typeBadge, isQuiplash && styles.quiplashBadge]}>
-          <Text style={styles.typeBadgeText}>
-            {isQuiplash ? "Mano e Mano" : currentPrompt.type.replace("_", " ")}
-          </Text>
-        </View>
+        {/* Prompt type badge - only show for Quiplash */}
+        {showingPrompt && isQuiplash && (
+          <View style={[styles.typeBadge, styles.quiplashBadge]}>
+            <Text style={styles.typeBadgeText}>Mano e Mano</Text>
+          </View>
+        )}
 
         {showingPrompt ? (
           // Show the prompt
           <View style={styles.promptContent}>
+            {/* Tap hint at top */}
+            <Text style={styles.swipeHintTop}>
+              {isQuizOrMC && revealStep < 3
+                ? "tap to reveal →"
+                : responses.length > 0 && !isQuizOrMC && !isQuiplash
+                ? "tap to see responses →"
+                : "tap for next →"}
+            </Text>
             <Text style={styles.promptTitle}>{currentPrompt.content || currentPrompt.title}</Text>
 
             {isQuizOrMC && revealStep >= 1 && (
               <View style={styles.optionsContainer}>
-                {/* Show enhanced results component when fully revealed and mc_results available */}
-                {revealStep >= 3 && currentPrompt.mc_results ? (
+                {/* Show enhanced results component when fully revealed */}
+                {revealStep >= 3 && mcResults ? (
                   <MultipleChoiceResults
-                    results={currentPrompt.mc_results}
+                    results={mcResults}
                     showCorrectAnswer={currentPrompt.type === 'quiz'}
+                    voters={responses.map(r => ({
+                      user_id: r.user_id,
+                      username: r.username,
+                      avatar_config: r.avatar_config,
+                      selected_option: r.selected_option || '',
+                    }))}
                   />
                 ) : (
                   /* Show progressive reveal before final step */
@@ -1200,9 +1309,25 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
                         </Text>
                         {revealStep >= 2 && votersForOption.length > 0 && (
                           <View style={styles.voterBadges}>
-                            {votersForOption.map((v, vi) => (
-                              <View key={vi} style={styles.voterDot} />
+                            {votersForOption.slice(0, 4).map((v, vi) => (
+                              <View
+                                key={vi}
+                                style={[
+                                  styles.voterAvatarSmall,
+                                  { marginLeft: vi > 0 ? -6 : 0, zIndex: 10 - vi },
+                                ]}
+                              >
+                                <PixelCharacter
+                                  config={(v.avatar_config as unknown as CharacterConfig) || DEFAULT_CHARACTER}
+                                  size={18}
+                                />
+                              </View>
                             ))}
+                            {votersForOption.length > 4 && (
+                              <View style={styles.moreVotersSmall}>
+                                <Text style={styles.moreVotersTextSmall}>+{votersForOption.length - 4}</Text>
+                              </View>
+                            )}
                           </View>
                         )}
                         {revealStep >= 3 && isCorrect && (
@@ -1215,128 +1340,184 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
               </View>
             )}
 
-            {isQuiplash && (
+            {isQuiplash && currentPrompt.quiplash_data && (
               <View style={styles.quiplashResults}>
-                {currentPrompt.quiplash_data?.map((participant, i) => {
-                  const isWinner = currentPrompt.quiplash_data &&
-                    participant.votes === Math.max(...currentPrompt.quiplash_data.map(p => p.votes));
+                {/* Hint text - at Fireside we always show results */}
+                <Text style={styles.quiplashHint}>tap for next →</Text>
+
+                {currentPrompt.quiplash_data.map((participant, i) => {
+                  const maxVotes = Math.max(...(currentPrompt.quiplash_data?.map(p => p.votes) || [0]));
+                  const isWinner = participant.votes === maxVotes && maxVotes > 0;
+                  const isTie = currentPrompt.quiplash_data?.filter(p => p.votes === maxVotes).length === 2;
 
                   return (
                     <View
                       key={i}
-                      style={[styles.quiplashEntry, isWinner && styles.quiplashWinner]}
+                      style={[
+                        styles.quiplashEntry,
+                        isWinner && !isTie && styles.quiplashWinner,
+                      ]}
                     >
+                      {/* Answer label */}
+                      <Text style={styles.quiplashLabel}>
+                        {i === 0 ? 'A' : 'B'}
+                      </Text>
+
+                      {/* Answer content */}
                       <Text style={styles.quiplashAnswer}>
                         "{participant.response?.content || "(no answer)"}"
                       </Text>
+
+                      {/* Always show votes and author at Fireside */}
                       <View style={styles.quiplashMeta}>
-                        <Text style={[styles.quiplashVotes, isWinner && styles.quiplashVotesWinner]}>
-                          {isWinner ? "WINNER " : ""}{participant.votes} votes
+                        <Text style={[styles.quiplashVotes, isWinner && !isTie && styles.quiplashVotesWinner]}>
+                          {isWinner && !isTie ? "WINNER " : ""}{participant.votes} vote{participant.votes !== 1 ? 's' : ''}
                         </Text>
-                        <Text style={styles.quiplashName}>
-                          — Player {participant.user_id.slice(0, 6)}
-                        </Text>
+                        <View style={styles.quiplashAuthorRow}>
+                          <View style={styles.quiplashAuthorAvatar}>
+                            <PixelCharacter
+                              config={(participant.avatar_config as unknown as CharacterConfig) || DEFAULT_CHARACTER}
+                              size={20}
+                            />
+                          </View>
+                          <Text style={styles.quiplashName}>
+                            {participant.username || 'Anonymous'}
+                          </Text>
+                        </View>
                       </View>
                     </View>
                   );
                 })}
+
+                {/* Tie message */}
+                {currentPrompt.quiplash_data.length === 2 &&
+                 currentPrompt.quiplash_data[0].votes === currentPrompt.quiplash_data[1].votes && (
+                  <Text style={styles.quiplashTie}>It's a tie!</Text>
+                )}
               </View>
             )}
-
-            <Text style={styles.swipeHint}>
-              {isQuizOrMC && revealStep < 3
-                ? "tap to reveal →"
-                : responses.length > 0 && !isQuizOrMC && !isQuiplash
-                ? "tap to see responses →"
-                : "tap for next →"}
-            </Text>
           </View>
-        ) : (
-          // Regular response view
+        ) : !isQuiplash ? (
+          // Regular response view (never shown for quiplash)
           <View style={styles.responseContainer}>
-            {currentResponse?.media_url ? (
+            {/* Tap hint at top */}
+            <Text style={styles.swipeHintTop}>
+              {currentResponseIndex < responses.length - 1 ? "tap for next response →" : "tap for next prompt →"}
+            </Text>
+
+            {/* Media content */}
+            {mediaType === 'video' && (
               signedPhotoUrl ? (
-                <Image
-                  source={{ uri: signedPhotoUrl }}
-                  style={styles.responsePhoto}
-                  contentFit="cover"
-                  placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }}
-                  transition={300}
-                                  />
+                <View style={styles.responseVideo}>
+                  <VideoPlayer uri={signedPhotoUrl} />
+                </View>
               ) : (
                 <View style={[styles.responsePhoto, { alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.card }]}>
                   <ActivityIndicator size="small" color={COLORS.accent} />
-                  <Text style={{ color: COLORS.muted, fontSize: 12, marginTop: 8 }}>Loading photo...</Text>
+                  <Text style={{ color: COLORS.muted, fontSize: 12, marginTop: 8 }}>Loading video...</Text>
                 </View>
               )
-            ) : null}
+            )}
 
-            <Text style={styles.responseContent}>
-              {currentResponse?.content || "(no text)"}
-            </Text>
+            {mediaType === 'audio' && (
+              signedPhotoUrl ? (
+                <View style={styles.responseAudio}>
+                  <AudioPlayer uri={signedPhotoUrl} />
+                </View>
+              ) : (
+                <View style={[styles.responseAudio, { alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.card, padding: 20, borderRadius: 16 }]}>
+                  <ActivityIndicator size="small" color={COLORS.accent} />
+                  <Text style={{ color: COLORS.muted, fontSize: 12, marginTop: 8 }}>Loading audio...</Text>
+                </View>
+              )
+            )}
 
-            <Text style={styles.responseAuthor}>
-              — Player {currentResponse?.user_id.slice(0, 6)}
-            </Text>
-
-            {/* Reaction bar */}
-            {currentResponse?.response_id && (
-              <View style={styles.reactionContainer}>
-                <ReactionBar responseId={currentResponse.response_id} />
+            {mediaType === 'photo' && signedPhotoUrl && (
+              <View style={styles.responsePhoto}>
+                <Image
+                  source={{ uri: signedPhotoUrl }}
+                  style={{ width: '100%', height: '100%', borderRadius: 16 }}
+                  resizeMode="cover"
+                  onError={(e) => {
+                    console.log('[Image] Load error:', e.nativeEvent.error);
+                    console.log('[Image] Failed URL:', signedPhotoUrl);
+                  }}
+                  onLoad={() => console.log('[Image] Loaded successfully!')}
+                  onLoadStart={() => console.log('[Image] Starting to load...')}
+                />
               </View>
             )}
+
+            {mediaType === 'photo' && !signedPhotoUrl && (
+              <View style={[styles.responsePhoto, { alignItems: 'center', justifyContent: 'center' }]}>
+                <ActivityIndicator size="small" color={COLORS.accent} />
+                <Text style={{ color: COLORS.muted, fontSize: 12, marginTop: 8 }}>Loading photo...</Text>
+              </View>
+            )}
+
+            {/* Only show content if it exists */}
+            {currentResponse?.content ? (
+              <Text style={styles.responseContent}>
+                {currentResponse.content}
+              </Text>
+            ) : null}
+
+            {/* Author with avatar */}
+            <View style={styles.responseAuthorRow}>
+              <View style={styles.responseAuthorAvatar}>
+                <PixelCharacter
+                  config={(currentResponse?.avatar_config as unknown as CharacterConfig) || DEFAULT_CHARACTER}
+                  size={24}
+                />
+              </View>
+              <Text style={styles.responseAuthorName}>
+                {currentResponse?.username || 'Anonymous'}
+              </Text>
+            </View>
 
             <Text style={styles.responseCount}>
               {currentResponseIndex + 1} of {responses.length}
             </Text>
-
-            <Text style={styles.swipeHint}>
-              {currentResponseIndex < responses.length - 1 ? "tap for next response →" : "tap for next prompt →"}
-            </Text>
           </View>
-        )}
+        ) : null}
       </TouchableOpacity>
 
-      {/* Comment input - show for responses OR for quiz/MC prompts */}
-      {((!showingPrompt && !isQuiplash) || (showingPrompt && isQuizOrMC && responses.length > 0)) && (
-        <View style={styles.commentContainer}>
-          {/* Open full comment sheet */}
-          <TouchableOpacity
-            style={styles.viewCommentsButton}
-            onPress={() => setShowCommentSheet(true)}
-          >
-            <Ionicons name="chatbubble-outline" size={18} color={COLORS.muted} />
-            <Text style={styles.viewCommentsText}>
-              {comments.length > 0 ? `${comments.length} comments` : 'Comments'}
-            </Text>
-          </TouchableOpacity>
-
-          <TextInput
-            style={styles.commentInput}
-            value={commentText}
-            onChangeText={setCommentText}
-            placeholder="Drop a comment..."
-            placeholderTextColor={COLORS.muted}
-            maxLength={200}
+      {/* Floating emoji reactions - shown on all responses including quiplash */}
+      {commentResponseId && (
+        <View style={styles.reactionsContainer}>
+          <FiresideReactions
+            responseId={commentResponseId}
+            promptId={currentPrompt.prompt_id}
           />
-          <TouchableOpacity style={styles.commentButton} onPress={submitComment}>
-            <Ionicons name="send" size={20} color={COLORS.text} />
-          </TouchableOpacity>
         </View>
       )}
 
-      {/* Floating comments */}
-      <View style={styles.floatingComments} pointerEvents="none">
-        {comments.slice(-5).map((c, i, arr) => (
-          <FloatingComment key={c.id} comment={c} index={i} total={arr.length} />
-        ))}
-      </View>
+      {/* Comments button - TikTok/Reels style */}
+      {commentResponseId && (
+        <TouchableOpacity
+          style={styles.commentsButton}
+          onPress={() => setShowCommentSheet(true)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.commentsButtonInner}>
+            <Ionicons name="chatbubble" size={22} color={COLORS.text} />
+            {comments.length > 0 && (
+              <View style={styles.commentBadge}>
+                <Text style={styles.commentBadgeText}>
+                  {comments.length > 99 ? '99+' : comments.length}
+                </Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.commentsButtonText}>Comments</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Comment sheet modal */}
-      {currentResponse?.response_id && (
+      {commentResponseId && (
         <CommentSheet
           visible={showCommentSheet}
-          responseId={currentResponse.response_id}
+          responseId={commentResponseId}
           onClose={() => setShowCommentSheet(false)}
         />
       )}
@@ -1352,7 +1533,7 @@ const styles = StyleSheet.create({
   // Locked screen
   lockedTitle: {
     fontSize: 32,
-    fontWeight: "900",
+    fontFamily: "Nunito_900Black",
     color: COLORS.text,
     textAlign: "center",
     marginTop: 20,
@@ -1377,7 +1558,7 @@ const styles = StyleSheet.create({
   backButtonText: {
     color: COLORS.accent,
     fontSize: 16,
-    fontWeight: "600",
+    fontFamily: "Nunito_600SemiBold",
   },
   // Bonfire
   bonfireContainer: {
@@ -1397,7 +1578,7 @@ const styles = StyleSheet.create({
   },
   firesideTitle: {
     fontSize: 40,
-    fontWeight: "900",
+    fontFamily: "Nunito_900Black",
     color: COLORS.accent,
     marginTop: 40,
     textShadowColor: COLORS.accent,
@@ -1469,7 +1650,8 @@ const styles = StyleSheet.create({
   promptContainer: {
     flex: 1,
     padding: 20,
-    justifyContent: "center",
+    justifyContent: "flex-start",
+    paddingTop: "25%",
   },
   typeBadge: {
     backgroundColor: COLORS.card,
@@ -1487,23 +1669,31 @@ const styles = StyleSheet.create({
   typeBadgeText: {
     color: COLORS.text,
     fontSize: 14,
-    fontWeight: "600",
+    fontFamily: "Nunito_600SemiBold",
     textTransform: "capitalize",
   },
   promptContent: {
     alignItems: "center",
   },
   promptTitle: {
-    fontSize: 26,
-    fontWeight: "800",
+    fontSize: 28,
+    fontFamily: "Nunito_800ExtraBold",
     color: COLORS.text,
     textAlign: "center",
-    lineHeight: 36,
+    lineHeight: 38,
+    paddingHorizontal: 10,
   },
   swipeHint: {
     color: COLORS.muted,
     fontSize: 14,
     marginTop: 40,
+    textAlign: "center",
+    opacity: 0.6,
+  },
+  swipeHintTop: {
+    color: COLORS.muted,
+    fontSize: 14,
+    marginBottom: 16,
     textAlign: "center",
     opacity: 0.6,
   },
@@ -1531,7 +1721,7 @@ const styles = StyleSheet.create({
   optionLetter: {
     color: COLORS.accent,
     fontSize: 18,
-    fontWeight: "700",
+    fontFamily: "Nunito_700Bold",
     marginRight: 12,
     width: 24,
   },
@@ -1542,7 +1732,7 @@ const styles = StyleSheet.create({
   },
   optionTextCorrect: {
     color: COLORS.green,
-    fontWeight: "700",
+    fontFamily: "Nunito_700Bold",
   },
   voterBadges: {
     flexDirection: "row",
@@ -1556,10 +1746,35 @@ const styles = StyleSheet.create({
     backgroundColor: "#FF6B35",
     marginLeft: 2,
   },
+  voterAvatarSmall: {
+    width: 22,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.card,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  moreVotersSmall: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: COLORS.border,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: -4,
+    zIndex: 1,
+  },
+  moreVotersTextSmall: {
+    color: COLORS.text,
+    fontSize: 8,
+    fontFamily: "Nunito_700Bold",
+  },
   checkMark: {
     color: COLORS.green,
     fontSize: 20,
-    fontWeight: "700",
+    fontFamily: "Nunito_700Bold",
     marginLeft: 8,
   },
   // Quiplash
@@ -1593,14 +1808,47 @@ const styles = StyleSheet.create({
   quiplashVotes: {
     color: COLORS.muted,
     fontSize: 14,
-    fontWeight: "600",
+    fontFamily: "Nunito_600SemiBold",
   },
   quiplashVotesWinner: {
     color: COLORS.gold,
   },
   quiplashName: {
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  quiplashAuthorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  quiplashAuthorAvatar: {
+    width: 24,
+    height: 30,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  quiplashHint: {
     color: COLORS.muted,
     fontSize: 14,
+    textAlign: "center",
+    marginBottom: 16,
+    opacity: 0.7,
+  },
+  quiplashLabel: {
+    color: COLORS.purple,
+    fontSize: 20,
+    fontFamily: "Nunito_900Black",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  quiplashTie: {
+    color: COLORS.purple,
+    fontSize: 16,
+    fontFamily: "Nunito_600SemiBold",
+    textAlign: "center",
+    marginTop: 8,
   },
   // Response view
   responseContainer: {
@@ -1611,18 +1859,50 @@ const styles = StyleSheet.create({
     height: SCREEN_WIDTH - 80,
     borderRadius: 16,
     marginBottom: 20,
+    backgroundColor: '#1a1a2e', // Dark background so we can see if image loads
+  },
+  responseVideo: {
+    width: SCREEN_WIDTH - 80,
+    height: SCREEN_WIDTH - 40,
+    borderRadius: 16,
+    marginBottom: 20,
+    overflow: "hidden",
+  },
+  responseAudio: {
+    width: SCREEN_WIDTH - 80,
+    marginBottom: 20,
   },
   responseContent: {
-    fontSize: 22,
+    fontSize: 28,
     color: COLORS.text,
     textAlign: "center",
-    lineHeight: 32,
+    lineHeight: 40,
     paddingHorizontal: 20,
+    marginTop: 20,
+    fontStyle: "italic",
   },
   responseAuthor: {
     color: COLORS.muted,
     fontSize: 14,
     marginTop: 20,
+  },
+  responseAuthorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 20,
+    gap: 8,
+  },
+  responseAuthorAvatar: {
+    width: 32,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  responseAuthorName: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontFamily: "Nunito_600SemiBold",
   },
   responseCount: {
     color: COLORS.muted,
@@ -1630,71 +1910,55 @@ const styles = StyleSheet.create({
     marginTop: 8,
     opacity: 0.6,
   },
-  reactionContainer: {
-    marginTop: 16,
-    alignSelf: "center",
-  },
-  // Comments
-  commentContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    padding: 16,
-    gap: 10,
-    backgroundColor: COLORS.card,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    alignItems: "center",
-  },
-  viewCommentsButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: COLORS.bg,
-    borderRadius: 16,
-  },
-  viewCommentsText: {
-    color: COLORS.muted,
-    fontSize: 13,
-  },
-  commentInput: {
-    flex: 1,
-    backgroundColor: COLORS.bg,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    color: COLORS.text,
-    fontSize: 14,
-  },
-  commentButton: {
-    backgroundColor: COLORS.accent,
-    borderRadius: 20,
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  floatingComments: {
+  // Reactions container - fixed at bottom center
+  reactionsContainer: {
     position: "absolute",
-    top: 0,
+    bottom: 130,
     left: 0,
     right: 0,
-    bottom: 0,
     zIndex: 50,
   },
-  floatingComment: {
+  // Comments button - positioned at bottom right
+  commentsButton: {
     position: "absolute",
-    right: 0,
-    backgroundColor: COLORS.accent + "DD",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    maxWidth: 200,
+    right: 16,
+    bottom: 70,
+    alignItems: "center",
+    zIndex: 100,
   },
-  floatingCommentText: {
+  commentsButtonInner: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+  },
+  commentBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    backgroundColor: "#EF4444",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+    zIndex: 10,
+  },
+  commentBadgeText: {
+    color: "#FFF",
+    fontSize: 11,
+    fontFamily: "Nunito_700Bold",
+  },
+  commentsButtonText: {
     color: COLORS.text,
-    fontSize: 13,
+    fontSize: 11,
+    marginTop: 4,
+    fontWeight: "500",
   },
   // Leaderboard
   leaderboardContent: {
@@ -1704,7 +1968,7 @@ const styles = StyleSheet.create({
   },
   leaderboardTitle: {
     fontSize: 32,
-    fontWeight: "900",
+    fontFamily: "Nunito_900Black",
     color: COLORS.gold,
     textAlign: "center",
     marginBottom: 30,
@@ -1717,21 +1981,38 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 12,
   },
-  leaderboardWinner: {
+  leaderboardGold: {
     borderWidth: 2,
-    borderColor: COLORS.gold,
-    backgroundColor: COLORS.gold + "15",
+    borderColor: "#FFD700",
+    backgroundColor: "rgba(255, 215, 0, 0.15)",
+  },
+  leaderboardSilver: {
+    borderWidth: 2,
+    borderColor: "#C0C0C0",
+    backgroundColor: "rgba(192, 192, 192, 0.1)",
+  },
+  leaderboardBronze: {
+    borderWidth: 2,
+    borderColor: "#CD7F32",
+    backgroundColor: "rgba(205, 127, 50, 0.1)",
   },
   leaderboardRankContainer: {
+    width: 36,
+    height: 36,
+    marginRight: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  leaderboardAvatar: {
     width: 40,
     height: 40,
-    marginRight: 16,
+    marginRight: 12,
     alignItems: "center",
     justifyContent: "center",
   },
   leaderboardRankText: {
-    fontSize: 20,
-    fontWeight: "700",
+    fontSize: 18,
+    fontFamily: "Nunito_700Bold",
     color: COLORS.muted,
   },
   leaderboardInfo: {
@@ -1740,7 +2021,7 @@ const styles = StyleSheet.create({
   leaderboardName: {
     color: COLORS.text,
     fontSize: 16,
-    fontWeight: "700",
+    fontFamily: "Nunito_700Bold",
   },
   leaderboardBreakdown: {
     color: COLORS.muted,
@@ -1750,7 +2031,7 @@ const styles = StyleSheet.create({
   leaderboardPoints: {
     color: COLORS.gold,
     fontSize: 28,
-    fontWeight: "900",
+    fontFamily: "Nunito_900Black",
   },
   winnerSection: {
     marginTop: 30,
@@ -1763,7 +2044,7 @@ const styles = StyleSheet.create({
   winnerTitle: {
     color: COLORS.purple,
     fontSize: 16,
-    fontWeight: "600",
+    fontFamily: "Nunito_600SemiBold",
     textAlign: "center",
   },
   doneButton: {
@@ -1776,6 +2057,63 @@ const styles = StyleSheet.create({
   doneButtonText: {
     color: COLORS.text,
     fontSize: 18,
-    fontWeight: "700",
+    fontFamily: "Nunito_700Bold",
+  },
+  promptChoiceCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: COLORS.purple + "40",
+  },
+  promptChoiceType: {
+    color: COLORS.purple,
+    fontSize: 11,
+    fontFamily: "Nunito_600SemiBold",
+    textTransform: "uppercase",
+    marginBottom: 6,
+  },
+  promptChoiceContent: {
+    color: COLORS.text,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  customPromptButton: {
+    marginTop: 8,
+    padding: 14,
+    alignItems: "center",
+  },
+  customPromptButtonText: {
+    color: COLORS.purple,
+    fontSize: 14,
+    fontFamily: "Nunito_600SemiBold",
+    fontStyle: "italic",
+  },
+  customPromptInput: {
+    marginTop: 8,
+  },
+  customPromptTextInput: {
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    padding: 14,
+    color: COLORS.text,
+    fontSize: 15,
+    minHeight: 80,
+    textAlignVertical: "top",
+    borderWidth: 1,
+    borderColor: COLORS.purple + "40",
+  },
+  customPromptSubmit: {
+    backgroundColor: COLORS.purple,
+    borderRadius: 12,
+    padding: 14,
+    alignItems: "center",
+    marginTop: 10,
+  },
+  customPromptSubmitText: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontFamily: "Nunito_700Bold",
   },
 });

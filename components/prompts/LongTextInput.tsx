@@ -28,7 +28,7 @@ export function LongTextInput({
   placeholder = 'Share your thoughts...',
   disabled = false,
 }: LongTextInputProps) {
-  const { min, max } = WORD_LIMITS.long_text;
+  const { min, max, good, excellent } = WORD_LIMITS.long_text;
 
   return (
     <View style={styles.container}>
@@ -44,7 +44,7 @@ export function LongTextInput({
         editable={!disabled}
         textAlignVertical="top"
       />
-      <WordCounter text={value} min={min} max={max} />
+      <WordCounter text={value} min={min} max={max} good={good} excellent={excellent} />
     </View>
   );
 }

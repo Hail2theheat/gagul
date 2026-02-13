@@ -1,13 +1,14 @@
 /**
  * MultipleChoiceResults - displays voting results for MC prompts during Lowdown
  * Supports regular MC, Most Likely To, and Quiz types
+ * Shows character avatars for each voter
  */
 
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PixelCharacter, CharacterConfig, DEFAULT_CHARACTER } from '../PixelCharacter';
-import type { MCResults, MCResultOption } from '../../lib/services/firesideService';
+import type { MCResults, MCResultOption, FiresideResponse } from '../../lib/services/firesideService';
 
 // Theme colors
 const COLORS = {
@@ -22,12 +23,21 @@ const COLORS = {
   gold: '#FFD700',
 };
 
+// Voter info for showing avatars
+interface VoterInfo {
+  user_id: string;
+  username?: string;
+  avatar_config?: Record<string, unknown> | null;
+  selected_option: string;
+}
+
 interface MultipleChoiceResultsProps {
   results: MCResults;
   showCorrectAnswer?: boolean; // For quiz reveal
+  voters?: VoterInfo[]; // Optional list of voters with their avatars
 }
 
-export function MultipleChoiceResults({ results, showCorrectAnswer = true }: MultipleChoiceResultsProps) {
+export function MultipleChoiceResults({ results, showCorrectAnswer = true, voters = [] }: MultipleChoiceResultsProps) {
   if (!results || !results.results || results.results.length === 0) {
     return (
       <View style={styles.container}>
@@ -39,6 +49,17 @@ export function MultipleChoiceResults({ results, showCorrectAnswer = true }: Mul
   const isMostLikely = results.is_most_likely;
   const isQuiz = results.prompt_type === 'quiz';
   const hasCorrectAnswer = isQuiz && results.correct_answer;
+
+  // Group voters by their selected option
+  const votersByOption: Record<string, VoterInfo[]> = {};
+  voters.forEach(voter => {
+    if (voter.selected_option) {
+      if (!votersByOption[voter.selected_option]) {
+        votersByOption[voter.selected_option] = [];
+      }
+      votersByOption[voter.selected_option].push(voter);
+    }
+  });
 
   return (
     <View style={styles.container}>
@@ -63,6 +84,7 @@ export function MultipleChoiceResults({ results, showCorrectAnswer = true }: Mul
             isCorrect={hasCorrectAnswer ? option.option === results.correct_answer : false}
             showCorrect={showCorrectAnswer && !!hasCorrectAnswer}
             rank={index + 1}
+            voters={votersByOption[option.option] || []}
           />
         ))}
       </View>
@@ -86,14 +108,15 @@ interface ResultBarProps {
   isCorrect: boolean;
   showCorrect: boolean;
   rank: number;
+  voters: VoterInfo[];
 }
 
-function ResultBar({ option, isMostLikely, isWinner, isCorrect, showCorrect, rank }: ResultBarProps) {
+function ResultBar({ option, isMostLikely, isWinner, isCorrect, showCorrect, rank, voters }: ResultBarProps) {
   const percentage = option.percentage || 0;
 
   return (
     <View style={[styles.resultBar, isWinner && styles.resultBarWinner]}>
-      {/* Left side - avatar or rank */}
+      {/* Left side - avatar(s) */}
       <View style={styles.resultLeft}>
         {isMostLikely && option.avatar_config ? (
           <View style={styles.avatarContainer}>
@@ -101,6 +124,29 @@ function ResultBar({ option, isMostLikely, isWinner, isCorrect, showCorrect, ran
               config={(option.avatar_config as unknown as CharacterConfig) || DEFAULT_CHARACTER}
               size={28}
             />
+          </View>
+        ) : voters.length > 0 ? (
+          // Show voter avatars stacked
+          <View style={styles.voterAvatarsContainer}>
+            {voters.slice(0, 4).map((voter, idx) => (
+              <View
+                key={voter.user_id}
+                style={[
+                  styles.voterAvatarWrapper,
+                  { marginLeft: idx > 0 ? -8 : 0, zIndex: 10 - idx },
+                ]}
+              >
+                <PixelCharacter
+                  config={(voter.avatar_config as unknown as CharacterConfig) || DEFAULT_CHARACTER}
+                  size={22}
+                />
+              </View>
+            ))}
+            {voters.length > 4 && (
+              <View style={[styles.moreVotersBadge, { marginLeft: -6 }]}>
+                <Text style={styles.moreVotersText}>+{voters.length - 4}</Text>
+              </View>
+            )}
           </View>
         ) : (
           <View style={[styles.rankBadge, isWinner && styles.rankBadgeWinner]}>
@@ -199,6 +245,36 @@ const styles = StyleSheet.create({
     height: 50,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  voterAvatarsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 40,
+    height: 36,
+  },
+  voterAvatarWrapper: {
+    width: 28,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.card,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  moreVotersBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  moreVotersText: {
+    color: COLORS.text,
+    fontSize: 9,
+    fontWeight: '700',
   },
   rankBadge: {
     width: 28,

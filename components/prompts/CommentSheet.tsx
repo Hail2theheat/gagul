@@ -26,6 +26,7 @@ import {
   FiresideComment,
 } from '../../lib/services/firesideService';
 import { trackInteraction } from '../../lib/services/metricsService';
+import { awardPoints } from '../../lib/services/pointsService';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SHEET_HEIGHT = SCREEN_HEIGHT * 0.7;
@@ -125,6 +126,8 @@ export function CommentSheet({ visible, responseId, onClose }: CommentSheetProps
       }
 
       trackInteraction('comment', { responseId });
+      // Award 1 point for commenting
+      await awardPoints('comment');
       await loadComments();
     } catch (error) {
       console.error('Error submitting comment:', error);

@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,10 +27,12 @@ const COLORS = {
 interface PhotoPickerProps {
   value: string | null;
   onChange: (uri: string | null) => void;
+  caption?: string;
+  onCaptionChange?: (caption: string) => void;
   disabled?: boolean;
 }
 
-export function PhotoPicker({ value, onChange, disabled = false }: PhotoPickerProps) {
+export function PhotoPicker({ value, onChange, caption = '', onCaptionChange, disabled = false }: PhotoPickerProps) {
   const [loading, setLoading] = useState(false);
 
   const pickImage = async (useCamera: boolean) => {
@@ -120,6 +123,17 @@ export function PhotoPicker({ value, onChange, disabled = false }: PhotoPickerPr
               <Text style={styles.changeText}>Choose another</Text>
             </TouchableOpacity>
           </View>
+        )}
+        {!disabled && onCaptionChange && (
+          <TextInput
+            style={styles.captionInput}
+            placeholder="Add a caption..."
+            placeholderTextColor={COLORS.muted}
+            value={caption}
+            onChangeText={onCaptionChange}
+            multiline
+            maxLength={200}
+          />
         )}
       </View>
     );
@@ -221,6 +235,18 @@ const styles = StyleSheet.create({
   changeText: {
     color: COLORS.muted,
     fontSize: 14,
+  },
+  captionInput: {
+    backgroundColor: COLORS.bg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 16,
+    color: COLORS.text,
+    fontSize: 16,
+    minHeight: 60,
+    textAlignVertical: 'top',
   },
 });
 

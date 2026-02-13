@@ -1,9 +1,10 @@
 /**
  * VideoPlayer - Play back video recordings
  * Used in Fireside to play video responses
+ * Note: Using expo-av Video component (deprecated but stable)
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -31,7 +32,6 @@ interface VideoPlayerProps {
   aspectRatio?: number; // width/height, default 9/16 (portrait)
   autoPlay?: boolean;
   showControls?: boolean;
-  onPlaybackStatusUpdate?: (status: AVPlaybackStatus) => void;
 }
 
 export function VideoPlayer({
@@ -39,7 +39,6 @@ export function VideoPlayer({
   aspectRatio = 9 / 16,
   autoPlay = false,
   showControls = true,
-  onPlaybackStatusUpdate,
 }: VideoPlayerProps) {
   const videoRef = useRef<Video>(null);
   const [status, setStatus] = useState<AVPlaybackStatus | null>(null);
@@ -51,22 +50,18 @@ export function VideoPlayer({
   const duration = status?.isLoaded ? status.durationMillis || 0 : 0;
   const progress = duration > 0 ? position / duration : 0;
 
-  useEffect(() => {
-    // Auto-hide overlay after playing for a bit
-    if (isPlaying) {
-      const timer = setTimeout(() => setShowOverlay(false), 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [isPlaying]);
-
   const handlePlaybackStatusUpdate = (newStatus: AVPlaybackStatus) => {
     setStatus(newStatus);
     setIsLoading(!newStatus.isLoaded);
-    onPlaybackStatusUpdate?.(newStatus);
 
     // Auto-restart when finished
     if (newStatus.isLoaded && newStatus.didJustFinish) {
       videoRef.current?.setPositionAsync(0);
+    }
+
+    // Auto-hide overlay when playing
+    if (newStatus.isLoaded && newStatus.isPlaying && showOverlay) {
+      setTimeout(() => setShowOverlay(false), 2000);
     }
   };
 
@@ -193,7 +188,6 @@ const styles = StyleSheet.create({
     right: 0,
     padding: 12,
     paddingBottom: 8,
-    backgroundColor: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
   },
   progressBar: {
     height: 3,
@@ -213,6 +207,5 @@ const styles = StyleSheet.create({
   time: {
     color: COLORS.text,
     fontSize: 11,
-    fontVariantNumeric: 'tabular-nums',
   },
 });

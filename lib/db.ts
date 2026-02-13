@@ -17,7 +17,7 @@ export async function getMyGroups() {
   const uid = await getMyUserId();
   const { data, error } = await supabase
     .from("group_members")
-    .select("group_id, groups:groups(id,name,code,owner_id,created_at)")
+    .select("group_id, groups:groups(id,name,join_code,owner_id,created_at)")
     .eq("user_id", uid);
 
   if (error) throw error;
@@ -36,7 +36,7 @@ export async function createGroup(name: string) {
 
     const { data: g, error: gErr } = await supabase
       .from("groups")
-      .insert({ name, code, owner_id: uid })
+      .insert({ name, code, join_code: code, owner_id: uid })
       .select()
       .single();
 
@@ -64,7 +64,7 @@ export async function joinGroupByCode(code: string) {
   const { data: g, error: gErr } = await supabase
     .from("groups")
     .select("*")
-    .eq("code", code.toUpperCase())
+    .eq("join_code", code.toUpperCase())
     .single();
 
   if (gErr) throw gErr;

@@ -19,17 +19,21 @@ interface WordCounterProps {
   text: string;
   min: number;
   max: number;
+  good?: number;
+  excellent?: number;
   showProgress?: boolean;
 }
 
-export function WordCounter({ text, min, max, showProgress = true }: WordCounterProps) {
+export function WordCounter({ text, min, max, good, excellent, showProgress = true }: WordCounterProps) {
   const count = countWords(text);
 
-  // Determine status
-  const getStatus = (): 'under' | 'valid' | 'over' => {
+  // Determine status with tiers
+  const getStatus = (): 'under' | 'minimal' | 'good' | 'excellent' | 'over' => {
     if (count < min) return 'under';
     if (count > max) return 'over';
-    return 'valid';
+    if (excellent && count >= excellent) return 'excellent';
+    if (good && count >= good) return 'good';
+    return 'minimal';
   };
 
   const status = getStatus();
@@ -38,8 +42,12 @@ export function WordCounter({ text, min, max, showProgress = true }: WordCounter
     switch (status) {
       case 'under':
         return COLORS.muted;
-      case 'valid':
+      case 'minimal':
+        return COLORS.warning;
+      case 'good':
         return COLORS.success;
+      case 'excellent':
+        return '#FFD700'; // Gold
       case 'over':
         return COLORS.error;
     }
@@ -48,11 +56,15 @@ export function WordCounter({ text, min, max, showProgress = true }: WordCounter
   const getMessage = () => {
     switch (status) {
       case 'under':
-        return `${min - count} more word${min - count === 1 ? '' : 's'} needed`;
-      case 'valid':
-        return '✓';
+        return `${min - count} more to submit`;
+      case 'minimal':
+        return good ? `${good - count} more for bonus points` : '✓';
+      case 'good':
+        return excellent ? `Good! ${excellent - count} more for excellent` : '✓ Good!';
+      case 'excellent':
+        return '🌟 Excellent!';
       case 'over':
-        return `${count - max} word${count - max === 1 ? '' : 's'} over limit`;
+        return `${count - max} over limit`;
     }
   };
 
@@ -86,9 +98,27 @@ export function WordCounter({ text, min, max, showProgress = true }: WordCounter
             <View
               style={[
                 styles.marker,
-                { left: `${(min / max) * 100}%` },
+                { left: `${(min / max) * 100}%`, backgroundColor: COLORS.muted },
               ]}
             />
+            {/* Good marker */}
+            {good && (
+              <View
+                style={[
+                  styles.marker,
+                  { left: `${(good / max) * 100}%`, backgroundColor: COLORS.success },
+                ]}
+              />
+            )}
+            {/* Excellent marker */}
+            {excellent && (
+              <View
+                style={[
+                  styles.marker,
+                  { left: `${(excellent / max) * 100}%`, backgroundColor: '#FFD700' },
+                ]}
+              />
+            )}
           </View>
         </View>
       )}

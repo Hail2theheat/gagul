@@ -1,6 +1,6 @@
 /**
- * DrawingCanvas - A drawing component with stroke size, colors, undo/redo
- * Used for Telephone game prompts
+ * DrawingCanvas - Opens a full-screen art studio for drawing
+ * Fixes: multiple strokes, color per stroke, scroll interference
  */
 
 import React, { useState, useRef, useCallback } from 'react';
@@ -10,16 +10,16 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  Modal,
+  SafeAreaView,
   PanResponder,
   GestureResponderEvent,
-  PanResponderGestureState,
 } from 'react-native';
 import Svg, { Path, G } from 'react-native-svg';
 import ViewShot from 'react-native-view-shot';
-import * as FileSystem from 'expo-file-system';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CANVAS_SIZE = SCREEN_WIDTH - 40; // 20px padding on each side
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const CANVAS_SIZE = Math.min(SCREEN_WIDTH - 40, SCREEN_HEIGHT * 0.5);
 
 const COLORS = {
   bg: '#0D1426',
@@ -31,21 +31,11 @@ const COLORS = {
   canvas: '#FFFFFF',
 };
 
-// Available colors for drawing
 const PALETTE = [
-  '#000000', // Black
-  '#FF0000', // Red
-  '#FF6B35', // Orange
-  '#FFD93D', // Yellow
-  '#4ADE80', // Green
-  '#3B82F6', // Blue
-  '#8B5CF6', // Purple
-  '#EC4899', // Pink
-  '#8B4513', // Brown
-  '#FFFFFF', // White (eraser effect on white canvas)
+  '#000000', '#FF0000', '#FF6B35', '#FFD93D', '#4ADE80',
+  '#3B82F6', '#8B5CF6', '#EC4899', '#8B4513', '#FFFFFF',
 ];
 
-// Stroke sizes
 const STROKE_SIZES = [
   { label: 'S', size: 3 },
   { label: 'M', size: 8 },
@@ -60,11 +50,12 @@ interface PathData {
 
 interface DrawingCanvasProps {
   onSave: (imageUri: string) => void;
-  onCancel?: () => void;
   disabled?: boolean;
+  prompt?: string;
 }
 
-export function DrawingCanvas({ onSave, onCancel, disabled }: DrawingCanvasProps) {
+export function DrawingCanvas({ onSave, disabled, prompt }: DrawingCanvasProps) {
+  const [showStudio, setShowStudio] = useState(false);
   const [paths, setPaths] = useState<PathData[]>([]);
   const [currentPath, setCurrentPath] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState('#000000');
@@ -75,47 +66,55 @@ export function DrawingCanvas({ onSave, onCancel, disabled }: DrawingCanvasProps
 
   const viewShotRef = useRef<ViewShot>(null);
 
-  // Convert touch coordinates to SVG path
-  const touchToPath = useCallback((x: number, y: number, isFirst: boolean) => {
-    // Clamp coordinates to canvas bounds
-    const clampedX = Math.max(0, Math.min(CANVAS_SIZE, x));
-    const clampedY = Math.max(0, Math.min(CANVAS_SIZE, y));
+  // Use refs to avoid stale closure issues
+  const pathsRef = useRef<PathData[]>([]);
+  const currentPathRef = useRef<string>('');
+  const selectedColorRef = useRef('#000000');
+  const strokeSizeRef = useRef(8);
 
-    if (isFirst) {
-      return `M${clampedX},${clampedY}`;
-    }
-    return `L${clampedX},${clampedY}`;
-  }, []);
+  // Keep refs in sync
+  pathsRef.current = paths;
+  currentPathRef.current = currentPath;
+  selectedColorRef.current = selectedColor;
+  strokeSizeRef.current = strokeSize;
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => !disabled,
-      onMoveShouldSetPanResponder: () => !disabled,
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderTerminationRequest: () => false,
 
       onPanResponderGrant: (evt: GestureResponderEvent) => {
         const { locationX, locationY } = evt.nativeEvent;
-        setCurrentPath(touchToPath(locationX, locationY, true));
+        const x = Math.max(0, Math.min(CANVAS_SIZE, locationX));
+        const y = Math.max(0, Math.min(CANVAS_SIZE, locationY));
+        currentPathRef.current = `M${x},${y}`;
+        setCurrentPath(`M${x},${y}`);
       },
 
       onPanResponderMove: (evt: GestureResponderEvent) => {
         const { locationX, locationY } = evt.nativeEvent;
-        setCurrentPath(prev => prev + touchToPath(locationX, locationY, false));
+        const x = Math.max(0, Math.min(CANVAS_SIZE, locationX));
+        const y = Math.max(0, Math.min(CANVAS_SIZE, locationY));
+        const newPath = currentPathRef.current + `L${x},${y}`;
+        currentPathRef.current = newPath;
+        setCurrentPath(newPath);
       },
 
       onPanResponderRelease: () => {
-        if (currentPath) {
-          // Save current state for undo
-          setUndoStack(prev => [...prev, paths]);
-          setRedoStack([]); // Clear redo stack on new action
-
+        if (currentPathRef.current && currentPathRef.current.length > 0) {
           const newPath: PathData = {
-            d: currentPath,
-            color: selectedColor,
-            strokeWidth: strokeSize,
+            d: currentPathRef.current,
+            color: selectedColorRef.current,
+            strokeWidth: strokeSizeRef.current,
           };
+
+          setUndoStack(prev => [...prev, pathsRef.current]);
+          setRedoStack([]);
           setPaths(prev => [...prev, newPath]);
-          setCurrentPath('');
         }
+        currentPathRef.current = '';
+        setCurrentPath('');
       },
     })
   ).current;
@@ -147,11 +146,12 @@ export function DrawingCanvas({ onSave, onCancel, disabled }: DrawingCanvasProps
   };
 
   const handleSave = async () => {
-    if (saving || !viewShotRef.current) return;
+    if (saving || !viewShotRef.current || paths.length === 0) return;
 
     setSaving(true);
     try {
       const uri = await viewShotRef.current.capture();
+      setShowStudio(false);
       onSave(uri);
     } catch (error) {
       console.error('Error saving drawing:', error);
@@ -160,17 +160,26 @@ export function DrawingCanvas({ onSave, onCancel, disabled }: DrawingCanvasProps
     }
   };
 
-  return (
-    <View style={styles.container}>
-      {/* Canvas area */}
-      <ViewShot
-        ref={viewShotRef}
-        options={{ format: 'png', quality: 0.9 }}
-        style={styles.canvasContainer}
-      >
-        <View style={styles.canvas} {...panResponder.panHandlers}>
-          <Svg width={CANVAS_SIZE} height={CANVAS_SIZE} style={styles.svg}>
-            {/* Completed paths */}
+  const handleClose = () => {
+    setShowStudio(false);
+  };
+
+  const openStudio = () => {
+    if (!disabled) {
+      setShowStudio(true);
+    }
+  };
+
+  // Preview component (shown in the card)
+  const PreviewCanvas = () => (
+    <TouchableOpacity
+      style={styles.previewContainer}
+      onPress={openStudio}
+      disabled={disabled}
+    >
+      {paths.length > 0 ? (
+        <View style={styles.previewCanvas}>
+          <Svg width="100%" height="100%" viewBox={`0 0 ${CANVAS_SIZE} ${CANVAS_SIZE}`}>
             <G>
               {paths.map((path, index) => (
                 <Path
@@ -183,129 +192,282 @@ export function DrawingCanvas({ onSave, onCancel, disabled }: DrawingCanvasProps
                   strokeLinejoin="round"
                 />
               ))}
-              {/* Current path being drawn */}
-              {currentPath && (
-                <Path
-                  d={currentPath}
-                  stroke={selectedColor}
-                  strokeWidth={strokeSize}
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              )}
             </G>
           </Svg>
         </View>
-      </ViewShot>
+      ) : (
+        <View style={styles.previewPlaceholder}>
+          <Text style={styles.previewIcon}>🎨</Text>
+          <Text style={styles.previewText}>Tap to open Art Studio</Text>
+          <Text style={styles.previewHint}>Draw your masterpiece!</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
 
-      {/* Tools */}
-      <View style={styles.tools}>
-        {/* Stroke size */}
-        <View style={styles.toolSection}>
-          <Text style={styles.toolLabel}>Size</Text>
-          <View style={styles.sizeRow}>
-            {STROKE_SIZES.map((s) => (
+  return (
+    <>
+      <PreviewCanvas />
+
+      <Modal
+        visible={showStudio}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={handleClose}
+      >
+        <SafeAreaView style={styles.studioContainer}>
+          {/* Header */}
+          <View style={styles.studioHeader}>
+            <TouchableOpacity onPress={handleClose} style={styles.headerButton}>
+              <Text style={styles.headerButtonText}>✕ Cancel</Text>
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Art Studio</Text>
+            <TouchableOpacity
+              onPress={handleSave}
+              style={[styles.headerButton, styles.saveHeaderButton, paths.length === 0 && styles.headerButtonDisabled]}
+              disabled={paths.length === 0 || saving}
+            >
+              <Text style={[styles.headerButtonText, styles.saveHeaderText]}>
+                {saving ? 'Saving...' : 'Done ✓'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Prompt */}
+          {prompt && (
+            <View style={styles.promptBar}>
+              <Text style={styles.promptLabel}>Draw:</Text>
+              <Text style={styles.promptText}>"{prompt}"</Text>
+            </View>
+          )}
+
+          {/* Canvas */}
+          <View style={styles.canvasWrapper}>
+            <ViewShot
+              ref={viewShotRef}
+              options={{ format: 'png', quality: 0.9 }}
+              style={styles.viewShot}
+            >
+              <View style={styles.canvas} {...panResponder.panHandlers}>
+                <Svg width={CANVAS_SIZE} height={CANVAS_SIZE}>
+                  <G>
+                    {paths.map((path, index) => (
+                      <Path
+                        key={index}
+                        d={path.d}
+                        stroke={path.color}
+                        strokeWidth={path.strokeWidth}
+                        fill="none"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    ))}
+                    {currentPath && (
+                      <Path
+                        d={currentPath}
+                        stroke={selectedColor}
+                        strokeWidth={strokeSize}
+                        fill="none"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    )}
+                  </G>
+                </Svg>
+              </View>
+            </ViewShot>
+          </View>
+
+          {/* Tools */}
+          <View style={styles.toolsContainer}>
+            {/* Stroke size */}
+            <View style={styles.toolSection}>
+              <Text style={styles.toolLabel}>Brush Size</Text>
+              <View style={styles.sizeRow}>
+                {STROKE_SIZES.map((s) => (
+                  <TouchableOpacity
+                    key={s.label}
+                    style={[
+                      styles.sizeButton,
+                      strokeSize === s.size && styles.sizeButtonActive,
+                    ]}
+                    onPress={() => setStrokeSize(s.size)}
+                  >
+                    <View
+                      style={[
+                        styles.sizePreview,
+                        { width: s.size + 6, height: s.size + 6, backgroundColor: selectedColor },
+                      ]}
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Colors */}
+            <View style={styles.toolSection}>
+              <Text style={styles.toolLabel}>Color</Text>
+              <View style={styles.colorRow}>
+                {PALETTE.map((color) => (
+                  <TouchableOpacity
+                    key={color}
+                    style={[
+                      styles.colorButton,
+                      { backgroundColor: color },
+                      color === '#FFFFFF' && styles.colorButtonWhite,
+                      selectedColor === color && styles.colorButtonActive,
+                    ]}
+                    onPress={() => setSelectedColor(color)}
+                  />
+                ))}
+              </View>
+            </View>
+
+            {/* Actions */}
+            <View style={styles.actionRow}>
               <TouchableOpacity
-                key={s.label}
-                style={[
-                  styles.sizeButton,
-                  strokeSize === s.size && styles.sizeButtonActive,
-                ]}
-                onPress={() => setStrokeSize(s.size)}
+                style={[styles.actionButton, undoStack.length === 0 && styles.actionButtonDisabled]}
+                onPress={handleUndo}
+                disabled={undoStack.length === 0}
               >
-                <View
-                  style={[
-                    styles.sizePreview,
-                    { width: s.size + 4, height: s.size + 4, backgroundColor: selectedColor },
-                  ]}
-                />
+                <Text style={styles.actionIcon}>↩</Text>
+                <Text style={styles.actionText}>Undo</Text>
               </TouchableOpacity>
-            ))}
-          </View>
-        </View>
 
-        {/* Colors */}
-        <View style={styles.toolSection}>
-          <Text style={styles.toolLabel}>Color</Text>
-          <View style={styles.colorRow}>
-            {PALETTE.map((color) => (
               <TouchableOpacity
-                key={color}
-                style={[
-                  styles.colorButton,
-                  { backgroundColor: color },
-                  color === '#FFFFFF' && styles.colorButtonWhite,
-                  selectedColor === color && styles.colorButtonActive,
-                ]}
-                onPress={() => setSelectedColor(color)}
-              />
-            ))}
+                style={[styles.actionButton, redoStack.length === 0 && styles.actionButtonDisabled]}
+                onPress={handleRedo}
+                disabled={redoStack.length === 0}
+              >
+                <Text style={styles.actionIcon}>↪</Text>
+                <Text style={styles.actionText}>Redo</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.actionButton, paths.length === 0 && styles.actionButtonDisabled]}
+                onPress={handleClear}
+                disabled={paths.length === 0}
+              >
+                <Text style={styles.actionIcon}>🗑</Text>
+                <Text style={styles.actionText}>Clear</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-
-        {/* Actions */}
-        <View style={styles.actionRow}>
-          <TouchableOpacity
-            style={[styles.actionButton, undoStack.length === 0 && styles.actionButtonDisabled]}
-            onPress={handleUndo}
-            disabled={undoStack.length === 0}
-          >
-            <Text style={styles.actionIcon}>↶</Text>
-            <Text style={styles.actionText}>Undo</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionButton, redoStack.length === 0 && styles.actionButtonDisabled]}
-            onPress={handleRedo}
-            disabled={redoStack.length === 0}
-          >
-            <Text style={styles.actionIcon}>↷</Text>
-            <Text style={styles.actionText}>Redo</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionButton, paths.length === 0 && styles.actionButtonDisabled]}
-            onPress={handleClear}
-            disabled={paths.length === 0}
-          >
-            <Text style={styles.actionIcon}>🗑</Text>
-            <Text style={styles.actionText}>Clear</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Bottom buttons */}
-      <View style={styles.bottomRow}>
-        {onCancel && (
-          <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity
-          style={[
-            styles.saveButton,
-            (paths.length === 0 || saving) && styles.saveButtonDisabled,
-          ]}
-          onPress={handleSave}
-          disabled={paths.length === 0 || saving}
-        >
-          <Text style={styles.saveButtonText}>
-            {saving ? 'Saving...' : 'Done'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+        </SafeAreaView>
+      </Modal>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  // Preview (in card)
+  previewContainer: {
     width: '100%',
-    gap: 16,
+    aspectRatio: 1,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: COLORS.canvas,
   },
-  canvasContainer: {
-    alignSelf: 'center',
+  previewCanvas: {
+    flex: 1,
+    backgroundColor: COLORS.canvas,
+  },
+  previewPlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.card,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    borderStyle: 'dashed',
+    borderRadius: 12,
+  },
+  previewIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+  previewText: {
+    color: COLORS.text,
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  previewHint: {
+    color: COLORS.muted,
+    fontSize: 14,
+    marginTop: 4,
+  },
+
+  // Studio (modal)
+  studioContainer: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+  },
+  studioHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  headerButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  headerButtonText: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  headerButtonDisabled: {
+    opacity: 0.4,
+  },
+  saveHeaderButton: {
+    backgroundColor: COLORS.accent,
+    borderRadius: 8,
+  },
+  saveHeaderText: {
+    color: '#FFF',
+    fontWeight: '700',
+  },
+  headerTitle: {
+    color: COLORS.text,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  promptBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: COLORS.card,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    gap: 6,
+  },
+  promptLabel: {
+    color: COLORS.muted,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  promptText: {
+    color: COLORS.accent,
+    fontSize: 14,
+    fontWeight: '700',
+    fontStyle: 'italic',
+    flexShrink: 1,
+  },
+
+  // Canvas
+  canvasWrapper: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  viewShot: {
     borderRadius: 12,
     overflow: 'hidden',
   },
@@ -315,14 +477,15 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.canvas,
     borderRadius: 12,
   },
-  svg: {
-    backgroundColor: 'transparent',
-  },
-  tools: {
+
+  // Tools
+  toolsContainer: {
     backgroundColor: COLORS.card,
-    borderRadius: 12,
-    padding: 12,
-    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    gap: 16,
   },
   toolSection: {
     gap: 8,
@@ -337,8 +500,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sizeButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: 8,
     backgroundColor: COLORS.bg,
     alignItems: 'center',
@@ -355,12 +518,12 @@ const styles = StyleSheet.create({
   colorRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
   },
   colorButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     borderWidth: 2,
     borderColor: 'transparent',
   },
@@ -375,13 +538,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 16,
+    marginTop: 8,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     backgroundColor: COLORS.bg,
     borderRadius: 8,
   },
@@ -389,44 +553,12 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   actionIcon: {
-    fontSize: 16,
+    fontSize: 18,
   },
   actionText: {
     color: COLORS.text,
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
-  },
-  bottomRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  cancelButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    color: COLORS.text,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  saveButton: {
-    flex: 2,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: COLORS.accent,
-    alignItems: 'center',
-  },
-  saveButtonDisabled: {
-    opacity: 0.5,
-  },
-  saveButtonText: {
-    color: COLORS.text,
-    fontSize: 16,
-    fontWeight: '700',
   },
 });
 

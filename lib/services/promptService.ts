@@ -269,6 +269,37 @@ export async function getMajorityGuessingResults(
 }
 
 /**
+ * Record that the current user has seen/viewed a prompt
+ */
+export async function recordPromptView(groupPromptId: string): Promise<void> {
+  const { error } = await supabase.rpc('record_prompt_view', {
+    p_group_prompt_id: groupPromptId,
+  });
+  if (error) {
+    console.error('Error recording prompt view:', error);
+  }
+}
+
+/**
+ * Get prompt status for all members in a group
+ * Returns array of { user_id, status } where status is 'not_seen' | 'seen' | 'responded'
+ */
+export async function getMemberPromptStatuses(
+  groupId: string
+): Promise<Array<{ user_id: string; status: 'not_seen' | 'seen' | 'responded' }>> {
+  const { data, error } = await supabase.rpc('get_member_prompt_statuses', {
+    p_group_id: groupId,
+  });
+
+  if (error) {
+    console.error('Error getting member prompt statuses:', error);
+    return [];
+  }
+
+  return (data as Array<{ user_id: string; status: 'not_seen' | 'seen' | 'responded' }>) || [];
+}
+
+/**
  * Submit a response with a majority guess
  * Used for "guess what the majority will answer" prompts
  */

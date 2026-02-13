@@ -6,10 +6,19 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
+import { SPRING_SNAPPY } from '../../constants/animations';
 import type { GroupPrompt, PromptType } from '../../lib/types/prompts';
 import { validateResponse, getPromptTypeLabel } from '../../lib/types/prompts';
 import {
@@ -18,6 +27,8 @@ import {
   uploadPhoto,
   isPromptExpired,
 } from '../../lib/services/promptService';
+import { supabase } from '../../lib/supabase';
+import { POINTS, emitPointsAwarded } from '../../lib/services/pointsService';
 import { CountdownTimer } from './CountdownTimer';
 import { ShortTextInput } from './ShortTextInput';
 import { LongTextInput } from './LongTextInput';
@@ -66,6 +77,7 @@ export function PromptCard({
   // State
   const [textValue, setTextValue] = useState('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [photoCaption, setPhotoCaption] = useState('');
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [majorityGuess, setMajorityGuess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -75,6 +87,12 @@ export function PromptCard({
 
   // Check if this is a majority guess prompt
   const isMajorityGuess = prompt?.is_majority_guess === true;
+
+  // Submit button press feedback
+  const submitScale = useSharedValue(1);
+  const submitAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: submitScale.value }],
+  }));
 
   // Validation
   const validation = validateResponse(promptType, textValue, photoUri ?? undefined, selectedOption ?? undefined);
@@ -103,12 +121,15 @@ export function PromptCard({
         mediaUrl = uploadResult.url ?? undefined;
       }
 
+      // Determine content - use photoCaption for photo prompts, textValue otherwise
+      const contentToSubmit = promptType === 'photo' ? (photoCaption || undefined) : (textValue || undefined);
+
       // Submit response - use majority guess function if applicable
       let result;
       if (isMajorityGuess && majorityGuess) {
         result = await submitResponseWithMajorityGuess({
           groupPromptId: groupPrompt.id,
-          content: textValue || undefined,
+          content: contentToSubmit,
           mediaUrl,
           selectedOption: selectedOption ?? undefined,
           guessedMajority: majorityGuess,
@@ -116,7 +137,7 @@ export function PromptCard({
       } else {
         result = await submitResponse({
           groupPromptId: groupPrompt.id,
-          content: textValue || undefined,
+          content: contentToSubmit,
           mediaUrl,
           selectedOption: selectedOption ?? undefined,
         });
@@ -125,6 +146,22 @@ export function PromptCard({
       if (result.success) {
         setHasResponded(true);
         onSubmitted?.();
+
+        // Emit points popups
+        const isPhoto = promptType === 'photo' || !!mediaUrl;
+        emitPointsAwarded(POINTS.RESPONSE, 'response');
+        if (isPhoto) {
+          setTimeout(() => emitPointsAwarded(POINTS.PHOTO_BONUS, 'photo_bonus'), 400);
+        }
+
+        // Check if first responder
+        const { count } = await supabase
+          .from('responses')
+          .select('id', { count: 'exact', head: true })
+          .eq('group_prompt_id', groupPrompt.id);
+        if (count === 1) {
+          setTimeout(() => emitPointsAwarded(POINTS.FIRST_RESPONDER, 'first_responder'), 800);
+        }
       } else {
         setError(result.error || 'Failed to submit');
       }
@@ -176,6 +213,8 @@ export function PromptCard({
           <PhotoPicker
             value={photoUri}
             onChange={setPhotoUri}
+            caption={photoCaption}
+            onCaptionChange={setPhotoCaption}
             disabled={submitting}
           />
         );
@@ -204,6 +243,18 @@ export function PromptCard({
                   if (result.success) {
                     setHasResponded(true);
                     onSubmitted?.();
+
+                    // Emit points popups
+                    emitPointsAwarded(POINTS.RESPONSE, 'response');
+
+                    // Check if first responder
+                    const { count } = await supabase
+                      .from('responses')
+                      .select('id', { count: 'exact', head: true })
+                      .eq('group_prompt_id', groupPrompt.id);
+                    if (count === 1) {
+                      setTimeout(() => emitPointsAwarded(POINTS.FIRST_RESPONDER, 'first_responder'), 800);
+                    }
                   } else {
                     setError(result.error || 'Failed to submit');
                   }
@@ -292,12 +343,12 @@ export function PromptCard({
 
       {/* Submitted state */}
       {hasResponded && (
-        <View style={styles.submittedBox}>
+        <Animated.View entering={FadeInDown.springify().damping(14)} style={styles.submittedBox}>
           <Text style={styles.submittedText}>✓ Response submitted!</Text>
           <Text style={styles.submittedHint}>
             Check back during the Lowdown to see everyone's answers
           </Text>
-        </View>
+        </Animated.View>
       )}
 
       {/* Input */}
@@ -310,20 +361,29 @@ export function PromptCard({
 
       {/* Submit button - not shown for MajorityGuess which has its own */}
       {!hasResponded && !expired && !isMajorityGuess && (
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            !canSubmit && styles.submitButtonDisabled,
-          ]}
-          onPress={handleSubmit}
-          disabled={!canSubmit}
-        >
-          {submitting ? (
-            <ActivityIndicator size="small" color={COLORS.btnText} />
-          ) : (
-            <Text style={styles.submitButtonText}>Submit Response</Text>
-          )}
-        </TouchableOpacity>
+        <Animated.View style={submitAnimStyle}>
+          <Pressable
+            style={[
+              styles.submitButton,
+              !canSubmit && styles.submitButtonDisabled,
+            ]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              handleSubmit();
+            }}
+            onPressIn={() => { submitScale.value = withSpring(0.96, SPRING_SNAPPY); }}
+            onPressOut={() => { submitScale.value = withSpring(1, SPRING_SNAPPY); }}
+            disabled={!canSubmit}
+            accessibilityRole="button"
+            accessibilityLabel="Submit Response"
+          >
+            {submitting ? (
+              <ActivityIndicator size="small" color={COLORS.btnText} />
+            ) : (
+              <Text style={styles.submitButtonText}>Submit Response</Text>
+            )}
+          </Pressable>
+        </Animated.View>
       )}
 
       {/* Rating - only show after response submitted */}

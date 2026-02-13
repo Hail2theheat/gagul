@@ -40,6 +40,8 @@ export interface MCResults {
 export interface QuiplashParticipant {
   matchup_id: string;
   user_id: string;
+  username?: string;
+  avatar_config?: Record<string, unknown> | null;
   response: {
     id: string;
     content: string;
@@ -64,6 +66,8 @@ export interface FiresidePrompt {
 
 export interface LeaderboardEntry {
   user_id: string;
+  username: string;
+  avatar_config: any;
   points_answering: number;
   points_voting: number;
   points_quiplash_wins: number;
@@ -72,6 +76,8 @@ export interface LeaderboardEntry {
 
 export interface WeeklyWinner {
   user_id: string;
+  username?: string;
+  avatar_config?: Record<string, unknown> | null;
   has_chosen: boolean;
   chosen_prompt_id?: string;
   custom_prompt_content?: string;
@@ -103,7 +109,7 @@ export interface FiresideComment {
 }
 
 /**
- * Check if Fireside is currently unlocked (Sunday 9pm ET to Monday 3am ET)
+ * Check if Fireside is currently unlocked (Sunday 8pm ET to Monday 3am ET)
  */
 export function isFiresideUnlocked(): boolean {
   const now = new Date();
@@ -117,8 +123,8 @@ export function isFiresideUnlocked(): boolean {
   const weekday = parts.find(p => p.type === 'weekday')?.value;
   const hour = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10);
 
-  // Sunday 9pm ET (21:00) or later, OR Monday before 3am
-  if (weekday === 'Sun' && hour >= 21) return true;
+  // Sunday 8pm ET (20:00) or later, OR Monday before 3am
+  if (weekday === 'Sun' && hour >= 20) return true;
   if (weekday === 'Mon' && hour < 3) return true;
   return false;
 }
@@ -243,7 +249,10 @@ export async function addComment(
 export async function getComments(responseId: string): Promise<FiresideComment[]> {
   const { data, error } = await supabase
     .from('fireside_comments')
-    .select('*')
+    .select(`
+      *,
+      profiles:user_id (username)
+    `)
     .eq('response_id', responseId)
     .is('parent_comment_id', null)
     .order('created_at', { ascending: true });
@@ -253,7 +262,13 @@ export async function getComments(responseId: string): Promise<FiresideComment[]
     return [];
   }
 
-  return (data as FiresideComment[]) || [];
+  // Map the profile data to the expected format
+  const comments = (data || []).map((comment: any) => ({
+    ...comment,
+    username: comment.profiles?.username || undefined,
+  }));
+
+  return comments as FiresideComment[];
 }
 
 /**
@@ -347,55 +362,66 @@ export async function getUserProfiles(
  * Handles public URLs, signed URLs, and raw paths
  */
 export async function getSignedImageUrl(url: string): Promise<string | null> {
-  if (!url) return null;
+  if (!url) {
+    console.log('[getSignedImageUrl] No URL provided');
+    return null;
+  }
+
+  console.log('[getSignedImageUrl] Input URL:', url);
 
   try {
-    // If it's already a public URL, just return it as-is
+    // If it's already a full Supabase public URL, return it
     if (url.includes('/storage/v1/object/public/')) {
+      console.log('[getSignedImageUrl] Already public URL');
       return url;
     }
 
     // If it's a signed URL that might still be valid, return it
     if (url.includes('/storage/v1/object/sign/')) {
+      console.log('[getSignedImageUrl] Already signed URL');
       return url;
     }
 
-    // Extract path if needed
+    // Extract path from URL
     let storagePath = url;
 
+    // Handle full URLs with /uploads/ bucket
     if (url.includes('/uploads/')) {
       storagePath = url.split('/uploads/')[1]?.split('?')[0] || url;
     } else if (url.startsWith('http')) {
-      // Unknown URL format - try to use as-is
+      // Unknown URL format - could be external, try as-is
+      console.log('[getSignedImageUrl] External URL, using as-is');
       return url;
     }
     // else: Already just a path
 
     // Decode any URL-encoded characters
     storagePath = decodeURIComponent(storagePath);
+    console.log('[getSignedImageUrl] Storage path:', storagePath);
 
-    // First try to get public URL
-    const { data: publicData } = supabase.storage
-      .from('uploads')
-      .getPublicUrl(storagePath);
-
-    if (publicData?.publicUrl) {
-      return publicData.publicUrl;
-    }
-
-    // Fallback to signed URL
+    // Always create a fresh signed URL (more reliable than public URLs for private buckets)
     const { data, error } = await supabase.storage
       .from('uploads')
-      .createSignedUrl(storagePath, 60 * 60 * 24);
+      .createSignedUrl(storagePath, 60 * 60); // 1 hour expiry
 
-    if (error || !data?.signedUrl) {
-      console.error('Error creating signed URL:', error, 'for path:', storagePath);
+    if (error) {
+      console.error('[getSignedImageUrl] Error creating signed URL:', error.message);
+      // Try public URL as fallback
+      const { data: publicData } = supabase.storage
+        .from('uploads')
+        .getPublicUrl(storagePath);
+
+      if (publicData?.publicUrl) {
+        console.log('[getSignedImageUrl] Using public URL fallback');
+        return publicData.publicUrl;
+      }
       return null;
     }
 
+    console.log('[getSignedImageUrl] Created signed URL successfully');
     return data.signedUrl;
   } catch (err) {
-    console.error('Error in getSignedImageUrl:', err);
+    console.error('[getSignedImageUrl] Exception:', err);
     return null;
   }
 }

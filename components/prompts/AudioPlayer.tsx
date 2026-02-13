@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   time: {
     color: COLORS.muted,
     fontSize: 12,
-    fontVariantNumeric: 'tabular-nums',
+    fontVariant: ['tabular-nums'],
   },
   // Compact styles
   compactContainer: {
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
   compactTime: {
     color: COLORS.muted,
     fontSize: 12,
-    fontVariantNumeric: 'tabular-nums',
+    fontVariant: ['tabular-nums'],
     minWidth: 32,
   },
 });

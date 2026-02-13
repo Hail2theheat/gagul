@@ -1,6 +1,6 @@
 /**
  * VideoRecorder - Record video responses for prompts
- * Uses expo-camera for video recording
+ * Uses expo-camera for video recording with preview after recording
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -14,9 +14,13 @@ import {
   Dimensions,
 } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
+import { Video, ResizeMode } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// Camera preview should be roughly 4:3 aspect ratio, sized for the card
+const CAMERA_HEIGHT = Math.min(SCREEN_HEIGHT * 0.45, 400);
 
 const COLORS = {
   bg: '#0B1026',
@@ -26,9 +30,11 @@ const COLORS = {
   muted: '#B8A88A',
   accent: '#FF6B35',
   red: '#EF4444',
+  success: '#4ADE80',
 };
 
 const MAX_DURATION = 30000; // 30 seconds max
+
 
 interface VideoRecorderProps {
   onRecordingComplete: (uri: string, duration: number) => void;
@@ -44,10 +50,12 @@ export function VideoRecorder({
   const [facing, setFacing] = useState<CameraType>('front');
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
+  const [recordedUri, setRecordedUri] = useState<string | null>(null);
+  const [finalDuration, setFinalDuration] = useState(0);
 
   const cameraRef = useRef<CameraView>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const durationInterval = useRef<NodeJS.Timeout | null>(null);
+  const durationInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     return () => {
@@ -120,12 +128,26 @@ export function VideoRecorder({
       });
 
       if (video?.uri) {
-        onRecordingComplete(video.uri, recordingDuration);
+        // Store video for preview instead of immediately submitting
+        setRecordedUri(video.uri);
+        setFinalDuration(recordingDuration);
       }
     } catch (error) {
       console.error('Failed to start recording:', error);
       setIsRecording(false);
     }
+  };
+
+  const handleUseVideo = () => {
+    if (recordedUri) {
+      onRecordingComplete(recordedUri, finalDuration);
+    }
+  };
+
+  const handleReRecord = () => {
+    setRecordedUri(null);
+    setFinalDuration(0);
+    setRecordingDuration(0);
   };
 
   const stopRecording = () => {
@@ -171,6 +193,50 @@ export function VideoRecorder({
         <TouchableOpacity style={styles.permissionButton} onPress={requestPermissions}>
           <Text style={styles.permissionButtonText}>Grant Access</Text>
         </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // Show preview if we have a recorded video
+  if (recordedUri) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.cameraContainer}>
+          <Video
+            style={styles.camera}
+            source={{ uri: recordedUri }}
+            resizeMode={ResizeMode.COVER}
+            shouldPlay={true}
+            isLooping={true}
+          />
+
+          {/* Duration badge */}
+          <View style={styles.previewBadge}>
+            <Ionicons name="videocam" size={14} color={COLORS.text} />
+            <Text style={styles.previewDuration}>
+              {formatDuration(finalDuration)}
+            </Text>
+          </View>
+        </View>
+
+        {/* Preview controls */}
+        <View style={styles.previewControls}>
+          <TouchableOpacity
+            style={styles.reRecordButton}
+            onPress={handleReRecord}
+          >
+            <Ionicons name="refresh" size={20} color={COLORS.text} />
+            <Text style={styles.reRecordText}>Re-record</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.useVideoButton}
+            onPress={handleUseVideo}
+          >
+            <Ionicons name="checkmark" size={20} color={COLORS.text} />
+            <Text style={styles.useVideoText}>Use This Video</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -243,14 +309,16 @@ export function VideoRecorder({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    width: '100%',
   },
   permissionContainer: {
-    flex: 1,
+    height: CAMERA_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 40,
     gap: 16,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 20,
   },
   permissionText: {
     color: COLORS.muted,
@@ -269,13 +337,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   cameraContainer: {
-    flex: 1,
+    height: CAMERA_HEIGHT,
     borderRadius: 20,
     overflow: 'hidden',
-    margin: 16,
+    marginHorizontal: 0,
+    marginVertical: 8,
+    backgroundColor: '#000',
   },
   camera: {
     flex: 1,
+    width: '100%',
+    height: '100%',
   },
   recordingOverlay: {
     position: 'absolute',
@@ -304,7 +376,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontSize: 14,
     fontWeight: '600',
-    fontVariantNumeric: 'tabular-nums',
+    fontVariant: ['tabular-nums'],
   },
   progressBar: {
     height: 4,
@@ -330,8 +402,9 @@ const styles = StyleSheet.create({
   },
   controls: {
     alignItems: 'center',
-    padding: 20,
-    gap: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    gap: 12,
   },
   recordButton: {
     width: 80,
@@ -361,5 +434,60 @@ const styles = StyleSheet.create({
   hint: {
     color: COLORS.muted,
     fontSize: 14,
+  },
+  previewBadge: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 6,
+  },
+  previewDuration: {
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  previewControls: {
+    flexDirection: 'row',
+    paddingVertical: 12,
+    paddingHorizontal: 0,
+    gap: 12,
+  },
+  reRecordButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  reRecordText: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  useVideoButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.success,
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  useVideoText: {
+    color: '#000',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

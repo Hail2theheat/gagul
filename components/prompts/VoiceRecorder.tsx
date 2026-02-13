@@ -43,7 +43,7 @@ export function VoiceRecorder({
   const [permissionGranted, setPermissionGranted] = useState(false);
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const durationInterval = useRef<NodeJS.Timeout | null>(null);
+  const durationInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     checkPermissions();
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '700',
     color: COLORS.text,
-    fontVariantNumeric: 'tabular-nums',
+    fontVariant: ['tabular-nums'],
   },
   remaining: {
     color: COLORS.muted,

@@ -5,7 +5,7 @@
 
 import { supabase } from '../supabase';
 
-export type EventType = 'view' | 'view_end' | 'reaction' | 'comment' | 'tap' | 'share';
+export type EventType = 'view' | 'view_end' | 'reaction' | 'emoji_reaction' | 'comment' | 'tap' | 'share';
 
 export interface ResponseStats {
   view_count: number;

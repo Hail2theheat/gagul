@@ -2,7 +2,7 @@
   "expo": {
     "name": "Stokie",
     "slug": "vibecheck",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/images/Icon.jpg",
     "scheme": "stokie",
@@ -31,6 +31,7 @@
     },
     "plugins": [
       "expo-router",
+      "expo-updates",
       [
         "expo-notifications",
         {
@@ -45,7 +46,8 @@
           "resizeMode": "cover",
           "backgroundColor": "#0B1026"
         }
-      ]
+      ],
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -56,6 +58,12 @@
       "eas": {
         "projectId": "c9e33c6a-11cb-4308-85a5-6a30830de4e6"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/c9e33c6a-11cb-4308-85a5-6a30830de4e6"
     }
   }
 }

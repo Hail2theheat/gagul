@@ -4,8 +4,11 @@
  */
 
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
+import { SPRING_SNAPPY } from '../../constants/animations';
 import { PixelCharacter, CharacterConfig, DEFAULT_CHARACTER } from '../PixelCharacter';
 import type { GroupMember } from '../../lib/types/prompts';
 
@@ -18,6 +21,34 @@ const COLORS = {
   text: '#E6F0FF',
   muted: '#9EC5FF',
 };
+
+// Animated option with press scale feedback
+function AnimatedOption({ children, onPress, disabled, style }: {
+  children: React.ReactNode;
+  onPress: () => void;
+  disabled: boolean;
+  style: any[];
+}) {
+  const scale = useSharedValue(1);
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  return (
+    <Animated.View style={animStyle}>
+      <Pressable
+        style={style}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          onPress();
+        }}
+        onPressIn={() => { scale.value = withSpring(0.97, SPRING_SNAPPY); }}
+        onPressOut={() => { scale.value = withSpring(1, SPRING_SNAPPY); }}
+        disabled={disabled}
+        accessibilityRole="radio"
+      >
+        {children}
+      </Pressable>
+    </Animated.View>
+  );
+}
 
 interface MultipleChoiceProps {
   options: string[];
@@ -44,7 +75,7 @@ export function MultipleChoice({
         {groupMembers.map((member) => {
           const isSelected = value === member.user_id;
           return (
-            <TouchableOpacity
+            <AnimatedOption
               key={member.user_id}
               style={[
                 styles.option,
@@ -52,9 +83,8 @@ export function MultipleChoice({
                 isSelected && styles.optionSelected,
                 disabled && styles.disabled,
               ]}
-              onPress={() => !disabled && onChange(member.user_id)}
+              onPress={() => onChange(member.user_id)}
               disabled={disabled}
-              activeOpacity={0.7}
             >
               {/* Avatar */}
               <View style={styles.avatarContainer}>
@@ -75,7 +105,7 @@ export function MultipleChoice({
                   <Ionicons name="checkmark" size={16} color="#fff" />
                 )}
               </View>
-            </TouchableOpacity>
+            </AnimatedOption>
           );
         })}
       </View>
@@ -88,16 +118,15 @@ export function MultipleChoice({
       {options.map((option, index) => {
         const isSelected = value === option;
         return (
-          <TouchableOpacity
+          <AnimatedOption
             key={`${option}-${index}`}
             style={[
               styles.option,
               isSelected && styles.optionSelected,
               disabled && styles.disabled,
             ]}
-            onPress={() => !disabled && onChange(option)}
+            onPress={() => onChange(option)}
             disabled={disabled}
-            activeOpacity={0.7}
           >
             <View style={[styles.radio, isSelected && styles.radioSelected]}>
               {isSelected && (
@@ -107,7 +136,7 @@ export function MultipleChoice({
             <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
               {option}
             </Text>
-          </TouchableOpacity>
+          </AnimatedOption>
         );
       })}
     </View>

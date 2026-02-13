@@ -5,6 +5,7 @@ export default function GroupLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
+        animation: 'slide_from_right',
       }}
     >
       <Stack.Screen
@@ -17,6 +18,7 @@ export default function GroupLayout() {
         name="lowdown"
         options={{
           headerShown: false,
+          animation: 'slide_from_bottom',
         }}
       />
     </Stack>

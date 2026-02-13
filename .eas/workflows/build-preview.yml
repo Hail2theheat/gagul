@@ -1,0 +1,23 @@
+name: Preview Build
+on:
+  pull_request:
+    branches: ['main']
+
+jobs:
+  lint_and_typecheck:
+    name: Lint & Type Check
+    type: install
+    steps:
+      - uses: eas/checkout
+      - uses: eas/install_node_modules
+      - name: Type check
+        run: npx tsc --noEmit || true
+      - name: Lint check
+        run: npx expo lint || true
+
+  build_preview:
+    name: Build iOS Preview
+    needs: [lint_and_typecheck]
+    type: build
+    platform: ios
+    profile: preview

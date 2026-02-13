@@ -5,6 +5,19 @@
 
 import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import Animated, {
+  FadeIn,
+  FadeInRight,
+  FadeOutLeft,
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import * as Haptics from 'expo-haptics';
+import { SPRING_SNAPPY } from '../../constants/animations';
 import {
   getQuiplashMatchups,
   submitQuiplashVote,
@@ -95,45 +108,107 @@ export function QuiplashVotingCard({ groupId, onVoted }: QuiplashVotingCardProps
 
   const currentMatchup = matchups[currentMatchupIndex];
 
+  // Swipe gesture for voting
+  const translateX = useSharedValue(0);
+  const cardRotate = useSharedValue(0);
+
+  const swipeToVote = (index: number) => {
+    if (submitting || !currentMatchup?.responses[index]) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    handleVote(currentMatchup.responses[index].response_id);
+  };
+
+  const panGesture = Gesture.Pan()
+    .activeOffsetX([-20, 20])
+    .onUpdate((e) => {
+      translateX.value = e.translationX;
+      cardRotate.value = e.translationX / 20; // Subtle tilt
+    })
+    .onEnd((e) => {
+      const THRESHOLD = 120;
+      if (e.translationX < -THRESHOLD) {
+        // Swipe left = vote B (second option)
+        translateX.value = withTiming(-400, { duration: 200 });
+        runOnJS(swipeToVote)(1);
+      } else if (e.translationX > THRESHOLD) {
+        // Swipe right = vote A (first option)
+        translateX.value = withTiming(400, { duration: 200 });
+        runOnJS(swipeToVote)(0);
+      } else {
+        // Spring back
+        translateX.value = withSpring(0, SPRING_SNAPPY);
+        cardRotate.value = withSpring(0, SPRING_SNAPPY);
+      }
+    });
+
+  const swipeStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { rotate: `${cardRotate.value}deg` },
+    ],
+  }));
+
+  // Option press scale
+  const optionAScale = useSharedValue(1);
+  const optionBScale = useSharedValue(1);
+  const optionAStyle = useAnimatedStyle(() => ({ transform: [{ scale: optionAScale.value }] }));
+  const optionBStyle = useAnimatedStyle(() => ({ transform: [{ scale: optionBScale.value }] }));
+
   return (
     <View style={styles.card}>
       {/* Header */}
-      <View style={styles.header}>
+      <Animated.View entering={FadeIn.duration(300)} style={styles.header}>
         <View style={styles.badge}>
           <Text style={styles.badgeText}>⚔️ QUIPLASH VOTE</Text>
         </View>
         <Text style={styles.progress}>
           {currentMatchupIndex + 1} / {matchups.length}
         </Text>
-      </View>
+      </Animated.View>
 
       {/* Prompt */}
-      <Text style={styles.promptText}>{currentMatchup.prompt_content}</Text>
+      <Animated.Text key={`prompt-${currentMatchupIndex}`} entering={FadeInRight.duration(300)} style={styles.promptText}>
+        {currentMatchup.prompt_content}
+      </Animated.Text>
 
       {error && (
         <Text style={styles.errorText}>{error}</Text>
       )}
 
       {/* Responses to vote on */}
-      <View style={styles.responsesContainer}>
-        <Text style={styles.votePrompt}>Which answer is better?</Text>
+      <GestureDetector gesture={panGesture}>
+        <Animated.View style={[styles.responsesContainer, swipeStyle]} key={`matchup-${currentMatchupIndex}`}>
+          <Text style={styles.votePrompt}>Which answer is better? (tap or swipe)</Text>
 
-        {currentMatchup.responses.map((response, index) => (
-          <Pressable
-            key={response.response_id}
-            style={[styles.responseOption, submitting && styles.responseDisabled]}
-            onPress={() => handleVote(response.response_id)}
-            disabled={submitting}
-          >
-            <Text style={styles.responseLabel}>
-              {index === 0 ? 'A' : 'B'}
-            </Text>
-            <Text style={styles.responseText}>
-              "{response.content}"
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+          {currentMatchup.responses.map((response, index) => {
+            const animStyle = index === 0 ? optionAStyle : optionBStyle;
+            const scaleVal = index === 0 ? optionAScale : optionBScale;
+            return (
+              <Animated.View key={response.response_id} style={animStyle} entering={FadeInRight.delay(index * 100).duration(250)}>
+                <Pressable
+                  style={[styles.responseOption, submitting && styles.responseDisabled]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    handleVote(response.response_id);
+                  }}
+                  onPressIn={() => { scaleVal.value = withSpring(0.97, SPRING_SNAPPY); }}
+                  onPressOut={() => { scaleVal.value = withSpring(1, SPRING_SNAPPY); }}
+                  disabled={submitting}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Vote for answer ${index === 0 ? 'A' : 'B'}`}
+                >
+                  <Text style={styles.responseLabel}>
+                    {index === 0 ? 'A' : 'B'}
+                  </Text>
+                  <Text style={styles.responseText}>
+                    "{response.content}"
+                  </Text>
+                </Pressable>
+              </Animated.View>
+            );
+          })}
+        </Animated.View>
+      </GestureDetector>
 
       {submitting && (
         <View style={styles.submittingOverlay}>

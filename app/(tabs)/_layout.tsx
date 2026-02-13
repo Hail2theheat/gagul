@@ -1,11 +1,36 @@
 // app/(tabs)/_layout.tsx
 import { Tabs } from "expo-router";
-import React from "react";
+import React, { useEffect } from "react";
 import { View } from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from "react-native-reanimated";
+import { HapticTab } from "../../components/haptic-tab";
+import { SPRING_BOUNCY } from "../../constants/animations";
+
+// Animated tab icon wrapper - scales up when active
+function AnimatedTabIcon({ children, focused }: { children: React.ReactNode; focused: boolean }) {
+  const scale = useSharedValue(1);
+
+  useEffect(() => {
+    scale.value = withSpring(focused ? 1.15 : 1, SPRING_BOUNCY);
+  }, [focused]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View style={animStyle}>
+      {children}
+    </Animated.View>
+  );
+}
 
 // Pixel art home icon
 function PixelHomeIcon({ color, size }: { color: string; size: number }) {
-  const s = size * 0.08;
   return (
     <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
       {/* Roof */}
@@ -77,19 +102,20 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        tabBarButton: HapticTab,
         tabBarStyle: {
-          backgroundColor: "#0B1026",
-          borderTopColor: "#1a2f1a",
+          backgroundColor: "#080E1C",
+          borderTopColor: "rgba(80, 100, 140, 0.2)",
           borderTopWidth: 1,
           height: 85,
           paddingBottom: 25,
           paddingTop: 10,
         },
-        tabBarActiveTintColor: "#FF6B35",
-        tabBarInactiveTintColor: "#6B5B4F",
+        tabBarActiveTintColor: "#FF8555",
+        tabBarInactiveTintColor: "#6B6058",
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: "600",
+          fontFamily: "Nunito_700Bold",
         },
       }}
     >
@@ -97,20 +123,28 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color, size }) => <PixelHomeIcon color={color} size={size} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon focused={focused}>
+              <PixelHomeIcon color={color} size={size} />
+            </AnimatedTabIcon>
+          ),
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
-          href: null, // This hides the tab
+          href: null,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: "Settings",
-          tabBarIcon: ({ color, size }) => <PixelGearIcon color={color} size={size} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon focused={focused}>
+              <PixelGearIcon color={color} size={size} />
+            </AnimatedTabIcon>
+          ),
         }}
       />
     </Tabs>

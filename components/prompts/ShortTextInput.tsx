@@ -20,6 +20,8 @@ interface ShortTextInputProps {
   onChangeText: (text: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  minWords?: number;
+  maxWords?: number;
 }
 
 export function ShortTextInput({
@@ -27,8 +29,12 @@ export function ShortTextInput({
   onChangeText,
   placeholder = 'Your quick response...',
   disabled = false,
+  minWords,
+  maxWords,
 }: ShortTextInputProps) {
-  const { min, max } = WORD_LIMITS.short_text;
+  const defaults = WORD_LIMITS.short_text;
+  const min = minWords ?? defaults.min;
+  const max = maxWords ?? defaults.max;
 
   return (
     <View style={styles.container}>
