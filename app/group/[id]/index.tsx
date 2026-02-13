@@ -1646,7 +1646,7 @@ export default function GroupScreen() {
                 </FireText>
                 <FireStreakBadge streak={groupStreak} />
               </View>
-              <Pressable onPress={() => setShowMembersModal(true)} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Pressable onPress={() => setShowMembersModal(true)} hitSlop={10} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 4 }}>
                 {/* Show all member avatars with status dots */}
                 {allMembers.slice(0, 6).map((member, idx) => {
                   const promptStatus = memberStatuses[member.user_id];
@@ -2020,7 +2020,7 @@ export default function GroupScreen() {
               </FireText>
               <FireStreakBadge streak={groupStreak} />
             </View>
-            <Pressable onPress={() => setShowMembersModal(true)} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <Pressable onPress={() => setShowMembersModal(true)} hitSlop={10} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 4 }}>
               {/* Show all member avatars */}
               {allMembers.slice(0, 6).map((member, idx) => (
                 <View key={member.user_id} style={{ marginLeft: idx > 0 ? -6 : 0, zIndex: allMembers.length - idx }}>
