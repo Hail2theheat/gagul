@@ -897,7 +897,7 @@ function Button({
         opacity: disabled ? 0.5 : 1,
       }}
     >
-      <Text style={{ color: TEXT, textAlign: "center", fontFamily: "Bitova", fontSize: 16 }}>
+      <Text style={{ color: TEXT, textAlign: "center", fontFamily: "Paaxel", fontSize: 16 }}>
         {title}
       </Text>
     </Pressable>
@@ -1522,7 +1522,7 @@ export default function GroupScreen() {
   if (!groupId) {
     return (
       <ScrollView style={{ flex: 1, backgroundColor: BG }} contentContainerStyle={{ padding: 18 }}>
-        <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Bitova" }}>
+        <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Paaxel" }}>
           Missing group id. Go back and tap the group again.
         </Text>
         <Text style={{ color: MUTED, marginTop: 12 }}>Debug params: {JSON.stringify(params)}</Text>
@@ -1534,7 +1534,7 @@ export default function GroupScreen() {
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: BG, alignItems: "center", justifyContent: "center" }}>
-        <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Bitova" }}>Loading...</Text>
+        <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Paaxel" }}>Loading...</Text>
       </View>
     );
   }
@@ -1677,7 +1677,7 @@ export default function GroupScreen() {
             <Card>
               <View style={{ alignItems: "center", paddingVertical: 30 }}>
                 <DetailedCampfire size={80} showSmoke={false} />
-                <Text style={{ color: "#FFD93D", fontSize: 24, fontFamily: "Bitova", marginTop: 16, textAlign: "center" }}>
+                <Text style={{ color: "#FFD93D", fontSize: 24, fontFamily: "Paaxel", marginTop: 16, textAlign: "center" }}>
                   Fireside is tonight!
                 </Text>
                 <Text style={{ color: TEXT, fontSize: 18, marginTop: 12, textAlign: "center" }}>
@@ -1698,7 +1698,7 @@ export default function GroupScreen() {
             <Card>
               <View style={{ alignItems: "center", paddingVertical: 30 }}>
                 <Text style={{ fontSize: 48, marginBottom: 8 }}>🌙</Text>
-                <Text style={{ color: "#4ADE80", fontSize: 24, fontFamily: "Bitova", textAlign: "center" }}>
+                <Text style={{ color: "#4ADE80", fontSize: 24, fontFamily: "Paaxel", textAlign: "center" }}>
                   Great week!
                 </Text>
                 <Text style={{ color: TEXT, fontSize: 18, marginTop: 16, textAlign: "center" }}>
@@ -1721,7 +1721,7 @@ export default function GroupScreen() {
                       <View style={{ marginBottom: 8 }}>
                         <DetailedCampfire size={70} showSmoke={false} />
                       </View>
-                      <Text style={{ color: "#4ADE80", fontSize: 22, fontFamily: "Bitova", marginTop: 8, textAlign: "center" }}>
+                      <Text style={{ color: "#4ADE80", fontSize: 22, fontFamily: "Paaxel", marginTop: 8, textAlign: "center" }}>
                         Relax, you already submitted.
                       </Text>
                       <Text style={{ color: MUTED, fontSize: 16, marginTop: 8, textAlign: "center" }}>
@@ -1741,7 +1741,7 @@ export default function GroupScreen() {
                   ) : isBeforePromptTime() ? (
                     <>
                       <Text style={{ fontSize: 48, marginBottom: 8 }}>🧘</Text>
-                      <Text style={{ color: TEXT, fontSize: 22, fontFamily: "Bitova", marginTop: 8, textAlign: "center" }}>
+                      <Text style={{ color: TEXT, fontSize: 22, fontFamily: "Paaxel", marginTop: 8, textAlign: "center" }}>
                         Dude, relax.
                       </Text>
                       <Text style={{ color: MUTED, fontSize: 16, marginTop: 8, textAlign: "center" }}>
@@ -1751,7 +1751,7 @@ export default function GroupScreen() {
                   ) : (
                     <>
                       <DetailedGrass size={60} variant={1} />
-                      <Text style={{ color: TEXT, fontSize: 22, fontFamily: "Bitova", marginTop: 16, textAlign: "center" }}>
+                      <Text style={{ color: TEXT, fontSize: 22, fontFamily: "Paaxel", marginTop: 16, textAlign: "center" }}>
                         Nothing here.
                       </Text>
                       <Text style={{ color: MUTED, fontSize: 16, marginTop: 8, textAlign: "center" }}>
@@ -1799,7 +1799,7 @@ export default function GroupScreen() {
             }}>
               {/* Header */}
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-                <Text style={{ color: TEXT, fontSize: 22, fontFamily: "Bitova" }}>
+                <Text style={{ color: TEXT, fontSize: 22, fontFamily: "Paaxel" }}>
                   Circle Settings
                 </Text>
                 <Pressable
@@ -1810,7 +1810,7 @@ export default function GroupScreen() {
                     borderRadius: 8,
                   }}
                 >
-                  <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Bitova" }}>X</Text>
+                  <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Paaxel" }}>X</Text>
                 </Pressable>
               </View>
 
@@ -1823,7 +1823,7 @@ export default function GroupScreen() {
                 padding: 16,
                 marginBottom: 16,
               }}>
-                <Text style={{ color: MUTED, fontSize: 12, fontFamily: "Bitova", marginBottom: 8 }}>
+                <Text style={{ color: MUTED, fontSize: 12, fontFamily: "Paaxel", marginBottom: 8 }}>
                   INVITE CODE
                 </Text>
                 <View style={{
@@ -1864,7 +1864,7 @@ export default function GroupScreen() {
                     }}
                   >
                     <PixelCopyIcon size={16} />
-                    <Text style={{ color: TEXT, fontFamily: "Bitova", fontSize: 14 }}>
+                    <Text style={{ color: TEXT, fontFamily: "Paaxel", fontSize: 14 }}>
                       {codeCopied ? "Copied!" : "Copy"}
                     </Text>
                   </Pressable>
@@ -1883,7 +1883,7 @@ export default function GroupScreen() {
                     }}
                   >
                     <PixelShareIcon size={16} />
-                    <Text style={{ color: TEXT, fontFamily: "Bitova", fontSize: 14 }}>
+                    <Text style={{ color: TEXT, fontFamily: "Paaxel", fontSize: 14 }}>
                       Share
                     </Text>
                   </Pressable>
@@ -1902,8 +1902,8 @@ export default function GroupScreen() {
                 <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
                   <PixelPersonIcon size={20} />
                   <View style={{ marginLeft: 12 }}>
-                    <Text style={{ color: MUTED, fontSize: 11, fontFamily: "Bitova" }}>MEMBERS</Text>
-                    <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Bitova" }}>
+                    <Text style={{ color: MUTED, fontSize: 11, fontFamily: "Paaxel" }}>MEMBERS</Text>
+                    <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Paaxel" }}>
                       {memberCount} {memberCount === 1 ? "person" : "people"}
                     </Text>
                   </View>
@@ -1912,8 +1912,8 @@ export default function GroupScreen() {
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
                   <PixelCalendarIcon size={20} />
                   <View style={{ marginLeft: 12 }}>
-                    <Text style={{ color: MUTED, fontSize: 11, fontFamily: "Bitova" }}>STARTED</Text>
-                    <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Bitova" }}>
+                    <Text style={{ color: MUTED, fontSize: 11, fontFamily: "Paaxel" }}>STARTED</Text>
+                    <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Paaxel" }}>
                       {formatDate(groupCreatedAt)}
                     </Text>
                   </View>
@@ -1938,7 +1938,7 @@ export default function GroupScreen() {
                 }}
               >
                 <PixelDoorIcon size={20} />
-                <Text style={{ color: DANGER, fontFamily: "Bitova", fontSize: 14 }}>
+                <Text style={{ color: DANGER, fontFamily: "Paaxel", fontSize: 14 }}>
                   {leaving ? "Leaving..." : "Leave Circle"}
                 </Text>
               </Pressable>
@@ -2030,7 +2030,7 @@ export default function GroupScreen() {
 
         {loading ? (
           <Card>
-            <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Bitova", textAlign: "center" }}>
+            <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Paaxel", textAlign: "center" }}>
               Loading...
             </Text>
           </Card>
@@ -2113,7 +2113,7 @@ export default function GroupScreen() {
           }}>
             {/* Header */}
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-              <Text style={{ color: TEXT, fontSize: 22, fontFamily: "Bitova" }}>
+              <Text style={{ color: TEXT, fontSize: 22, fontFamily: "Paaxel" }}>
                 Circle Settings
               </Text>
               <Pressable
@@ -2124,7 +2124,7 @@ export default function GroupScreen() {
                   borderRadius: 8,
                 }}
               >
-                <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Bitova" }}>X</Text>
+                <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Paaxel" }}>X</Text>
               </Pressable>
             </View>
 
@@ -2137,7 +2137,7 @@ export default function GroupScreen() {
               padding: 16,
               marginBottom: 16,
             }}>
-              <Text style={{ color: MUTED, fontSize: 12, fontFamily: "Bitova", marginBottom: 8 }}>
+              <Text style={{ color: MUTED, fontSize: 12, fontFamily: "Paaxel", marginBottom: 8 }}>
                 INVITE CODE
               </Text>
               <View style={{
@@ -2178,7 +2178,7 @@ export default function GroupScreen() {
                   }}
                 >
                   <PixelCopyIcon size={16} />
-                  <Text style={{ color: TEXT, fontFamily: "Bitova", fontSize: 14 }}>
+                  <Text style={{ color: TEXT, fontFamily: "Paaxel", fontSize: 14 }}>
                     {codeCopied ? "Copied!" : "Copy"}
                   </Text>
                 </Pressable>
@@ -2197,7 +2197,7 @@ export default function GroupScreen() {
                   }}
                 >
                   <PixelShareIcon size={16} />
-                  <Text style={{ color: TEXT, fontFamily: "Bitova", fontSize: 14 }}>
+                  <Text style={{ color: TEXT, fontFamily: "Paaxel", fontSize: 14 }}>
                     Share
                   </Text>
                 </Pressable>
@@ -2216,8 +2216,8 @@ export default function GroupScreen() {
               <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
                 <PixelPersonIcon size={20} />
                 <View style={{ marginLeft: 12 }}>
-                  <Text style={{ color: MUTED, fontSize: 11, fontFamily: "Bitova" }}>MEMBERS</Text>
-                  <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Bitova" }}>
+                  <Text style={{ color: MUTED, fontSize: 11, fontFamily: "Paaxel" }}>MEMBERS</Text>
+                  <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Paaxel" }}>
                     {memberCount} {memberCount === 1 ? "person" : "people"}
                   </Text>
                 </View>
@@ -2226,8 +2226,8 @@ export default function GroupScreen() {
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <PixelCalendarIcon size={20} />
                 <View style={{ marginLeft: 12 }}>
-                  <Text style={{ color: MUTED, fontSize: 11, fontFamily: "Bitova" }}>STARTED</Text>
-                  <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Bitova" }}>
+                  <Text style={{ color: MUTED, fontSize: 11, fontFamily: "Paaxel" }}>STARTED</Text>
+                  <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Paaxel" }}>
                     {formatDate(groupCreatedAt)}
                   </Text>
                 </View>
@@ -2252,7 +2252,7 @@ export default function GroupScreen() {
               }}
             >
               <PixelDoorIcon size={20} />
-              <Text style={{ color: DANGER, fontFamily: "Bitova", fontSize: 14 }}>
+              <Text style={{ color: DANGER, fontFamily: "Paaxel", fontSize: 14 }}>
                 {leaving ? "Leaving..." : "Leave Circle"}
               </Text>
             </Pressable>

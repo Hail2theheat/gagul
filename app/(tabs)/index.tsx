@@ -303,7 +303,7 @@ function PixelStump({ size = 50, label, onPress, icon }: { size?: number; label?
             <Text style={{
               color: "#3D1A00",
               fontSize: size * 0.28,
-              fontFamily: "Bitova",
+              fontFamily: "Paaxel",
               textShadowColor: "rgba(255, 245, 220, 0.9)",
               textShadowOffset: { width: 0, height: 0 },
               textShadowRadius: 3,
@@ -560,7 +560,7 @@ export default function HomeGroupsScreen() {
                                 alignItems: "center",
                                 justifyContent: "center",
                               }}>
-                                <Text style={{ color: MUTED, fontSize: 11, fontFamily: "Bitova" }}>
+                                <Text style={{ color: MUTED, fontSize: 11, fontFamily: "Paaxel" }}>
                                   +{memberCount - 4}
                                 </Text>
                               </View>
@@ -570,7 +570,7 @@ export default function HomeGroupsScreen() {
 
                         {/* Created time - smaller, at the bottom */}
                         {lastActive ? (
-                          <Text style={{ color: MUTED, fontSize: 10, fontFamily: "Bitova", marginTop: 6, opacity: 0.7 }}>
+                          <Text style={{ color: MUTED, fontSize: 10, fontFamily: "Paaxel", marginTop: 6, opacity: 0.7 }}>
                             created {lastActive}
                           </Text>
                         ) : null}

@@ -91,6 +91,7 @@ export default function RootLayout() {
     PixelifySans_700Bold,
     'Retro': require('../assets/fonts/retro.ttf'),
     'Bitova': require('../assets/fonts/bitova.ttf'),
+    'Paaxel': require('../assets/fonts/paaxel.otf'),
   });
 
   // Hide the native splash once our custom fonts are loaded

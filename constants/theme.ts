@@ -108,37 +108,37 @@ export const Radii = {
 // ===== TYPOGRAPHY PRESETS =====
 export const Typography = {
   heading1: {
-    fontFamily: 'Bitova',
+    fontFamily: 'Paaxel',
     fontSize: 28,
     letterSpacing: 0.5,
   } as TextStyle,
   heading2: {
-    fontFamily: 'Bitova',
+    fontFamily: 'Paaxel',
     fontSize: 20,
   } as TextStyle,
   heading3: {
-    fontFamily: 'Bitova',
+    fontFamily: 'Paaxel',
     fontSize: 16,
   } as TextStyle,
   body: {
-    fontFamily: 'Bitova',
+    fontFamily: 'Paaxel',
     fontSize: 16,
   } as TextStyle,
   bodyBold: {
-    fontFamily: 'Bitova',
+    fontFamily: 'Paaxel',
     fontSize: 16,
   } as TextStyle,
   caption: {
-    fontFamily: 'Bitova',
+    fontFamily: 'Paaxel',
     fontSize: 13,
   } as TextStyle,
   button: {
-    fontFamily: 'Bitova',
+    fontFamily: 'Paaxel',
     fontSize: 16,
     letterSpacing: 0.5,
   } as TextStyle,
   tab: {
-    fontFamily: 'Bitova',
+    fontFamily: 'Paaxel',
     fontSize: 12,
   } as TextStyle,
 } as const;

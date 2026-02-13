@@ -434,40 +434,142 @@ function TwigLetter({
     ],
   }));
 
-  // Each letter is rendered as styled text with "twig" effect:
-  // brown body with leaf-green accents and bark texture shadow
+  // Amber fire gradient: red (bottom) → orange → yellow → white (tips)
+  // with faint fire glow behind each letter
+  const fontSize = 52;
+  const letterHeight = fontSize * 1.15; // approximate rendered height
+
   return (
     <Animated.View style={[{ marginHorizontal: 2 }, style]}>
+      {/* Outer fire glow - faint warm halo */}
+      <View
+        style={{
+          position: "absolute",
+          top: -20,
+          left: -18,
+          right: -18,
+          bottom: -12,
+          backgroundColor: "#FF6B35",
+          borderRadius: 28,
+          opacity: 0.1,
+        }}
+        pointerEvents="none"
+      />
+      {/* Middle glow layer */}
+      <View
+        style={{
+          position: "absolute",
+          top: -12,
+          left: -12,
+          right: -12,
+          bottom: -8,
+          backgroundColor: "#FF8C00",
+          borderRadius: 20,
+          opacity: 0.18,
+        }}
+        pointerEvents="none"
+      />
+      {/* Inner glow - brighter, closer */}
+      <View
+        style={{
+          position: "absolute",
+          top: -6,
+          left: -6,
+          right: -6,
+          bottom: -4,
+          backgroundColor: "#FFD93D",
+          borderRadius: 14,
+          opacity: 0.12,
+        }}
+        pointerEvents="none"
+      />
+
+      {/* Layer 1 (base): Deep red - visible at the bottom */}
       <Animated.Text
         style={{
-          fontFamily: "Bitova",
-          fontSize: 48,
-          color: "#8B5E3C", // bark brown
-          textShadowColor: "#4A2810",
-          textShadowOffset: { width: 2, height: 2 },
-          textShadowRadius: 0,
+          fontFamily: "Paaxel",
+          fontSize,
+          color: "#CC2200",
+          textShadowColor: "#4A0800",
+          textShadowOffset: { width: 2, height: 3 },
+          textShadowRadius: 2,
         }}
       >
         {char}
       </Animated.Text>
-      {/* Green leaf highlight overlay (top portion) */}
+
+      {/* Layer 2: Orange - covers top ~78% */}
       <View
         style={{
           position: "absolute",
           top: 0,
           left: 0,
           right: 0,
-          height: 20,
+          height: letterHeight * 0.78,
           overflow: "hidden",
         }}
         pointerEvents="none"
       >
         <Animated.Text
           style={{
-            fontFamily: "Bitova",
-            fontSize: 48,
-            color: "#5A8C3C",
+            fontFamily: "Paaxel",
+            fontSize,
+            color: "#FF6B35",
             textShadowColor: "transparent",
+            textShadowOffset: { width: 0, height: 0 },
+            textShadowRadius: 0,
+          }}
+        >
+          {char}
+        </Animated.Text>
+      </View>
+
+      {/* Layer 3: Yellow - covers top ~48% */}
+      <View
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: letterHeight * 0.48,
+          overflow: "hidden",
+        }}
+        pointerEvents="none"
+      >
+        <Animated.Text
+          style={{
+            fontFamily: "Paaxel",
+            fontSize,
+            color: "#FFD93D",
+            textShadowColor: "transparent",
+            textShadowOffset: { width: 0, height: 0 },
+            textShadowRadius: 0,
+          }}
+        >
+          {char}
+        </Animated.Text>
+      </View>
+
+      {/* Layer 4: White/cream tips - covers top ~18% */}
+      <View
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: letterHeight * 0.18,
+          overflow: "hidden",
+        }}
+        pointerEvents="none"
+      >
+        <Animated.Text
+          style={{
+            fontFamily: "Paaxel",
+            fontSize,
+            color: "#FFFEF0",
+            textShadowColor: "rgba(255, 250, 220, 0.6)",
+            textShadowOffset: { width: 0, height: 0 },
+            textShadowRadius: 6,
           }}
         >
           {char}

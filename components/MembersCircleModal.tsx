@@ -126,7 +126,7 @@ function DancingMember({
         style={{
           color: TEXT_COLOR,
           fontSize: 11,
-          fontFamily: "Bitova",
+          fontFamily: "Paaxel",
           textAlign: "center",
           marginTop: 2,
           maxWidth: 70,
@@ -292,7 +292,7 @@ export function MembersCircleModal({
             style={{
               color: TEXT_COLOR,
               fontSize: 22,
-              fontFamily: "Bitova",
+              fontFamily: "Paaxel",
             }}
           >
             Your Circle
@@ -309,7 +309,7 @@ export function MembersCircleModal({
               style={{
                 color: TEXT_COLOR,
                 fontSize: 18,
-                fontFamily: "Bitova",
+                fontFamily: "Paaxel",
               }}
             >
               X
@@ -322,7 +322,7 @@ export function MembersCircleModal({
           style={{
             color: MUTED,
             fontSize: 13,
-            fontFamily: "Bitova",
+            fontFamily: "Paaxel",
             textAlign: "center",
             marginBottom: 8,
           }}

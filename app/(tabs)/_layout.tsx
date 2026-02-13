@@ -120,7 +120,7 @@ export default function TabLayout() {
         tabBarInactiveTintColor: "#6B6058",
         tabBarLabelStyle: {
           fontSize: 12,
-          fontFamily: "Bitova",
+          fontFamily: "Paaxel",
         },
       }}
     >

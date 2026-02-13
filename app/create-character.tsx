@@ -328,7 +328,7 @@ export default function CreateCharacterScreen() {
           accessibilityLabel="Go back"
         >
           <PixelArrowBack size={20} />
-          <Text style={{ color: TEXT, marginLeft: 8, fontFamily: "Bitova" }}>Back</Text>
+          <Text style={{ color: TEXT, marginLeft: 8, fontFamily: "Paaxel" }}>Back</Text>
         </Pressable>
       )}
 
