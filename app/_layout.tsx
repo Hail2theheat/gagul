@@ -30,29 +30,36 @@ import { checkStreakBonus } from '@/lib/services/pointsService';
 import { PointsPopup } from '@/components/PointsPopup';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { AnimatedSplash } from '@/components/AnimatedSplash';
-import { ErrorUtils } from 'react-native';
 
 // Keep native splash visible while we load fonts
 SplashScreen.preventAutoHideAsync();
 
 // Global error handler — log unhandled JS errors to Supabase
-const originalHandler = ErrorUtils.getGlobalHandler();
-ErrorUtils.setGlobalHandler(async (error: any, isFatal?: boolean) => {
-  try {
-    const { data } = await supabase.auth.getUser();
-    if (data?.user) {
-      await supabase.from('crash_logs').insert({
-        user_id: data.user.id,
-        screen: 'global',
-        error_message: String(error?.message || error).substring(0, 500),
-        error_stack: String(error?.stack || '').substring(0, 2000),
-        metadata: { isFatal },
-      });
-    }
-  } catch {}
-  // Call the original handler so the default red screen / crash behavior still works
-  if (originalHandler) originalHandler(error, isFatal);
-});
+// ErrorUtils is a React Native global, not an import
+try {
+  const _ErrorUtils = (global as any).ErrorUtils;
+  if (_ErrorUtils) {
+    const originalHandler = _ErrorUtils.getGlobalHandler();
+    _ErrorUtils.setGlobalHandler(async (error: any, isFatal?: boolean) => {
+      try {
+        const { data } = await supabase.auth.getUser();
+        if (data?.user) {
+          await supabase.from('crash_logs').insert({
+            user_id: data.user.id,
+            screen: 'global',
+            error_message: String(error?.message || error).substring(0, 500),
+            error_stack: String(error?.stack || '').substring(0, 2000),
+            metadata: { isFatal },
+          });
+        }
+      } catch {}
+      // Call the original handler so the default red screen / crash behavior still works
+      if (originalHandler) originalHandler(error, isFatal);
+    });
+  }
+} catch {
+  // Silently fail — don't crash the app while setting up error logging
+}
 
 export const unstable_settings = {
   anchor: '(tabs)',
