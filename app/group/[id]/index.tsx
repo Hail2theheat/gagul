@@ -957,6 +957,102 @@ function Button({
   );
 }
 
+// Shared recommend prompt modal — used in both render paths
+function RecommendModal({
+  visible, onClose, recStep, setRecStep, recType, setRecType,
+  recPromptText, setRecPromptText, recOptions, setRecOptions,
+  recSubmitting, onSubmit,
+}: {
+  visible: boolean; onClose: () => void;
+  recStep: 'type' | 'prompt'; setRecStep: (s: 'type' | 'prompt') => void;
+  recType: string | null; setRecType: (t: any) => void;
+  recPromptText: string; setRecPromptText: (t: string) => void;
+  recOptions: string[]; setRecOptions: (o: string[]) => void;
+  recSubmitting: boolean; onSubmit: () => void;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: "rgba(0, 0, 0, 0.85)", justifyContent: "flex-end" }}>
+        <View style={{
+          backgroundColor: BG, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+          borderTopWidth: 2, borderLeftWidth: 2, borderRightWidth: 2,
+          borderColor: BORDER, padding: 24, paddingBottom: 40, maxHeight: SCREEN_HEIGHT * 0.75,
+        }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Paaxel" }}>
+              {recStep === 'type' ? 'Choose Prompt Type' : 'Write Your Prompt'}
+            </Text>
+            <Pressable onPress={onClose} style={{ padding: 8, backgroundColor: CARD, borderRadius: 8 }}>
+              <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Paaxel" }}>X</Text>
+            </Pressable>
+          </View>
+
+          {recStep === 'type' ? (
+            <View style={{ gap: 10 }}>
+              {([
+                { key: 'quiplash' as const, label: 'Quiplash', desc: 'Funny fill-in-the-blank prompts' },
+                { key: 'multiple_choice' as const, label: 'Multiple Choice', desc: 'Question with 2-4 answer options' },
+                { key: 'text' as const, label: 'Text Response', desc: 'Open-ended text question' },
+                { key: 'photo' as const, label: 'Photo', desc: 'Photo response prompt' },
+              ]).map((item) => (
+                <Pressable key={item.key} onPress={() => { setRecType(item.key); setRecStep('prompt'); }}
+                  style={{ backgroundColor: CARD, borderColor: BORDER, borderWidth: 1, borderRadius: 14, padding: 16 }}>
+                  <Text style={{ color: TEXT, fontSize: 16, fontFamily: "Paaxel" }}>{item.label}</Text>
+                  <Text style={{ color: MUTED, fontSize: 12, fontFamily: "Paaxel", marginTop: 4 }}>{item.desc}</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : (
+            <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: SCREEN_HEIGHT * 0.5 }}>
+              <Pressable onPress={() => setRecStep('type')} style={{ marginBottom: 16 }}>
+                <Text style={{ color: MUTED, fontSize: 13, fontFamily: "Paaxel" }}>&lt; Back</Text>
+              </Pressable>
+              <Text style={{ color: MUTED, fontSize: 12, fontFamily: "Paaxel", marginBottom: 6 }}>
+                {recType === 'quiplash' ? 'QUIPLASH PROMPT' : recType === 'multiple_choice' ? 'QUESTION' : recType === 'photo' ? 'PHOTO PROMPT' : 'TEXT PROMPT'}
+              </Text>
+              <TextInput value={recPromptText} onChangeText={setRecPromptText}
+                placeholder={recType === 'quiplash' ? "e.g. The worst thing to say at a wedding..." : recType === 'multiple_choice' ? "e.g. What's the best pizza topping?" : recType === 'photo' ? "e.g. Show us your fridge right now" : "e.g. What's your hot take for the week?"}
+                placeholderTextColor="#555" multiline
+                style={{ backgroundColor: CARD, borderColor: BORDER, borderWidth: 1, borderRadius: 12, padding: 14, color: TEXT, fontFamily: "Paaxel", fontSize: 15, minHeight: 60, textAlignVertical: "top" }}
+              />
+              {recType === 'multiple_choice' && (
+                <View style={{ marginTop: 16 }}>
+                  <Text style={{ color: MUTED, fontSize: 12, fontFamily: "Paaxel", marginBottom: 6 }}>ANSWERS ({recOptions.length}/4)</Text>
+                  {recOptions.map((opt, idx) => (
+                    <View key={idx} style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+                      <TextInput value={opt} onChangeText={(t) => { const next = [...recOptions]; next[idx] = t; setRecOptions(next); }}
+                        placeholder={`Answer ${idx + 1}`} placeholderTextColor="#555"
+                        style={{ flex: 1, backgroundColor: CARD, borderColor: BORDER, borderWidth: 1, borderRadius: 10, padding: 12, color: TEXT, fontFamily: "Paaxel", fontSize: 14 }}
+                      />
+                      {recOptions.length > 2 && (
+                        <Pressable onPress={() => setRecOptions(recOptions.filter((_, i) => i !== idx))} style={{ marginLeft: 8, padding: 6 }}>
+                          <Text style={{ color: DANGER, fontSize: 16, fontFamily: "Paaxel" }}>X</Text>
+                        </Pressable>
+                      )}
+                    </View>
+                  ))}
+                  {recOptions.length < 4 && (
+                    <Pressable onPress={() => setRecOptions([...recOptions, ''])}
+                      style={{ borderColor: BORDER, borderWidth: 1, borderRadius: 10, borderStyle: "dashed", paddingVertical: 10, alignItems: "center" }}>
+                      <Text style={{ color: MUTED, fontSize: 13, fontFamily: "Paaxel" }}>+ Add Answer</Text>
+                    </Pressable>
+                  )}
+                </View>
+              )}
+              <Pressable onPress={onSubmit} disabled={recSubmitting || !recPromptText.trim()}
+                style={{ backgroundColor: BTN_ORANGE, borderRadius: 14, paddingVertical: 14, marginTop: 20, opacity: (recSubmitting || !recPromptText.trim()) ? 0.5 : 1 }}>
+                <Text style={{ color: TEXT, textAlign: "center", fontFamily: "Paaxel", fontSize: 16 }}>
+                  {recSubmitting ? "Submitting..." : "Submit Recommendation"}
+                </Text>
+              </Pressable>
+            </ScrollView>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 // Sunday state types
 type SundayState = 'not-sunday' | 'pre-fireside' | 'during-fireside' | 'post-fireside';
 
@@ -1842,7 +1938,9 @@ function GroupScreenInner() {
                     </>
                   ) : isBeforePromptTime() ? (
                     <>
-                      <Text style={{ fontSize: 48, marginBottom: 8 }}>🧘</Text>
+                      <View style={{ marginBottom: 8 }}>
+                        <PixelCharacter config={{ ...DEFAULT_CHARACTER, pose: "sitting" }} size={60} />
+                      </View>
                       <Text style={{ color: TEXT, fontSize: 22, fontFamily: "Paaxel", marginTop: 8, textAlign: "center" }}>
                         Dude, relax.
                       </Text>
@@ -2059,6 +2157,22 @@ function GroupScreenInner() {
           visible={showMembersModal}
           onClose={() => setShowMembersModal(false)}
           members={allMembers}
+        />
+
+        {/* Recommend Prompt Modal */}
+        <RecommendModal
+          visible={showRecommendModal}
+          onClose={() => setShowRecommendModal(false)}
+          recStep={recStep}
+          setRecStep={setRecStep}
+          recType={recType}
+          setRecType={setRecType}
+          recPromptText={recPromptText}
+          setRecPromptText={setRecPromptText}
+          recOptions={recOptions}
+          setRecOptions={setRecOptions}
+          recSubmitting={recSubmitting}
+          onSubmit={submitRecommendation}
         />
       </WeatherBackground>
     );
@@ -2389,182 +2503,20 @@ function GroupScreenInner() {
       />
 
       {/* Recommend Prompt Modal */}
-      <Modal
+      <RecommendModal
         visible={showRecommendModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowRecommendModal(false)}
-      >
-        <View style={{ flex: 1, backgroundColor: "rgba(0, 0, 0, 0.85)", justifyContent: "flex-end" }}>
-          <View style={{
-            backgroundColor: BG,
-            borderTopLeftRadius: 24,
-            borderTopRightRadius: 24,
-            borderTopWidth: 2,
-            borderLeftWidth: 2,
-            borderRightWidth: 2,
-            borderColor: BORDER,
-            padding: 24,
-            paddingBottom: 40,
-            maxHeight: SCREEN_HEIGHT * 0.75,
-          }}>
-            {/* Header */}
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Paaxel" }}>
-                {recStep === 'type' ? 'Choose Prompt Type' : 'Write Your Prompt'}
-              </Text>
-              <Pressable
-                onPress={() => setShowRecommendModal(false)}
-                style={{ padding: 8, backgroundColor: CARD, borderRadius: 8 }}
-              >
-                <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Paaxel" }}>X</Text>
-              </Pressable>
-            </View>
-
-            {recStep === 'type' ? (
-              <View style={{ gap: 10 }}>
-                {([
-                  { key: 'quiplash' as const, label: 'Quiplash', desc: 'Funny fill-in-the-blank prompts' },
-                  { key: 'multiple_choice' as const, label: 'Multiple Choice', desc: 'Question with 2-4 answer options' },
-                  { key: 'text' as const, label: 'Text Response', desc: 'Open-ended text question' },
-                  { key: 'photo' as const, label: 'Photo', desc: 'Photo response prompt' },
-                ]).map((item) => (
-                  <Pressable
-                    key={item.key}
-                    onPress={() => {
-                      setRecType(item.key);
-                      setRecStep('prompt');
-                    }}
-                    style={{
-                      backgroundColor: CARD,
-                      borderColor: BORDER,
-                      borderWidth: 1,
-                      borderRadius: 14,
-                      padding: 16,
-                    }}
-                  >
-                    <Text style={{ color: TEXT, fontSize: 16, fontFamily: "Paaxel" }}>{item.label}</Text>
-                    <Text style={{ color: MUTED, fontSize: 12, fontFamily: "Paaxel", marginTop: 4 }}>{item.desc}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            ) : (
-              <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: SCREEN_HEIGHT * 0.5 }}>
-                {/* Back to type selection */}
-                <Pressable onPress={() => setRecStep('type')} style={{ marginBottom: 16 }}>
-                  <Text style={{ color: MUTED, fontSize: 13, fontFamily: "Paaxel" }}>
-                    &lt; Back
-                  </Text>
-                </Pressable>
-
-                <Text style={{ color: MUTED, fontSize: 12, fontFamily: "Paaxel", marginBottom: 6 }}>
-                  {recType === 'quiplash' ? 'QUIPLASH PROMPT' :
-                   recType === 'multiple_choice' ? 'QUESTION' :
-                   recType === 'photo' ? 'PHOTO PROMPT' : 'TEXT PROMPT'}
-                </Text>
-                <TextInput
-                  value={recPromptText}
-                  onChangeText={setRecPromptText}
-                  placeholder={
-                    recType === 'quiplash' ? "e.g. The worst thing to say at a wedding..." :
-                    recType === 'multiple_choice' ? "e.g. What's the best pizza topping?" :
-                    recType === 'photo' ? "e.g. Show us your fridge right now" :
-                    "e.g. What's your hot take for the week?"
-                  }
-                  placeholderTextColor="#555"
-                  multiline
-                  style={{
-                    backgroundColor: CARD,
-                    borderColor: BORDER,
-                    borderWidth: 1,
-                    borderRadius: 12,
-                    padding: 14,
-                    color: TEXT,
-                    fontFamily: "Paaxel",
-                    fontSize: 15,
-                    minHeight: 60,
-                    textAlignVertical: "top",
-                  }}
-                />
-
-                {/* Multiple choice options */}
-                {recType === 'multiple_choice' && (
-                  <View style={{ marginTop: 16 }}>
-                    <Text style={{ color: MUTED, fontSize: 12, fontFamily: "Paaxel", marginBottom: 6 }}>
-                      ANSWERS ({recOptions.length}/4)
-                    </Text>
-                    {recOptions.map((opt, idx) => (
-                      <View key={idx} style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-                        <TextInput
-                          value={opt}
-                          onChangeText={(t) => {
-                            const next = [...recOptions];
-                            next[idx] = t;
-                            setRecOptions(next);
-                          }}
-                          placeholder={`Answer ${idx + 1}`}
-                          placeholderTextColor="#555"
-                          style={{
-                            flex: 1,
-                            backgroundColor: CARD,
-                            borderColor: BORDER,
-                            borderWidth: 1,
-                            borderRadius: 10,
-                            padding: 12,
-                            color: TEXT,
-                            fontFamily: "Paaxel",
-                            fontSize: 14,
-                          }}
-                        />
-                        {recOptions.length > 2 && (
-                          <Pressable
-                            onPress={() => setRecOptions(recOptions.filter((_, i) => i !== idx))}
-                            style={{ marginLeft: 8, padding: 6 }}
-                          >
-                            <Text style={{ color: DANGER, fontSize: 16, fontFamily: "Paaxel" }}>X</Text>
-                          </Pressable>
-                        )}
-                      </View>
-                    ))}
-                    {recOptions.length < 4 && (
-                      <Pressable
-                        onPress={() => setRecOptions([...recOptions, ''])}
-                        style={{
-                          borderColor: BORDER,
-                          borderWidth: 1,
-                          borderRadius: 10,
-                          borderStyle: "dashed",
-                          paddingVertical: 10,
-                          alignItems: "center",
-                        }}
-                      >
-                        <Text style={{ color: MUTED, fontSize: 13, fontFamily: "Paaxel" }}>+ Add Answer</Text>
-                      </Pressable>
-                    )}
-                  </View>
-                )}
-
-                {/* Submit button */}
-                <Pressable
-                  onPress={submitRecommendation}
-                  disabled={recSubmitting || !recPromptText.trim()}
-                  style={{
-                    backgroundColor: BTN_ORANGE,
-                    borderRadius: 14,
-                    paddingVertical: 14,
-                    marginTop: 20,
-                    opacity: (recSubmitting || !recPromptText.trim()) ? 0.5 : 1,
-                  }}
-                >
-                  <Text style={{ color: TEXT, textAlign: "center", fontFamily: "Paaxel", fontSize: 16 }}>
-                    {recSubmitting ? "Submitting..." : "Submit Recommendation"}
-                  </Text>
-                </Pressable>
-              </ScrollView>
-            )}
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setShowRecommendModal(false)}
+        recStep={recStep}
+        setRecStep={setRecStep}
+        recType={recType}
+        setRecType={setRecType}
+        recPromptText={recPromptText}
+        setRecPromptText={setRecPromptText}
+        recOptions={recOptions}
+        setRecOptions={setRecOptions}
+        recSubmitting={recSubmitting}
+        onSubmit={submitRecommendation}
+      />
     </WeatherBackground>
   );
 }

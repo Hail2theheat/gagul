@@ -30,6 +30,7 @@ import { checkStreakBonus } from '@/lib/services/pointsService';
 import { PointsPopup } from '@/components/PointsPopup';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { AnimatedSplash } from '@/components/AnimatedSplash';
+import { FireTransition } from '@/components/FireTransition';
 
 // Keep native splash visible while we load fonts
 SplashScreen.preventAutoHideAsync();
@@ -103,7 +104,8 @@ export default function RootLayout() {
   const [authChecked, setAuthChecked] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const [splashDone, setSplashDone] = useState(false);
+  // Splash phases: 'splash' -> 'fire' -> 'done'
+  const [splashPhase, setSplashPhase] = useState<'splash' | 'fire' | 'done'>('splash');
 
   const [fontsLoaded] = useFonts({
     Nunito_400Regular,
@@ -125,8 +127,14 @@ export default function RootLayout() {
     }
   }, [fontsLoaded]);
 
+  // When splash animation finishes, start fire transition
   const handleSplashComplete = useCallback(() => {
-    setSplashDone(true);
+    setSplashPhase('fire');
+  }, []);
+
+  // When fire transition finishes, remove overlay
+  const handleFireComplete = useCallback(() => {
+    setSplashPhase('done');
   }, []);
 
   // Check for OTA updates on launch
@@ -298,10 +306,17 @@ export default function RootLayout() {
             <OfflineBanner />
             <PointsPopup />
 
-            {/* Animated splash overlay — dismissed after ~1.5s */}
-            {!splashDone && (
+            {/* Animated splash overlay — only on cold start */}
+            {splashPhase !== 'done' && (
               <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998 }}>
-                <AnimatedSplash onAnimationComplete={handleSplashComplete} />
+                {splashPhase === 'splash' && (
+                  <AnimatedSplash onAnimationComplete={handleSplashComplete} />
+                )}
+                <FireTransition
+                  active={splashPhase === 'fire'}
+                  onComplete={handleFireComplete}
+                  duration={1200}
+                />
               </View>
             )}
           </View>

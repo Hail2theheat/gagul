@@ -586,8 +586,8 @@ function StokieTitle({ onComplete }: { onComplete: () => void }) {
   const letters = "STOKIE".split("");
 
   useEffect(() => {
-    // Show for 1.5 seconds then signal done
-    const t = setTimeout(() => onComplete(), 1500);
+    // Show for 2.5 seconds then signal done
+    const t = setTimeout(() => onComplete(), 2500);
     return () => clearTimeout(t);
   }, []);
 
