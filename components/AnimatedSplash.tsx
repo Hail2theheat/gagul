@@ -744,26 +744,49 @@ export function AnimatedSplash({ onAnimationComplete }: AnimatedSplashProps) {
     { x: W - 20, height: 90, shade: 2 },
     { x: W + 5, height: 80, shade: 3 },
   ], []);
-  // Ground trees — fill the grass on both sides, leaving a clearing for the campfire
+  // Ground trees — dense forest covering ALL grass, small clearing for campfire only
   const groundTrees = React.useMemo(() => [
-    // Left side cluster
-    { x: -20, height: 72, shade: 3 },
-    { x: -5, height: 58, shade: 4 },
-    { x: 12, height: 80, shade: 3 },
-    { x: 28, height: 65, shade: 5 },
-    { x: 42, height: 74, shade: 4 },
-    { x: 55, height: 60, shade: 3 },
-    { x: 68, height: 68, shade: 5 },
-    { x: 80, height: 55, shade: 4 },
-    // Right side cluster
-    { x: W - 95, height: 58, shade: 4 },
-    { x: W - 80, height: 72, shade: 3 },
-    { x: W - 65, height: 64, shade: 5 },
-    { x: W - 50, height: 78, shade: 4 },
-    { x: W - 38, height: 60, shade: 3 },
-    { x: W - 24, height: 70, shade: 5 },
-    { x: W - 10, height: 66, shade: 4 },
-    { x: W + 5, height: 56, shade: 3 },
+    // Far left — off-screen overlap for fullness
+    { x: -30, height: 75, shade: 3 },
+    { x: -18, height: 62, shade: 4 },
+    { x: -8, height: 80, shade: 3 },
+    // Left side — packed tight
+    { x: 4, height: 68, shade: 5 },
+    { x: 14, height: 82, shade: 3 },
+    { x: 22, height: 58, shade: 4 },
+    { x: 30, height: 76, shade: 5 },
+    { x: 38, height: 65, shade: 3 },
+    { x: 46, height: 72, shade: 4 },
+    { x: 54, height: 60, shade: 5 },
+    { x: 62, height: 78, shade: 3 },
+    { x: 70, height: 55, shade: 4 },
+    { x: 78, height: 68, shade: 5 },
+    { x: 86, height: 62, shade: 3 },
+    { x: 94, height: 74, shade: 4 },
+    // Left edge of clearing
+    { x: 102, height: 56, shade: 5 },
+    { x: 110, height: 64, shade: 4 },
+    // Right edge of clearing
+    { x: W - 125, height: 60, shade: 4 },
+    { x: W - 117, height: 68, shade: 5 },
+    // Right side — packed tight
+    { x: W - 108, height: 74, shade: 3 },
+    { x: W - 100, height: 58, shade: 4 },
+    { x: W - 92, height: 70, shade: 5 },
+    { x: W - 84, height: 80, shade: 3 },
+    { x: W - 76, height: 62, shade: 4 },
+    { x: W - 68, height: 72, shade: 5 },
+    { x: W - 60, height: 56, shade: 3 },
+    { x: W - 52, height: 78, shade: 4 },
+    { x: W - 44, height: 64, shade: 5 },
+    { x: W - 36, height: 70, shade: 3 },
+    { x: W - 28, height: 58, shade: 4 },
+    { x: W - 20, height: 76, shade: 5 },
+    { x: W - 12, height: 66, shade: 3 },
+    { x: W - 4, height: 72, shade: 4 },
+    // Far right — off-screen overlap
+    { x: W + 4, height: 60, shade: 3 },
+    { x: W + 12, height: 55, shade: 5 },
   ], []);
 
   return (
