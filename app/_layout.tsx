@@ -30,8 +30,6 @@ import { checkStreakBonus } from '@/lib/services/pointsService';
 import { PointsPopup } from '@/components/PointsPopup';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { AnimatedSplash } from '@/components/AnimatedSplash';
-import { FireTransition } from '@/components/FireTransition';
-import { FireNavigationProvider } from '@/components/FireNavigationProvider';
 
 // Keep native splash visible while we load fonts
 SplashScreen.preventAutoHideAsync();
@@ -78,8 +76,7 @@ export default function RootLayout() {
   const [authChecked, setAuthChecked] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // Splash states: 'splash' → 'fire' → 'done'
-  const [splashPhase, setSplashPhase] = useState<'splash' | 'fire' | 'done'>('splash');
+  const [splashDone, setSplashDone] = useState(false);
 
   const [fontsLoaded] = useFonts({
     Nunito_400Regular,
@@ -101,14 +98,8 @@ export default function RootLayout() {
     }
   }, [fontsLoaded]);
 
-  // When animated splash completes its intro, start fire transition
   const handleSplashComplete = useCallback(() => {
-    setSplashPhase('fire');
-  }, []);
-
-  // When fire transition fills the screen, dismiss splash
-  const handleFireComplete = useCallback(() => {
-    setSplashPhase('done');
+    setSplashDone(true);
   }, []);
 
   // Check for OTA updates on launch
@@ -240,7 +231,6 @@ export default function RootLayout() {
       persistOptions={{ persister: asyncStoragePersister, maxAge: 1000 * 60 * 60 * 24, dehydrateOptions: { shouldDehydrateQuery } }}
     >
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <FireNavigationProvider>
           <View style={{ flex: 1 }}>
             <Stack>
               <Stack.Screen
@@ -272,29 +262,22 @@ export default function RootLayout() {
                 name="group/[id]"
                 options={{
                   headerShown: false,
-                  animation: 'none',
+                  animation: 'fade',
                 }}
               />
               <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
             </Stack>
             <StatusBar style="light" />
-            {/* Offline banner - slides in when no connection */}
             <OfflineBanner />
-            {/* Points popup overlay - shows +X animation when points awarded */}
             <PointsPopup />
 
-            {/* Animated splash overlay */}
-            {splashPhase !== 'done' && (
+            {/* Animated splash overlay — dismissed after ~1.5s */}
+            {!splashDone && (
               <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998 }}>
                 <AnimatedSplash onAnimationComplete={handleSplashComplete} />
-                <FireTransition
-                  active={splashPhase === 'fire'}
-                  onComplete={handleFireComplete}
-                />
               </View>
             )}
           </View>
-        </FireNavigationProvider>
       </ThemeProvider>
     </PersistQueryClientProvider>
   );

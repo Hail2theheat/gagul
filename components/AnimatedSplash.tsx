@@ -413,23 +413,12 @@ function TwigLetter({
   index: number;
   delay: number;
 }) {
-  const translateY = useSharedValue(60);
-  const opacity = useSharedValue(0);
   const wiggle = useSharedValue(0);
 
   useEffect(() => {
-    // Rise up
-    translateY.value = withDelay(
-      delay,
-      withTiming(0, { duration: 1200, easing: Easing.out(Easing.cubic) })
-    );
-    opacity.value = withDelay(
-      delay,
-      withTiming(1, { duration: 800, easing: Easing.out(Easing.quad) })
-    );
-    // Gentle wiggle after settling
+    // Gentle wiggle only
     wiggle.value = withDelay(
-      delay + 1200,
+      delay + 200,
       withRepeat(
         withSequence(
           withTiming(2, { duration: 2000, easing: Easing.inOut(Easing.quad) }),
@@ -442,9 +431,8 @@ function TwigLetter({
   }, []);
 
   const style = useAnimatedStyle(() => ({
-    opacity: opacity.value,
+    opacity: 1,
     transform: [
-      { translateY: translateY.value },
       { rotate: `${wiggle.value}deg` },
     ],
   }));
@@ -596,19 +584,17 @@ function TwigLetter({
 
 function StokieTitle({ onComplete }: { onComplete: () => void }) {
   const letters = "STOKIE".split("");
-  const baseDelay = 2000; // starts after the scene loads
 
   useEffect(() => {
-    // Signal completion after all letters have risen + brief pause
-    const total = baseDelay + letters.length * 150 + 1200 + 1500;
-    const t = setTimeout(() => onComplete(), total);
+    // Show for 1.5 seconds then signal done
+    const t = setTimeout(() => onComplete(), 1500);
     return () => clearTimeout(t);
   }, []);
 
   return (
     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
       {letters.map((char, i) => (
-        <TwigLetter key={i} char={char} index={i} delay={baseDelay + i * 150} />
+        <TwigLetter key={i} char={char} index={i} delay={0} />
       ))}
     </View>
   );
@@ -689,15 +675,9 @@ interface AnimatedSplashProps {
 }
 
 export function AnimatedSplash({ onAnimationComplete }: AnimatedSplashProps) {
-  // Scene fade-in
-  const sceneOpacity = useSharedValue(0);
-
-  useEffect(() => {
-    sceneOpacity.value = withTiming(1, { duration: 1500, easing: Easing.out(Easing.quad) });
-  }, []);
-
+  // Scene visible immediately
   const sceneStyle = useAnimatedStyle(() => ({
-    opacity: sceneOpacity.value,
+    opacity: 1,
   }));
 
   // Layout zones

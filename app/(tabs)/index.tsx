@@ -18,7 +18,6 @@ import * as Clipboard from "expo-clipboard";
 
 import { useMyGroups, useCreateGroup, useJoinGroup, GroupRow } from "../../lib/hooks/useMyGroups";
 import { DetailedCampfire, SmallFireIcon } from "../../components/PixelArt";
-import { useFireNavigation } from "../../components/FireNavigationProvider";
 import { PixelCharacter, DEFAULT_CHARACTER } from "../../components/PixelCharacter";
 import { PixelLake, LakeCreatures } from "../../components/PixelLake";
 import { NightSky, ForestGround } from "../../components/sky";
@@ -353,7 +352,6 @@ function PixelStump({ size = 50, label, onPress, icon }: { size?: number; label?
 export default function HomeGroupsScreen() {
   const params = useLocalSearchParams();
   const refreshKey = params.refresh as string | undefined;
-  const { navigateWithFire } = useFireNavigation();
 
   // React Query hooks for data fetching
   const { data: groups = [], isLoading: loading, refetch, isRefetching } = useMyGroups();
@@ -404,7 +402,7 @@ export default function HomeGroupsScreen() {
     setShowCongratsModal(false);
     if (createdGroup) {
       const id = createdGroup.id;
-      navigateWithFire(() => router.push(`/group/${id}`));
+      router.push(`/group/${id}`);
     }
   }
 
@@ -415,13 +413,13 @@ export default function HomeGroupsScreen() {
       const group = await joinGroupMutation.mutateAsync(code);
       setJoinId("");
       Alert.alert("Joined!", `You joined "${group.name || "the circle"}"!`);
-      navigateWithFire(() => router.push(`/group/${group.id}`));
+      router.push(`/group/${group.id}`);
     } catch (e: any) {
       // Error already handled by mutation onError
     }
   }
 
-  function openGroup(id: string) { navigateWithFire(() => router.push(`/group/${id}`)); }
+  function openGroup(id: string) { router.push(`/group/${id}`); }
 
   // Refetch when returning from group creation
   useEffect(() => {
