@@ -2,6 +2,8 @@
  * Prompt service - handles all prompt-related operations
  */
 
+import * as FileSystem from 'expo-file-system';
+import { decode } from 'base64-arraybuffer';
 import { supabase } from '../supabase';
 import type {
   GroupStatus,
@@ -74,19 +76,26 @@ export async function uploadPhoto(
   }
 
   try {
-    // Fetch the photo as a blob
-    const response = await fetch(photoUri);
-    const blob = await response.blob();
+    // Read the photo as base64 (fetch().blob() returns 0 bytes on React Native)
+    const base64 = await FileSystem.readAsStringAsync(photoUri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
 
-    // Determine content type from blob or default to jpeg
-    const contentType = blob.type || 'image/jpeg';
-    const ext = contentType.split('/')[1] || 'jpg';
+    // Determine extension from URI
+    const uriLower = photoUri.toLowerCase();
+    let contentType = 'image/jpeg';
+    let ext = 'jpeg';
+    if (uriLower.includes('.png')) { contentType = 'image/png'; ext = 'png'; }
+    else if (uriLower.includes('.heic')) { contentType = 'image/heic'; ext = 'heic'; }
+    else if (uriLower.includes('.webp')) { contentType = 'image/webp'; ext = 'webp'; }
+
     const fileName = `${groupId}/${groupPromptId}/${userData.user.id}_${Date.now()}.${ext}`;
 
-    // Upload to Supabase Storage
+    // Convert base64 to ArrayBuffer and upload
+    const arrayBuffer = decode(base64);
     const { error: uploadError } = await supabase.storage
       .from('uploads')
-      .upload(fileName, blob, {
+      .upload(fileName, arrayBuffer, {
         contentType,
         upsert: false,
       });
