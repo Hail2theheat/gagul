@@ -49,39 +49,29 @@ export function CountdownTimer({ expiresAt, onExpire }: CountdownTimerProps) {
   if (timeLeft.expired) {
     return (
       <View style={styles.container}>
-        <Text style={[styles.label, { color: COLORS.urgent }]}>Expired</Text>
+        <Text style={[styles.number, { color: COLORS.urgent }]}>Expired</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.label, { color: COLORS.muted }]}>Time left</Text>
       <View style={styles.timerRow}>
         {timeLeft.hours > 0 && (
           <>
-            <View style={styles.unit}>
-              <Text style={[styles.number, { color: getColor() }]}>
-                {formatNumber(timeLeft.hours)}
-              </Text>
-              <Text style={styles.unitLabel}>hr</Text>
-            </View>
+            <Text style={[styles.number, { color: getColor() }]}>
+              {formatNumber(timeLeft.hours)}
+            </Text>
             <Text style={[styles.colon, { color: getColor() }]}>:</Text>
           </>
         )}
-        <View style={styles.unit}>
-          <Text style={[styles.number, { color: getColor() }]}>
-            {formatNumber(timeLeft.minutes)}
-          </Text>
-          <Text style={styles.unitLabel}>min</Text>
-        </View>
+        <Text style={[styles.number, { color: getColor() }]}>
+          {formatNumber(timeLeft.minutes)}
+        </Text>
         <Text style={[styles.colon, { color: getColor() }]}>:</Text>
-        <View style={styles.unit}>
-          <Text style={[styles.number, { color: getColor() }]}>
-            {formatNumber(timeLeft.seconds)}
-          </Text>
-          <Text style={styles.unitLabel}>sec</Text>
-        </View>
+        <Text style={[styles.number, { color: getColor() }]}>
+          {formatNumber(timeLeft.seconds)}
+        </Text>
       </View>
     </View>
   );
@@ -90,36 +80,21 @@ export function CountdownTimer({ expiresAt, onExpire }: CountdownTimerProps) {
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    paddingVertical: 8,
-  },
-  label: {
-    fontSize: 12,
-    marginBottom: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    paddingVertical: 0,
   },
   timerRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  unit: {
-    alignItems: 'center',
-  },
   number: {
-    fontSize: 28,
+    fontSize: 18,
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
   },
-  unitLabel: {
-    fontSize: 10,
-    color: COLORS.muted,
-    textTransform: 'uppercase',
-  },
   colon: {
-    fontSize: 24,
+    fontSize: 16,
     fontWeight: '700',
-    marginHorizontal: 4,
-    marginBottom: 12,
+    marginHorizontal: 2,
   },
 });
 

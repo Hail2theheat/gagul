@@ -20,7 +20,7 @@ import Animated, {
 import * as Haptics from 'expo-haptics';
 import { SPRING_SNAPPY } from '../../constants/animations';
 import type { GroupPrompt, PromptType } from '../../lib/types/prompts';
-import { validateResponse, getPromptTypeLabel } from '../../lib/types/prompts';
+import { validateResponse } from '../../lib/types/prompts';
 import {
   submitResponse,
   submitResponseWithMajorityGuess,
@@ -311,17 +311,7 @@ export function PromptCard({
 
   return (
     <View style={styles.card}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.typeBadge}>
-          <Text style={styles.typeText}>{getPromptTypeLabel(promptType)}</Text>
-        </View>
-        {prompt.category && (
-          <Text style={styles.category}>{prompt.category}</Text>
-        )}
-      </View>
-
-      {/* Timer */}
+      {/* Timer - at the top, compact */}
       {!hasResponded && !expired && (
         <CountdownTimer
           expiresAt={groupPrompt.expires_at}
@@ -405,35 +395,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     padding: 20,
-    gap: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  typeBadge: {
-    backgroundColor: COLORS.btn + '30',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  typeText: {
-    color: COLORS.btn,
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-  },
-  category: {
-    color: COLORS.muted,
-    fontSize: 12,
-    textTransform: 'capitalize',
+    gap: 8,
   },
   promptTitle: {
     color: COLORS.text,
-    fontSize: 20,
-    fontWeight: '600',
-    lineHeight: 28,
+    fontSize: 22,
+    fontFamily: 'Paaxel',
+    lineHeight: 30,
+    textAlign: 'center',
   },
   expiredBox: {
     backgroundColor: COLORS.error + '15',
