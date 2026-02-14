@@ -764,6 +764,27 @@ export function AnimatedSplash({ onAnimationComplete }: AnimatedSplashProps) {
     { x: W - 20, height: 90, shade: 2 },
     { x: W + 5, height: 80, shade: 3 },
   ], []);
+  // Ground trees — fill the grass on both sides, leaving a clearing for the campfire
+  const groundTrees = React.useMemo(() => [
+    // Left side cluster
+    { x: -20, height: 72, shade: 3 },
+    { x: -5, height: 58, shade: 4 },
+    { x: 12, height: 80, shade: 3 },
+    { x: 28, height: 65, shade: 5 },
+    { x: 42, height: 74, shade: 4 },
+    { x: 55, height: 60, shade: 3 },
+    { x: 68, height: 68, shade: 5 },
+    { x: 80, height: 55, shade: 4 },
+    // Right side cluster
+    { x: W - 95, height: 58, shade: 4 },
+    { x: W - 80, height: 72, shade: 3 },
+    { x: W - 65, height: 64, shade: 5 },
+    { x: W - 50, height: 78, shade: 4 },
+    { x: W - 38, height: 60, shade: 3 },
+    { x: W - 24, height: 70, shade: 5 },
+    { x: W - 10, height: 66, shade: 4 },
+    { x: W + 5, height: 56, shade: 3 },
+  ], []);
 
   return (
     <Animated.View style={[styles.container, sceneStyle]}>
@@ -867,6 +888,13 @@ export function AnimatedSplash({ onAnimationComplete }: AnimatedSplashProps) {
       <View style={{ position: "absolute", top: lakeTop + lakeHeight - 80, left: 0, right: 0, height: 160, zIndex: 3 }} pointerEvents="none">
         {frontTrees.map((t, i) => (
           <SplashTree key={`ft${i}`} x={t.x} height={t.height} shade={t.shade} />
+        ))}
+      </View>
+
+      {/* ── Ground trees covering the grass on both sides ── */}
+      <View style={{ position: "absolute", top: groundTop - 30, left: 0, right: 0, height: groundHeight + 30, zIndex: 5 }} pointerEvents="none">
+        {groundTrees.map((t, i) => (
+          <SplashTree key={`grt${i}`} x={t.x} height={t.height} shade={t.shade} />
         ))}
       </View>
 
