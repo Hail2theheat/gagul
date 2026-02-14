@@ -22,6 +22,38 @@ import type { GroupStatus, GroupPrompt } from "../../../lib/types/prompts";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
+// Error boundary to prevent full-app crashes on the group screen
+class GroupErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: string }
+> {
+  state = { hasError: false, error: '' };
+  static getDerivedStateFromError(err: any) {
+    return { hasError: true, error: String(err?.message || err) };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={{ flex: 1, backgroundColor: "#0B1026", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <Text style={{ color: "#FFF8DC", fontSize: 18, fontFamily: "Paaxel", textAlign: "center", marginBottom: 12 }}>
+            Something went wrong
+          </Text>
+          <Text style={{ color: "#B8A88A", fontSize: 13, fontFamily: "Paaxel", textAlign: "center", marginBottom: 20 }}>
+            {this.state.error}
+          </Text>
+          <Pressable
+            onPress={() => this.setState({ hasError: false, error: '' })}
+            style={{ backgroundColor: "#1E4ED8", paddingVertical: 12, paddingHorizontal: 24, borderRadius: 12 }}
+          >
+            <Text style={{ color: "#FFF8DC", fontFamily: "Paaxel", fontSize: 15 }}>Try Again</Text>
+          </Pressable>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const BG = "#0B1026";
 const CARD = "rgba(20, 30, 50, 0.85)";
 const BORDER = "#2a3f5f";
@@ -709,7 +741,7 @@ function StreakLogs({ streak }: { streak: number }) {
 
   if (streak === 0) return null;
 
-  const logCount = streak;
+  const logCount = Math.min(streak, 10); // Cap at 10 to avoid memory pressure
   const logWidth = 22;
   const logSpacing = 8;
   const totalWidth = logCount * logWidth + (logCount - 1) * logSpacing;
@@ -1140,7 +1172,7 @@ function BigFiresideButton({ onPress }: { onPress: () => void }) {
   );
 }
 
-export default function GroupScreen() {
+function GroupScreenInner() {
   const params = useGlobalSearchParams();
   const raw = (params as any)?.id ?? (params as any)?.Id;
   const groupId = typeof raw === "string" ? raw : undefined;
@@ -2512,5 +2544,13 @@ export default function GroupScreen() {
         </View>
       </Modal>
     </WeatherBackground>
+  );
+}
+
+export default function GroupScreen() {
+  return (
+    <GroupErrorBoundary>
+      <GroupScreenInner />
+    </GroupErrorBoundary>
   );
 }
