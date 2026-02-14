@@ -394,7 +394,7 @@ function WalkingCharacter({ config, onPositionChange }: { config: CharacterConfi
           Animated.parallel([
             Animated.timing(rotateAnim, { toValue: 360, duration: 800, useNativeDriver: true }),
             Animated.sequence([
-              Animated.timing(walkAnim, { toValue: walkAnim._value + 100, duration: 800, useNativeDriver: true }),
+              Animated.timing(walkAnim, { toValue: currentXRef.current + 100, duration: 800, useNativeDriver: true }),
             ]),
             Animated.sequence([
               Animated.timing(verticalAnim, { toValue: -30, duration: 200, useNativeDriver: true }),

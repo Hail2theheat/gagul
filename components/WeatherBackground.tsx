@@ -326,48 +326,37 @@ function PineTree({ height, x, shade }: { height: number; x: number; shade: numb
 function GrassLayer() {
   const blades = useMemo(() => {
     const result = [];
-    // Back layer - darkest
-    for (let i = 0; i < 120; i++) {
+    // Back layer - darkest (wider blades, fewer count)
+    for (let i = 0; i < 40; i++) {
       result.push({
-        x: (i / 120) * SCREEN_WIDTH + (Math.random() - 0.5) * 12,
+        x: (i / 40) * SCREEN_WIDTH + (Math.random() - 0.5) * 12,
         height: 10 + Math.random() * 12,
-        width: 2 + Math.random() * 1.5,
+        width: 3 + Math.random() * 2,
         color: "#0A1F0A",
         delay: Math.random() * 2000,
         layer: 0,
       });
     }
-    // Mid-back layer
-    for (let i = 0; i < 100; i++) {
+    // Mid layer
+    for (let i = 0; i < 35; i++) {
       result.push({
-        x: (i / 100) * SCREEN_WIDTH + (Math.random() - 0.5) * 10,
-        height: 14 + Math.random() * 14,
-        width: 2.5 + Math.random() * 1.5,
+        x: (i / 35) * SCREEN_WIDTH + (Math.random() - 0.5) * 10,
+        height: 16 + Math.random() * 16,
+        width: 3.5 + Math.random() * 2,
         color: "#0D280D",
         delay: Math.random() * 2000,
         layer: 1,
       });
     }
-    // Mid layer
-    for (let i = 0; i < 80; i++) {
-      result.push({
-        x: (i / 80) * SCREEN_WIDTH + (Math.random() - 0.5) * 10,
-        height: 18 + Math.random() * 16,
-        width: 3 + Math.random() * 1.5,
-        color: "#103510",
-        delay: Math.random() * 2000,
-        layer: 2,
-      });
-    }
     // Front layer
-    for (let i = 0; i < 70; i++) {
+    for (let i = 0; i < 30; i++) {
       result.push({
-        x: (i / 70) * SCREEN_WIDTH + (Math.random() - 0.5) * 8,
+        x: (i / 30) * SCREEN_WIDTH + (Math.random() - 0.5) * 8,
         height: 20 + Math.random() * 18,
-        width: 3 + Math.random() * 2,
+        width: 4 + Math.random() * 2.5,
         color: "#144014",
         delay: Math.random() * 2000,
-        layer: 3,
+        layer: 2,
       });
     }
     return result.sort((a, b) => a.layer - b.layer);
@@ -419,7 +408,7 @@ export function WeatherBackground({ children }: WeatherBackgroundProps) {
   const stars = useMemo(() => {
     const result = [];
     const starColors = ["#FFF", "#FFF", "#FFF", "#FFE4B5", "#ADD8E6", "#FFB6C1"];
-    for (let i = 0; i < 80; i++) {
+    for (let i = 0; i < 40; i++) {
       result.push({
         x: Math.random() * SCREEN_WIDTH,
         y: Math.random() * (SCREEN_HEIGHT * 0.75), // Stars go down to 75% of screen (tree top level)
@@ -465,10 +454,8 @@ export function WeatherBackground({ children }: WeatherBackgroundProps) {
         <PixelStar key={i} x={star.x} y={star.y} size={star.size} delay={star.delay} color={star.color} />
       ))}
 
-      {/* Shooting stars */}
-      <ShootingStar delay={2000} />
-      <ShootingStar delay={7000} />
-      <ShootingStar delay={12000} />
+      {/* Shooting star */}
+      <ShootingStar delay={4000} />
 
       {/* Trees */}
       {trees.map((tree, i) => (
