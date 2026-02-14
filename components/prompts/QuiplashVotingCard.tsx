@@ -48,6 +48,21 @@ export function QuiplashVotingCard({ groupId, onVoted }: QuiplashVotingCardProps
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // All hooks must be called before any early returns
+  const translateX = useSharedValue(0);
+  const cardRotate = useSharedValue(0);
+  const optionAScale = useSharedValue(1);
+  const optionBScale = useSharedValue(1);
+
+  const swipeStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { rotate: `${cardRotate.value}deg` },
+    ],
+  }));
+  const optionAStyle = useAnimatedStyle(() => ({ transform: [{ scale: optionAScale.value }] }));
+  const optionBStyle = useAnimatedStyle(() => ({ transform: [{ scale: optionBScale.value }] }));
+
   useEffect(() => {
     loadMatchups();
   }, [groupId]);
@@ -108,10 +123,6 @@ export function QuiplashVotingCard({ groupId, onVoted }: QuiplashVotingCardProps
 
   const currentMatchup = matchups[currentMatchupIndex];
 
-  // Swipe gesture for voting
-  const translateX = useSharedValue(0);
-  const cardRotate = useSharedValue(0);
-
   const swipeToVote = (index: number) => {
     if (submitting || !currentMatchup?.responses[index]) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -140,19 +151,6 @@ export function QuiplashVotingCard({ groupId, onVoted }: QuiplashVotingCardProps
         cardRotate.value = withSpring(0, SPRING_SNAPPY);
       }
     });
-
-  const swipeStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: translateX.value },
-      { rotate: `${cardRotate.value}deg` },
-    ],
-  }));
-
-  // Option press scale
-  const optionAScale = useSharedValue(1);
-  const optionBScale = useSharedValue(1);
-  const optionAStyle = useAnimatedStyle(() => ({ transform: [{ scale: optionAScale.value }] }));
-  const optionBStyle = useAnimatedStyle(() => ({ transform: [{ scale: optionBScale.value }] }));
 
   return (
     <View style={styles.card}>
