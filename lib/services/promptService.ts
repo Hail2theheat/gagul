@@ -2,8 +2,7 @@
  * Prompt service - handles all prompt-related operations
  */
 
-import * as FileSystem from 'expo-file-system';
-import { decode } from 'base64-arraybuffer';
+import { File as ExpoFile } from 'expo-file-system';
 import { supabase } from '../supabase';
 import type {
   GroupStatus,
@@ -76,10 +75,16 @@ export async function uploadPhoto(
   }
 
   try {
-    // Read the photo as base64 (fetch().blob() returns 0 bytes on React Native)
-    const base64 = await FileSystem.readAsStringAsync(photoUri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
+    // Read file using SDK 54 File API
+    const file = new ExpoFile(photoUri);
+    const arrayBuffer = await file.arrayBuffer();
+
+    console.log('[uploadPhoto] file URI:', photoUri);
+    console.log('[uploadPhoto] arrayBuffer size:', arrayBuffer.byteLength);
+
+    if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+      return { url: null, error: 'Failed to read photo file (0 bytes)' };
+    }
 
     // Determine extension from URI
     const uriLower = photoUri.toLowerCase();
@@ -91,8 +96,6 @@ export async function uploadPhoto(
 
     const fileName = `${groupId}/${groupPromptId}/${userData.user.id}_${Date.now()}.${ext}`;
 
-    // Convert base64 to ArrayBuffer and upload
-    const arrayBuffer = decode(base64);
     const { error: uploadError } = await supabase.storage
       .from('uploads')
       .upload(fileName, arrayBuffer, {

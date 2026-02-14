@@ -1058,6 +1058,9 @@ type SundayState = 'not-sunday' | 'pre-fireside' | 'during-fireside' | 'post-fir
 
 // Get Sunday state based on current time (Fireside only on Sundays 8PM-3AM EST)
 function getSundayState(): SundayState {
+  // DEV ONLY: bypass time gate for testing
+  if (__DEV__) return 'during-fireside';
+
   const now = new Date();
 
   // Get EST time
@@ -1391,10 +1394,8 @@ function GroupScreenInner() {
           setOtherUsers(users);
         })
         .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-          console.log('[Presence] User joined:', key);
         })
         .on('presence', { event: 'leave' }, ({ key }) => {
-          console.log('[Presence] User left:', key);
         })
         .subscribe(async (status) => {
           if (status === 'SUBSCRIBED') {
