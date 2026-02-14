@@ -21,6 +21,23 @@ import type { GroupStatus, GroupPrompt } from "../../../lib/types/prompts";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
+// Log crash to Supabase for debugging
+async function logCrash(screen: string, error: string, stack?: string, meta?: any) {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) return;
+    await supabase.from('crash_logs').insert({
+      user_id: userData.user.id,
+      screen,
+      error_message: error.substring(0, 500),
+      error_stack: (stack || '').substring(0, 2000),
+      metadata: meta,
+    });
+  } catch {
+    // silently fail — don't crash while logging a crash
+  }
+}
+
 // Error boundary to prevent full-app crashes on the group screen
 class GroupErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -29,6 +46,11 @@ class GroupErrorBoundary extends React.Component<
   state = { hasError: false, error: '' };
   static getDerivedStateFromError(err: any) {
     return { hasError: true, error: String(err?.message || err) };
+  }
+  componentDidCatch(err: any, info: any) {
+    logCrash('group-screen', String(err?.message || err), err?.stack, {
+      componentStack: info?.componentStack?.substring(0, 1000),
+    });
   }
   render() {
     if (this.state.hasError) {
@@ -1369,6 +1391,7 @@ function GroupScreenInner() {
       const telephone = await getMyTelephone(groupId);
       setTelephoneAssignment(telephone);
     } catch (e: any) {
+      logCrash('group-loadStatus', e?.message ?? String(e), e?.stack);
       Alert.alert("Load failed", e?.message ?? String(e));
       setStatus(null);
     } finally {
