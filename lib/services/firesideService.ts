@@ -307,6 +307,49 @@ export async function getPromptViews(groupPromptIds: string[]): Promise<Record<s
 }
 
 /**
+ * Update the current user's fireside progress as they click through
+ */
+export async function updateFiresideProgress(
+  groupId: string,
+  weekOf: string,
+  promptIndex: number,
+  totalPrompts: number,
+  completed: boolean = false
+): Promise<void> {
+  const { error } = await supabase.rpc('update_fireside_progress', {
+    p_group_id: groupId,
+    p_week_of: weekOf,
+    p_prompt_index: promptIndex,
+    p_total_prompts: totalPrompts,
+    p_completed: completed,
+  });
+  if (error) {
+    console.error('Error updating fireside progress:', error);
+  }
+}
+
+/**
+ * Get all members' fireside viewing progress for a group/week
+ * Returns: { user_id, status: 'completed' | 'partial' | 'not_started' }[]
+ */
+export async function getFiresideProgress(
+  groupId: string,
+  weekOf: string
+): Promise<{ user_id: string; status: 'completed' | 'partial' | 'not_started' }[]> {
+  const { data, error } = await supabase.rpc('get_fireside_progress', {
+    p_group_id: groupId,
+    p_week_of: weekOf,
+  });
+
+  if (error) {
+    console.error('Error getting fireside progress:', error);
+    return [];
+  }
+
+  return (data as { user_id: string; status: 'completed' | 'partial' | 'not_started' }[]) || [];
+}
+
+/**
  * Get comments for a response (flat list, no threading)
  */
 export async function getComments(responseId: string): Promise<FiresideComment[]> {

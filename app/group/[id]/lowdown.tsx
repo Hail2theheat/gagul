@@ -22,7 +22,8 @@ import {
   isFiresideUnlocked,
   getComments,
   getCommentCounts,
-  getPromptViews,
+  updateFiresideProgress,
+  getFiresideProgress,
   subscribeToComments,
   getSignedImageUrl,
   getQuiplashVoters,
@@ -351,7 +352,7 @@ export default function LowdownScreen() {
   const [revealStep, setRevealStep] = useState(0); // For quiz/MC reveals
   const [comments, setComments] = useState<FiresideComment[]>([]);
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
-  const [promptViews, setPromptViews] = useState<Record<string, string[]>>({});
+  const [firesideProgress, setFiresideProgress] = useState<Record<string, 'completed' | 'partial' | 'not_started'>>({});
   const [signedPhotoUrl, setSignedPhotoUrl] = useState<string | null>(null);
   const [showCommentSheet, setShowCommentSheet] = useState(false);
   const [quiplashVoters, setQuiplashVoters] = useState<QuiplashVoter[]>([]);
@@ -472,6 +473,36 @@ export default function LowdownScreen() {
     };
   }, [currentResponseIndex, currentPromptIndex, firesideData]);
 
+  // Subscribe to real-time fireside progress updates so dots update live
+  useEffect(() => {
+    if (!groupId || !firesideData?.week_of) return;
+
+    const weekOf = firesideData.week_of;
+    const channel = supabase
+      .channel(`fireside-progress:${groupId}:${weekOf}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'fireside_progress',
+          filter: `group_id=eq.${groupId}`,
+        },
+        async () => {
+          const progress = await getFiresideProgress(groupId, weekOf);
+          const progressMap: Record<string, 'completed' | 'partial' | 'not_started'> = {};
+          for (const p of progress) {
+            progressMap[p.user_id] = p.status;
+          }
+          setFiresideProgress(progressMap);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [groupId, firesideData?.week_of]);
 
   const loadData = async () => {
     if (!groupId) return;
@@ -507,11 +538,17 @@ export default function LowdownScreen() {
           setCommentCounts(counts);
         }
 
-        // Load prompt views for status dots (green/blue/red)
-        const allGroupPromptIds = data.prompts.map((p: FiresidePrompt) => p.group_prompt_id).filter(Boolean);
-        if (allGroupPromptIds.length > 0) {
-          const views = await getPromptViews(allGroupPromptIds);
-          setPromptViews(views);
+        // Load fireside viewing progress for status dots (green/blue/red)
+        if (groupId && data.week_of) {
+          const progress = await getFiresideProgress(groupId, data.week_of);
+          const progressMap: Record<string, 'completed' | 'partial' | 'not_started'> = {};
+          for (const p of progress) {
+            progressMap[p.user_id] = p.status;
+          }
+          setFiresideProgress(progressMap);
+
+          // Record that this user opened the fireside
+          updateFiresideProgress(groupId, data.week_of, 0, data.prompts.length);
         }
       } else {
         setScreenState("locked");
@@ -631,13 +668,22 @@ export default function LowdownScreen() {
   };
 
   const goToNextPrompt = () => {
-    if (currentPromptIndex < (firesideData?.prompts.length || 0) - 1) {
-      setCurrentPromptIndex(currentPromptIndex + 1);
+    const totalPrompts = firesideData?.prompts.length || 0;
+    if (currentPromptIndex < totalPrompts - 1) {
+      const nextIndex = currentPromptIndex + 1;
+      setCurrentPromptIndex(nextIndex);
       setCurrentResponseIndex(-1);
       setRevealStep(0);
       setQuiplashVoters([]);
-      // Comments will be loaded by useEffect when response changes
+      // Track progress
+      if (groupId && firesideData?.week_of) {
+        updateFiresideProgress(groupId, firesideData.week_of, nextIndex, totalPrompts);
+      }
     } else {
+      // Completed the entire fireside
+      if (groupId && firesideData?.week_of) {
+        updateFiresideProgress(groupId, firesideData.week_of, totalPrompts - 1, totalPrompts, true);
+      }
       setScreenState("leaderboard");
     }
   };
@@ -1400,13 +1446,14 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
             </Text>
             <AutoShrinkText style={styles.promptTitle} text={currentPrompt.content || currentPrompt.title || ''} />
 
-            {/* Member status dots - green=answered, blue=seen, red=not seen */}
-            {firesideData?.leaderboard && firesideData.leaderboard.length > 0 && (
+            {/* Member fireside progress dots - green=completed, blue=started, red=not opened */}
+            {firesideData?.leaderboard && firesideData.leaderboard.length > 0 && Object.keys(firesideProgress).length > 0 && (
               <View style={styles.statusDotsRow}>
                 {firesideData.leaderboard.map((member) => {
-                  const responded = (currentPrompt.responses || []).some(r => r.user_id === member.user_id);
-                  const seen = (promptViews[currentPrompt.group_prompt_id] || []).includes(member.user_id);
-                  const dotColor = responded ? '#4ADE80' : seen ? '#60A5FA' : '#EF4444';
+                  const status = firesideProgress[member.user_id] || 'not_started';
+                  const dotColor = status === 'completed' ? '#4ADE80'
+                    : status === 'partial' ? '#60A5FA'
+                    : '#EF4444';
                   return (
                     <View key={member.user_id} style={styles.statusDotMember}>
                       <PixelCharacter
