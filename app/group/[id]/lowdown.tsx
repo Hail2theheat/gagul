@@ -23,7 +23,6 @@ import {
   getComments,
   getCommentCounts,
   updateFiresideProgress,
-  getFiresideProgress,
   subscribeToComments,
   getSignedImageUrl,
   getQuiplashVoters,
@@ -352,7 +351,6 @@ export default function LowdownScreen() {
   const [revealStep, setRevealStep] = useState(0); // For quiz/MC reveals
   const [comments, setComments] = useState<FiresideComment[]>([]);
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
-  const [firesideProgress, setFiresideProgress] = useState<Record<string, 'completed' | 'partial' | 'not_started'>>({});
   const [signedPhotoUrl, setSignedPhotoUrl] = useState<string | null>(null);
   const [showCommentSheet, setShowCommentSheet] = useState(false);
   const [quiplashVoters, setQuiplashVoters] = useState<QuiplashVoter[]>([]);
@@ -473,37 +471,6 @@ export default function LowdownScreen() {
     };
   }, [currentResponseIndex, currentPromptIndex, firesideData]);
 
-  // Subscribe to real-time fireside progress updates so dots update live
-  useEffect(() => {
-    if (!groupId || !firesideData?.week_of) return;
-
-    const weekOf = firesideData.week_of;
-    const channel = supabase
-      .channel(`fireside-progress:${groupId}:${weekOf}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'fireside_progress',
-          filter: `group_id=eq.${groupId}`,
-        },
-        async () => {
-          const progress = await getFiresideProgress(groupId, weekOf);
-          const progressMap: Record<string, 'completed' | 'partial' | 'not_started'> = {};
-          for (const p of progress) {
-            progressMap[p.user_id] = p.status;
-          }
-          setFiresideProgress(progressMap);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [groupId, firesideData?.week_of]);
-
   const loadData = async () => {
     if (!groupId) return;
 
@@ -538,16 +505,8 @@ export default function LowdownScreen() {
           setCommentCounts(counts);
         }
 
-        // Load fireside viewing progress for status dots (green/blue/red)
+        // Record that this user opened the fireside (for group page dots)
         if (groupId && data.week_of) {
-          const progress = await getFiresideProgress(groupId, data.week_of);
-          const progressMap: Record<string, 'completed' | 'partial' | 'not_started'> = {};
-          for (const p of progress) {
-            progressMap[p.user_id] = p.status;
-          }
-          setFiresideProgress(progressMap);
-
-          // Record that this user opened the fireside
           updateFiresideProgress(groupId, data.week_of, 0, data.prompts.length);
         }
       } else {
@@ -1933,25 +1892,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 38,
     paddingHorizontal: 10,
-  },
-  statusDotsRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 16,
-    flexWrap: "wrap",
-  },
-  statusDotMember: {
-    alignItems: "center",
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginTop: 2,
-    borderWidth: 1,
-    borderColor: "#0B1026",
   },
   swipeHint: {
     color: COLORS.muted,
