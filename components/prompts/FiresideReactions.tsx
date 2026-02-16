@@ -1,6 +1,8 @@
 /**
  * FiresideReactions - Floating emoji reactions for Fireside
- * Emojis float up like burning ash when tapped
+ * Emojis float up like TikTok live reactions when tapped.
+ * Existing reactions from other users replay as a staggered burst on load.
+ * Real-time reactions from others appear as they happen.
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -17,10 +19,14 @@ import {
   getUserEmojis,
   DEFAULT_EMOJIS,
   UserEmojis,
+  getResponseReactions,
+  toggleReaction,
+  subscribeToReactions,
+  ReactionSummary,
 } from '../../lib/services/reactionService';
 import { trackInteraction } from '../../lib/services/metricsService';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const COLORS = {
   bg: 'rgba(0, 0, 0, 0.4)',
@@ -47,27 +53,94 @@ export function FiresideReactions({ responseId, promptId }: FiresideReactionsPro
   const [userEmojis, setUserEmojis] = useState<UserEmojis>(DEFAULT_EMOJIS);
   const [floatingEmojis, setFloatingEmojis] = useState<FloatingEmoji[]>([]);
   const emojiIdCounter = useRef(0);
+  const prevReactionsRef = useRef<ReactionSummary[]>([]);
+  const hasLoadedRef = useRef(false);
+  const savedEmojiRef = useRef<string | null>(null); // Track which emoji is already persisted
 
   useEffect(() => {
     loadEmojis();
   }, []);
+
+  // Load existing reactions and subscribe to real-time changes
+  useEffect(() => {
+    hasLoadedRef.current = false;
+    prevReactionsRef.current = [];
+    savedEmojiRef.current = null;
+
+    // Fetch existing reactions and replay them as a staggered burst
+    const loadExistingReactions = async () => {
+      const reactions = await getResponseReactions(responseId);
+      prevReactionsRef.current = reactions;
+      hasLoadedRef.current = true;
+
+      // Build a flat list of emojis to spawn, one per count
+      const emojisToSpawn: string[] = [];
+      for (const r of reactions) {
+        for (let i = 0; i < r.count; i++) {
+          emojisToSpawn.push(r.emoji);
+        }
+      }
+
+      // Stagger spawn so they don't all pop at once (like balloons rising)
+      const maxDelay = Math.min(emojisToSpawn.length * 150, 2000);
+      emojisToSpawn.forEach((emoji, i) => {
+        const delay = (i / Math.max(emojisToSpawn.length - 1, 1)) * maxDelay;
+        setTimeout(() => {
+          spawnFloatingEmojiRandom(emoji);
+        }, delay);
+      });
+    };
+
+    loadExistingReactions();
+
+    // Subscribe to real-time reaction changes from others
+    const unsubscribe = subscribeToReactions(responseId, (newReactions) => {
+      if (!hasLoadedRef.current) return;
+
+      // Compare with previous to find new emojis
+      for (const nr of newReactions) {
+        const prev = prevReactionsRef.current.find(r => r.emoji === nr.emoji);
+        const prevCount = prev ? prev.count : 0;
+        const diff = nr.count - prevCount;
+        // Spawn floating emojis for each new reaction
+        if (diff > 0) {
+          for (let i = 0; i < diff; i++) {
+            setTimeout(() => {
+              spawnFloatingEmojiRandom(nr.emoji);
+            }, i * 200);
+          }
+        }
+      }
+      prevReactionsRef.current = newReactions;
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [responseId]);
 
   const loadEmojis = async () => {
     const emojis = await getUserEmojis();
     setUserEmojis(emojis);
   };
 
-  const spawnFloatingEmoji = useCallback((emoji: string, buttonX: number) => {
+  // Spawn a floating emoji at a random X position (for existing/real-time reactions)
+  const spawnFloatingEmojiRandom = useCallback((emoji: string) => {
+    const x = SCREEN_WIDTH * 0.15 + Math.random() * SCREEN_WIDTH * 0.7;
+    spawnFloatingEmoji(emoji, x);
+  }, []);
+
+  const spawnFloatingEmoji = useCallback((emoji: string, startX: number) => {
     const id = `${Date.now()}-${emojiIdCounter.current++}`;
     const anim = new Animated.Value(0);
-    const drift = (Math.random() - 0.5) * 80; // Random horizontal drift
-    const rotation = (Math.random() - 0.5) * 60; // Random rotation -30 to 30 degrees
-    const scale = 0.8 + Math.random() * 0.4; // Random scale 0.8 to 1.2
+    const drift = (Math.random() - 0.5) * 80;
+    const rotation = (Math.random() - 0.5) * 60;
+    const scale = 0.8 + Math.random() * 0.4;
 
     const newEmoji: FloatingEmoji = {
       id,
       emoji,
-      startX: buttonX + (Math.random() - 0.5) * 20,
+      startX: startX + (Math.random() - 0.5) * 20,
       anim,
       drift,
       rotation,
@@ -76,33 +149,39 @@ export function FiresideReactions({ responseId, promptId }: FiresideReactionsPro
 
     setFloatingEmojis(prev => [...prev, newEmoji]);
 
-    // Animate the emoji floating up
     Animated.timing(anim, {
       toValue: 1,
-      duration: 2000 + Math.random() * 1000, // 2-3 seconds
+      duration: 2000 + Math.random() * 1000,
       easing: Easing.out(Easing.quad),
       useNativeDriver: true,
     }).start(() => {
-      // Remove emoji after animation
       setFloatingEmojis(prev => prev.filter(e => e.id !== id));
     });
+  }, []);
 
-    // Track the interaction
+  const handleEmojiPress = (emoji: string, index: number) => {
+    // Calculate button X position for the float origin
+    const buttonWidth = 52;
+    const gap = 8;
+    const totalWidth = 4 * buttonWidth + 3 * gap;
+    const startX = (SCREEN_WIDTH - totalWidth) / 2;
+    const buttonX = startX + index * (buttonWidth + gap) + buttonWidth / 2;
+
+    // Spawn local floating emoji immediately (always - every tap)
+    spawnFloatingEmoji(emoji, buttonX);
+
+    // Only persist if this is a new emoji or different from what's saved
+    // Avoids toggling off on repeated taps of the same emoji
+    if (savedEmojiRef.current !== emoji) {
+      savedEmojiRef.current = emoji;
+      toggleReaction(responseId, emoji);
+    }
+
+    // Track every tap for engagement metrics
     trackInteraction('emoji_reaction', {
       responseId,
       metadata: { emoji, promptId },
     });
-  }, [responseId, promptId]);
-
-  const handleEmojiPress = (emoji: string, index: number) => {
-    // Calculate approximate button X position
-    const buttonWidth = 52;
-    const gap = 8;
-    const totalWidth = 4 * buttonWidth + 3 * gap;
-    const startX = (Dimensions.get('window').width - totalWidth) / 2;
-    const buttonX = startX + index * (buttonWidth + gap) + buttonWidth / 2;
-
-    spawnFloatingEmoji(emoji, buttonX);
   };
 
   const emojiList = [

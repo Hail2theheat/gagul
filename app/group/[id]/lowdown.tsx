@@ -1,6 +1,6 @@
 // app/group/[id]/lowdown.tsx
 import { useGlobalSearchParams, router } from "expo-router";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -21,14 +21,17 @@ import {
   getFiresideData,
   isFiresideUnlocked,
   getComments,
+  getCommentCounts,
   subscribeToComments,
   getSignedImageUrl,
+  getQuiplashVoters,
   finalizeWeek,
   winnerChoosePrompt,
   FiresideData,
   FiresidePrompt,
   FiresideComment,
   WeeklyWinner,
+  QuiplashVoter,
 } from "../../../lib/services/firesideService";
 import { awardPoints } from "../../../lib/services/pointsService";
 import { supabase } from "../../../lib/supabase";
@@ -42,6 +45,7 @@ import { PixelCharacter, CharacterConfig, DEFAULT_CHARACTER } from "../../../com
 import { DetailedCampfire } from "../../../components/PixelArt";
 import { PixelTitle } from "../../../components/PixelTitle";
 import { NightSky } from "../../../components/sky";
+import { FiresideIntro } from "../../../components/FiresideIntro";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -57,6 +61,53 @@ function PixelTree({ x, height, shade }: { x: number; height: number; shade: num
       <View style={{ width: 0, height: 0, borderLeftWidth: height * 0.6, borderRightWidth: height * 0.6, borderBottomWidth: height * 0.45, borderLeftColor: "transparent", borderRightColor: "transparent", borderBottomColor: treeColor }} />
       <View style={{ width: height * 0.15, height: height * 0.2, backgroundColor: trunkColor }} />
     </View>
+  );
+}
+
+// Max height for text before it hits the emoji area
+const TEXT_MAX_HEIGHT = SCREEN_HEIGHT * 0.45;
+
+// Auto-shrinking text that reduces font size to fit within maxHeight
+function AutoShrinkText({
+  text,
+  style,
+  maxHeight = TEXT_MAX_HEIGHT,
+  minFontSize = 12,
+}: {
+  text: string;
+  style: any;
+  maxHeight?: number;
+  minFontSize?: number;
+}) {
+  const baseFontSize = StyleSheet.flatten(style)?.fontSize || 22;
+  const baseLineHeight = StyleSheet.flatten(style)?.lineHeight || baseFontSize * 1.4;
+  const [fontSize, setFontSize] = useState(baseFontSize);
+  const [lineHeight, setLineHeight] = useState(baseLineHeight);
+
+  useEffect(() => {
+    // Reset when text changes
+    setFontSize(baseFontSize);
+    setLineHeight(baseLineHeight);
+  }, [text]);
+
+  const onTextLayout = useCallback((e: any) => {
+    const { height } = e.nativeEvent.layout;
+    if (height > maxHeight && fontSize > minFontSize) {
+      const scale = Math.max(minFontSize / baseFontSize, maxHeight / height * 0.95);
+      const newSize = Math.max(minFontSize, Math.floor(baseFontSize * scale));
+      const newLineHeight = Math.max(minFontSize * 1.3, Math.floor(baseLineHeight * scale));
+      setFontSize(newSize);
+      setLineHeight(newLineHeight);
+    }
+  }, [fontSize, maxHeight, minFontSize, baseFontSize, baseLineHeight]);
+
+  return (
+    <Text
+      style={[style, { fontSize, lineHeight }]}
+      onLayout={onTextLayout}
+    >
+      {text}
+    </Text>
   );
 }
 
@@ -286,7 +337,7 @@ const COLORS = {
   gold: "#FFD700",
 };
 
-type ScreenState = "loading" | "locked" | "bonfire" | "prompts" | "leaderboard";
+type ScreenState = "loading" | "locked" | "intro" | "bonfire" | "prompts" | "leaderboard";
 
 export default function LowdownScreen() {
   const params = useGlobalSearchParams();
@@ -298,9 +349,10 @@ export default function LowdownScreen() {
   const [currentResponseIndex, setCurrentResponseIndex] = useState(-1); // -1 = show prompt
   const [revealStep, setRevealStep] = useState(0); // For quiz/MC reveals
   const [comments, setComments] = useState<FiresideComment[]>([]);
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
   const [signedPhotoUrl, setSignedPhotoUrl] = useState<string | null>(null);
   const [showCommentSheet, setShowCommentSheet] = useState(false);
-  const [quiplashRevealed, setQuiplashRevealed] = useState(false);
+  const [quiplashVoters, setQuiplashVoters] = useState<QuiplashVoter[]>([]);
   const [showCustomPrompt, setShowCustomPrompt] = useState(false);
   const [customPromptText, setCustomPromptText] = useState("");
   const [choosingPrompt, setChoosingPrompt] = useState(false);
@@ -406,6 +458,11 @@ export default function LowdownScreen() {
         if (prev.some(c => c.id === newComment.id)) return prev;
         return [...prev, newComment];
       });
+      // Also update the counts map so badge shows for everyone
+      setCommentCounts((prev) => ({
+        ...prev,
+        [responseId]: (prev[responseId] || 0) + 1,
+      }));
     });
 
     return () => {
@@ -433,8 +490,20 @@ export default function LowdownScreen() {
       const data = await getFiresideData(groupId);
       if (data) {
         setFiresideData(data);
-        setScreenState("bonfire");
+        setScreenState("intro");
         startFireAnimation();
+
+        // Load comment counts for all responses so badge is visible to everyone
+        const allResponseIds: string[] = [];
+        for (const prompt of data.prompts) {
+          for (const response of prompt.responses || []) {
+            if (response.response_id) allResponseIds.push(response.response_id);
+          }
+        }
+        if (allResponseIds.length > 0) {
+          const counts = await getCommentCounts(allResponseIds);
+          setCommentCounts(counts);
+        }
       } else {
         setScreenState("locked");
       }
@@ -442,6 +511,14 @@ export default function LowdownScreen() {
       console.error('[Fireside] Failed to load data:', error);
       setScreenState("locked");
     }
+  };
+
+  const fetchQuiplashVoterData = async (quiplashData: { matchup_id: string }[]) => {
+    const matchupIds = [...new Set(quiplashData.map(p => p.matchup_id))];
+    const results = await Promise.all(
+      matchupIds.map(id => getQuiplashVoters(id))
+    );
+    setQuiplashVoters(results.flat());
   };
 
   const startFireAnimation = () => {
@@ -502,8 +579,17 @@ export default function LowdownScreen() {
     const isQuizOrMC = ["quiz", "multiple_choice"].includes(currentPrompt.type);
     const isQuiplash = currentPrompt.type === "quiplash";
 
-    // Quiplash: at Fireside we show results immediately, tap goes to next prompt
+    // Quiplash: progressive 4-step reveal
     if (isQuiplash) {
+      if (revealStep < 3) {
+        const nextStep = revealStep + 1;
+        setRevealStep(nextStep);
+        // Fetch voter data when reaching votes reveal (step 2)
+        if (nextStep === 2 && currentPrompt.quiplash_data) {
+          fetchQuiplashVoterData(currentPrompt.quiplash_data);
+        }
+        return;
+      }
       goToNextPrompt();
       return;
     }
@@ -540,7 +626,7 @@ export default function LowdownScreen() {
       setCurrentPromptIndex(currentPromptIndex + 1);
       setCurrentResponseIndex(-1);
       setRevealStep(0);
-      setQuiplashRevealed(false);
+      setQuiplashVoters([]);
       // Comments will be loaded by useEffect when response changes
     } else {
       setScreenState("leaderboard");
@@ -554,15 +640,13 @@ export default function LowdownScreen() {
     const isQuizOrMC = ["quiz", "multiple_choice"].includes(currentPrompt.type);
     const isQuiplash = currentPrompt.type === "quiplash";
 
-    // SAFEGUARD: Quiplash should NEVER be in response mode
+    // Quiplash: step back through reveal stages
     if (isQuiplash) {
-      if (quiplashRevealed) {
-        // Go back to unrevealed
-        setQuiplashRevealed(false);
-        setCurrentResponseIndex(-1); // Ensure we're in prompt mode
+      if (revealStep > 0) {
+        setRevealStep(revealStep - 1);
         return;
       }
-      // Not revealed, go to previous prompt (handled below)
+      // revealStep is 0, go to previous prompt (handled below)
     }
 
     // If showing responses (not for quiplash), go to previous response or back to prompt
@@ -598,17 +682,18 @@ export default function LowdownScreen() {
       if (prevIsQuizOrMC) {
         setCurrentResponseIndex(-1);
         setRevealStep(3); // Show fully revealed
-        setQuiplashRevealed(false);
       } else if (prevIsQuiplash) {
         setCurrentResponseIndex(-1);
-        setQuiplashRevealed(true); // Show revealed results
-        setRevealStep(0);
+        setRevealStep(3); // Show fully revealed
+        // Fetch voter data for previous quiplash prompt
+        const prevQuiplashData = firesideData?.prompts[prevPromptIndex]?.quiplash_data;
+        if (prevQuiplashData) {
+          fetchQuiplashVoterData(prevQuiplashData);
+        }
       } else if (prevResponses.length > 0) {
         setCurrentResponseIndex(prevResponses.length - 1);
-        setQuiplashRevealed(false);
       } else {
         setCurrentResponseIndex(-1);
-        setQuiplashRevealed(false);
       }
     }
   };
@@ -678,7 +763,27 @@ function PixelLock({ size = 40 }: { size?: number }) {
     );
   }
 
-  // Bonfire Entry - Stardew Valley style pixel art scene
+  // Intro animation — avatars walk to campfire
+  if (screenState === "intro") {
+    return (
+      <FiresideIntro
+        members={firesideData?.leaderboard || []}
+        promptCount={firesideData?.prompts.length || 0}
+        onComplete={() => {
+          // Award fireside points
+          if (!hasAwardedFiresidePoints.current) {
+            hasAwardedFiresidePoints.current = true;
+            awardPoints('fireside', groupId!);
+          }
+          setScreenState("prompts");
+          setCurrentPromptIndex(0);
+          setCurrentResponseIndex(-1);
+        }}
+      />
+    );
+  }
+
+  // Bonfire Entry - Stardew Valley style pixel art scene (fallback)
   if (screenState === "bonfire") {
     // Generate trees at various positions
     const trees = [
@@ -1153,6 +1258,18 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
 
   const mcResults = calculateMcResults();
 
+  // Debug: log prompt data
+  console.log('[Fireside] prompt:', currentPrompt.type, currentPrompt.content || currentPrompt.title);
+  console.log('[Fireside] responses:', currentPrompt.responses?.length, 'responseIdx:', currentResponseIndex);
+  if (currentResponseIndex >= 0 && currentPrompt.responses?.[currentResponseIndex]) {
+    const r = currentPrompt.responses[currentResponseIndex];
+    console.log('[Fireside] current response media_url:', r.media_url, 'content:', typeof r.content === 'string' ? r.content?.substring(0, 50) : JSON.stringify(r.content)?.substring(0, 50));
+  }
+  if (isQuiplash) {
+    console.log('[Quiplash] quiplash_data:', JSON.stringify(currentPrompt.quiplash_data)?.substring(0, 200));
+    console.log('[Quiplash] revealStep:', revealStep);
+  }
+
   // Get the response ID for comments - for quiz/MC/quiplash use first response, otherwise current
   const commentResponseId = (isQuizOrMC || isQuiplash) && responses.length > 0
     ? responses[0].response_id
@@ -1212,21 +1329,6 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
 
       {/* Progress bar */}
       <View style={styles.progressContainer}>
-        {/* Back button */}
-        <TouchableOpacity
-          onPress={handleBack}
-          style={styles.navButton}
-          disabled={currentPromptIndex === 0 && currentResponseIndex === -1 && revealStep === 0}
-        >
-          <Ionicons
-            name="chevron-back"
-            size={24}
-            color={currentPromptIndex === 0 && currentResponseIndex === -1 && revealStep === 0
-              ? COLORS.border
-              : COLORS.text}
-          />
-        </TouchableOpacity>
-
         <View style={styles.progressBar}>
           <View
             style={[
@@ -1238,14 +1340,29 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
         <Text style={styles.progressText}>
           {currentPromptIndex + 1} / {firesideData?.prompts.length}
         </Text>
-
-        {/* Forward button */}
-        <TouchableOpacity onPress={handleTap} style={styles.navButton}>
-          <Ionicons name="chevron-forward" size={24} color={COLORS.text} />
-        </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.promptContainer} onPress={handleTap} activeOpacity={0.9}>
+      {/* Back button - mid left */}
+      <TouchableOpacity
+        onPress={handleBack}
+        style={styles.midNavButtonLeft}
+        disabled={currentPromptIndex === 0 && currentResponseIndex === -1 && revealStep === 0}
+      >
+        <Ionicons
+          name="chevron-back"
+          size={32}
+          color={currentPromptIndex === 0 && currentResponseIndex === -1 && revealStep === 0
+            ? COLORS.border
+            : COLORS.text}
+        />
+      </TouchableOpacity>
+
+      {/* Forward button - mid right */}
+      <TouchableOpacity onPress={handleTap} style={styles.midNavButtonRight}>
+        <Ionicons name="chevron-forward" size={32} color={COLORS.text} />
+      </TouchableOpacity>
+
+      <View style={styles.promptContainer}>
         {/* Prompt type badge - only show for Quiplash */}
         {showingPrompt && isQuiplash && (
           <View style={[styles.typeBadge, styles.quiplashBadge]}>
@@ -1256,15 +1373,23 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
         {showingPrompt ? (
           // Show the prompt
           <View style={styles.promptContent}>
-            {/* Tap hint at top */}
+            {/* Navigation hint at top */}
             <Text style={styles.swipeHintTop}>
               {isQuizOrMC && revealStep < 3
-                ? "tap to reveal →"
-                : responses.length > 0 && !isQuizOrMC && !isQuiplash
-                ? "tap to see responses →"
-                : "tap for next →"}
+                ? "→ reveal"
+                : isQuiplash
+                ? revealStep === 0
+                  ? "→ see answers"
+                  : revealStep === 1
+                  ? "→ reveal votes"
+                  : revealStep === 2
+                  ? "→ see who wrote them"
+                  : "→ next"
+                : responses.length > 0 && !isQuizOrMC
+                ? "→ see responses"
+                : "→ next"}
             </Text>
-            <Text style={styles.promptTitle}>{currentPrompt.content || currentPrompt.title}</Text>
+            <AutoShrinkText style={styles.promptTitle} text={currentPrompt.content || currentPrompt.title || ''} />
 
             {isQuizOrMC && revealStep >= 1 && (
               <View style={styles.optionsContainer}>
@@ -1332,70 +1457,126 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
               </View>
             )}
 
-            {isQuiplash && currentPrompt.quiplash_data && (
+            {isQuiplash && currentPrompt.quiplash_data && revealStep >= 1 && (
               <View style={styles.quiplashResults}>
-                {/* Hint text - at Fireside we always show results */}
-                <Text style={styles.quiplashHint}>tap for next →</Text>
-
                 {currentPrompt.quiplash_data.map((participant, i) => {
                   const maxVotes = Math.max(...(currentPrompt.quiplash_data?.map(p => p.votes) || [0]));
                   const isWinner = participant.votes === maxVotes && maxVotes > 0;
                   const isTie = currentPrompt.quiplash_data?.filter(p => p.votes === maxVotes).length === 2;
+
+                  // Get voters for this participant's response
+                  const votersForThis = quiplashVoters.filter(
+                    v => v.voted_for_response_id === participant.response?.id
+                  );
 
                   return (
                     <View
                       key={i}
                       style={[
                         styles.quiplashEntry,
-                        isWinner && !isTie && styles.quiplashWinner,
+                        revealStep >= 2 && isWinner && !isTie && styles.quiplashWinner,
                       ]}
                     >
-                      {/* Answer label */}
-                      <Text style={styles.quiplashLabel}>
-                        {i === 0 ? 'A' : 'B'}
-                      </Text>
-
                       {/* Answer content */}
                       <Text style={styles.quiplashAnswer}>
                         "{participant.response?.content || "(no answer)"}"
                       </Text>
 
-                      {/* Always show votes and author at Fireside */}
-                      <View style={styles.quiplashMeta}>
-                        <Text style={[styles.quiplashVotes, isWinner && !isTie && styles.quiplashVotesWinner]}>
-                          {isWinner && !isTie ? "WINNER " : ""}{participant.votes} vote{participant.votes !== 1 ? 's' : ''}
-                        </Text>
-                        <View style={styles.quiplashAuthorRow}>
-                          <View style={styles.quiplashAuthorAvatar}>
-                            <PixelCharacter
-                              config={(participant.avatar_config as unknown as CharacterConfig) || DEFAULT_CHARACTER}
-                              size={20}
-                            />
-                          </View>
-                          <Text style={styles.quiplashName}>
-                            {participant.username || 'Anonymous'}
+                      {/* Step 2+: Votes + voter avatars */}
+                      {revealStep >= 2 && (
+                        <View style={styles.quiplashMeta}>
+                          <Text style={[styles.quiplashVotes, isWinner && !isTie && styles.quiplashVotesWinner]}>
+                            {isWinner && !isTie ? "WINNER " : ""}{participant.votes} vote{participant.votes !== 1 ? 's' : ''}
                           </Text>
+                          {votersForThis.length > 0 && (
+                            <View style={styles.quiplashVoterRow}>
+                              {votersForThis.map((voter, vi) => (
+                                <View
+                                  key={vi}
+                                  style={[
+                                    styles.voterAvatarSmall,
+                                    { marginLeft: vi > 0 ? -6 : 0, zIndex: 10 - vi },
+                                  ]}
+                                >
+                                  <PixelCharacter
+                                    config={(voter.avatar_config as unknown as CharacterConfig) || DEFAULT_CHARACTER}
+                                    size={18}
+                                  />
+                                </View>
+                              ))}
+                            </View>
+                          )}
                         </View>
-                      </View>
+                      )}
+
+                      {/* Step 3: Author reveal */}
+                      {revealStep >= 3 && (
+                        <View style={styles.quiplashAuthorReveal}>
+                          <Text style={styles.quiplashWrittenBy}>written by</Text>
+                          <View style={styles.quiplashAuthorRow}>
+                            <View style={styles.quiplashAuthorAvatar}>
+                              <PixelCharacter
+                                config={(participant.avatar_config as unknown as CharacterConfig) || DEFAULT_CHARACTER}
+                                size={20}
+                              />
+                            </View>
+                            <Text style={styles.quiplashName}>
+                              {participant.username || 'Anonymous'}
+                            </Text>
+                          </View>
+                        </View>
+                      )}
                     </View>
                   );
                 })}
 
-                {/* Tie message */}
-                {currentPrompt.quiplash_data.length === 2 &&
-                 currentPrompt.quiplash_data[0].votes === currentPrompt.quiplash_data[1].votes && (
-                  <Text style={styles.quiplashTie}>It's a tie!</Text>
-                )}
+                {/* Points banner - step 3 */}
+                {revealStep >= 3 && (() => {
+                  const maxVotes = Math.max(...(currentPrompt.quiplash_data?.map(p => p.votes) || [0]));
+                  const winners = currentPrompt.quiplash_data?.filter(p => p.votes === maxVotes && maxVotes > 0) || [];
+                  if (winners.length === 1) {
+                    return (
+                      <View style={styles.quiplashPointsBanner}>
+                        <Text style={styles.quiplashPointsText}>
+                          {winners[0].username || 'Anonymous'} earns 5 points!
+                        </Text>
+                      </View>
+                    );
+                  }
+                  if (winners.length === 2) {
+                    return (
+                      <View style={styles.quiplashPointsBanner}>
+                        <Text style={styles.quiplashTie}>It's a tie!</Text>
+                        <Text style={styles.quiplashPointsText}>
+                          {winners[0].username || 'Anonymous'} & {winners[1].username || 'Anonymous'} each earn 2.5 points
+                        </Text>
+                      </View>
+                    );
+                  }
+                  return null;
+                })()}
               </View>
             )}
           </View>
         ) : !isQuiplash ? (
           // Regular response view (never shown for quiplash)
           <View style={styles.responseContainer}>
-            {/* Tap hint at top */}
-            <Text style={styles.swipeHintTop}>
-              {currentResponseIndex < responses.length - 1 ? "tap for next response →" : "tap for next prompt →"}
-            </Text>
+            {/* Photo author - top left, OUTSIDE the photo */}
+            {mediaType === 'photo' && (
+              <View style={styles.photoAuthorRow}>
+                <View style={styles.photoAuthorAvatar}>
+                  <PixelCharacter
+                    config={(currentResponse?.avatar_config as unknown as CharacterConfig) || DEFAULT_CHARACTER}
+                    size={36}
+                  />
+                </View>
+                <Text style={styles.photoAuthorName}>
+                  {currentResponse?.username || 'Anonymous'}
+                </Text>
+                <View style={{ flex: 1 }} />
+                <Ionicons name="chevron-forward" size={24} color={COLORS.muted} />
+              </View>
+            )}
 
             {/* Media content */}
             {mediaType === 'video' && (
@@ -1449,30 +1630,30 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
 
             {/* Only show content if it exists */}
             {currentResponse?.content ? (
-              <Text style={styles.responseContent}>
-                {currentResponse.content}
-              </Text>
+              <AutoShrinkText style={styles.responseContent} text={currentResponse.content} />
             ) : null}
 
-            {/* Author with avatar */}
-            <View style={styles.responseAuthorRow}>
-              <View style={styles.responseAuthorAvatar}>
-                <PixelCharacter
-                  config={(currentResponse?.avatar_config as unknown as CharacterConfig) || DEFAULT_CHARACTER}
-                  size={24}
-                />
+            {/* Author with avatar - below text (not shown for photos, handled above) */}
+            {mediaType !== 'photo' && (
+              <View style={styles.responseAuthorColumn}>
+                <View style={styles.responseAuthorAvatarLarge}>
+                  <PixelCharacter
+                    config={(currentResponse?.avatar_config as unknown as CharacterConfig) || DEFAULT_CHARACTER}
+                    size={40}
+                  />
+                </View>
+                <Text style={styles.responseAuthorName}>
+                  {currentResponse?.username || 'Anonymous'}
+                </Text>
               </View>
-              <Text style={styles.responseAuthorName}>
-                {currentResponse?.username || 'Anonymous'}
-              </Text>
-            </View>
+            )}
 
             <Text style={styles.responseCount}>
               {currentResponseIndex + 1} of {responses.length}
             </Text>
           </View>
         ) : null}
-      </TouchableOpacity>
+      </View>
 
       {/* Floating emoji reactions - shown on all responses including quiplash */}
       {commentResponseId && (
@@ -1493,13 +1674,16 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
         >
           <View style={styles.commentsButtonInner}>
             <Ionicons name="chatbubble" size={22} color={COLORS.text} />
-            {comments.length > 0 && (
-              <View style={styles.commentBadge}>
-                <Text style={styles.commentBadgeText}>
-                  {comments.length > 99 ? '99+' : comments.length}
-                </Text>
-              </View>
-            )}
+            {(() => {
+              const count = comments.length > 0 ? comments.length : (commentCounts[commentResponseId] || 0);
+              return count > 0 ? (
+                <View style={styles.commentBadge}>
+                  <Text style={styles.commentBadgeText}>
+                    {count > 99 ? '99+' : count}
+                  </Text>
+                </View>
+              ) : null;
+            })()}
           </View>
           <Text style={styles.commentsButtonText}>Comments</Text>
         </TouchableOpacity>
@@ -1629,6 +1813,24 @@ const styles = StyleSheet.create({
   navButton: {
     padding: 8,
   },
+  midNavButtonLeft: {
+    position: "absolute",
+    left: 4,
+    top: "50%",
+    zIndex: 50,
+    padding: 8,
+    backgroundColor: COLORS.card + "99",
+    borderRadius: 20,
+  },
+  midNavButtonRight: {
+    position: "absolute",
+    right: 4,
+    top: "50%",
+    zIndex: 50,
+    padding: 8,
+    backgroundColor: COLORS.card + "99",
+    borderRadius: 20,
+  },
   closeButton: {
     position: "absolute",
     top: 50,
@@ -1643,7 +1845,8 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     justifyContent: "flex-start",
-    paddingTop: "25%",
+    paddingTop: "15%",
+    paddingBottom: 180,
   },
   typeBadge: {
     backgroundColor: COLORS.card,
@@ -1666,6 +1869,7 @@ const styles = StyleSheet.create({
   },
   promptContent: {
     alignItems: "center",
+    paddingBottom: 40,
   },
   promptTitle: {
     fontSize: 28,
@@ -1771,14 +1975,20 @@ const styles = StyleSheet.create({
   },
   // Quiplash
   quiplashResults: {
-    marginTop: 30,
+    marginTop: 16,
     width: "100%",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    justifyContent: "center",
   },
   quiplashEntry: {
     backgroundColor: COLORS.card,
-    padding: 20,
+    padding: 14,
     borderRadius: 16,
-    marginBottom: 12,
+    flex: 1,
+    minWidth: "45%",
+    maxWidth: "48%",
   },
   quiplashWinner: {
     borderWidth: 2,
@@ -1787,15 +1997,16 @@ const styles = StyleSheet.create({
   },
   quiplashAnswer: {
     color: COLORS.text,
-    fontSize: 18,
+    fontSize: 16,
+    fontFamily: "Paaxel",
     fontStyle: "italic",
     textAlign: "center",
-    lineHeight: 26,
+    lineHeight: 24,
   },
   quiplashMeta: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 12,
+    alignItems: "center",
+    marginTop: 10,
+    gap: 6,
   },
   quiplashVotes: {
     color: COLORS.muted,
@@ -1835,16 +2046,51 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 8,
   },
-  quiplashTie: {
-    color: COLORS.purple,
+  quiplashVoterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginLeft: 8,
+  },
+  quiplashAuthorReveal: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    alignItems: "center",
+    gap: 4,
+  },
+  quiplashWrittenBy: {
+    color: COLORS.muted,
+    fontSize: 12,
+    fontStyle: "italic",
+  },
+  quiplashPointsBanner: {
+    marginTop: 6,
+    width: "100%",
+    backgroundColor: COLORS.gold + "20",
+    borderWidth: 1,
+    borderColor: COLORS.gold,
+    borderRadius: 12,
+    padding: 14,
+    alignItems: "center",
+  },
+  quiplashPointsText: {
+    color: COLORS.gold,
     fontSize: 16,
     fontFamily: "Paaxel",
     textAlign: "center",
-    marginTop: 8,
+  },
+  quiplashTie: {
+    color: COLORS.gold,
+    fontSize: 18,
+    fontFamily: "Paaxel",
+    textAlign: "center",
+    marginBottom: 4,
   },
   // Response view
   responseContainer: {
     alignItems: "center",
+    paddingBottom: 180,
   },
   responsePhoto: {
     width: SCREEN_WIDTH - 80,
@@ -1865,10 +2111,11 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   responseContent: {
-    fontSize: 28,
+    fontSize: 22,
+    fontFamily: "Paaxel",
     color: COLORS.text,
     textAlign: "center",
-    lineHeight: 40,
+    lineHeight: 32,
     paddingHorizontal: 20,
     marginTop: 20,
     fontStyle: "italic",
@@ -1878,18 +2125,35 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 20,
   },
-  responseAuthorRow: {
-    flexDirection: "row",
+  responseAuthorColumn: {
     alignItems: "center",
     justifyContent: "center",
     marginTop: 20,
-    gap: 8,
+    gap: 4,
   },
-  responseAuthorAvatar: {
-    width: 32,
-    height: 40,
+  responseAuthorAvatarLarge: {
+    width: 48,
+    height: 56,
     alignItems: "center",
     justifyContent: "center",
+  },
+  photoAuthorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 10,
+    paddingHorizontal: 4,
+  },
+  photoAuthorAvatar: {
+    width: 40,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  photoAuthorName: {
+    color: COLORS.text,
+    fontSize: 18,
+    fontFamily: "Paaxel",
   },
   responseAuthorName: {
     color: COLORS.text,
@@ -1905,7 +2169,7 @@ const styles = StyleSheet.create({
   // Reactions container - fixed at bottom center
   reactionsContainer: {
     position: "absolute",
-    bottom: 130,
+    bottom: 100,
     left: 0,
     right: 0,
     zIndex: 50,

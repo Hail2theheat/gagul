@@ -3,6 +3,7 @@
  */
 
 import { supabase } from '../supabase';
+import { awardPoints, emitPointsAwarded } from './pointsService';
 
 // Types
 export interface FiresideResponse {
@@ -47,6 +48,13 @@ export interface QuiplashParticipant {
     content: string;
   } | null;
   votes: number;
+}
+
+export interface QuiplashVoter {
+  voter_id: string;
+  voted_for_response_id: string;
+  username: string;
+  avatar_config: Record<string, unknown> | null;
 }
 
 export interface FiresidePrompt {
@@ -112,6 +120,9 @@ export interface FiresideComment {
  * Check if Fireside is currently unlocked (Sunday 8pm ET to Monday 3am ET)
  */
 export function isFiresideUnlocked(): boolean {
+  // DEV ONLY: bypass time gate for testing
+  if (__DEV__) return true;
+
   const now = new Date();
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/New_York',
@@ -240,7 +251,34 @@ export async function addComment(
     return null;
   }
 
+  // Award 2 pts to commenter for participating
+  awardPoints('comment').catch(() => {});
+
   return data as FiresideComment;
+}
+
+/**
+ * Get comment counts for multiple responses at once
+ */
+export async function getCommentCounts(responseIds: string[]): Promise<Record<string, number>> {
+  if (responseIds.length === 0) return {};
+
+  const { data, error } = await supabase
+    .from('fireside_comments')
+    .select('response_id', { count: 'exact', head: false })
+    .in('response_id', responseIds)
+    .is('parent_comment_id', null);
+
+  if (error) {
+    console.error('Error getting comment counts:', error);
+    return {};
+  }
+
+  const counts: Record<string, number> = {};
+  for (const row of data || []) {
+    counts[row.response_id] = (counts[row.response_id] || 0) + 1;
+  }
+  return counts;
 }
 
 /**
@@ -424,4 +462,20 @@ export async function getSignedImageUrl(url: string): Promise<string | null> {
     console.error('[getSignedImageUrl] Exception:', err);
     return null;
   }
+}
+
+/**
+ * Get voter details for a quiplash matchup
+ */
+export async function getQuiplashVoters(matchupId: string): Promise<QuiplashVoter[]> {
+  const { data, error } = await supabase.rpc('get_quiplash_voters', {
+    p_matchup_id: matchupId,
+  });
+
+  if (error) {
+    console.error('Error getting quiplash voters:', error);
+    return [];
+  }
+
+  return (data as QuiplashVoter[]) || [];
 }
