@@ -22,6 +22,7 @@ import {
   isFiresideUnlocked,
   getComments,
   getCommentCounts,
+  getPromptViews,
   subscribeToComments,
   getSignedImageUrl,
   getQuiplashVoters,
@@ -350,6 +351,7 @@ export default function LowdownScreen() {
   const [revealStep, setRevealStep] = useState(0); // For quiz/MC reveals
   const [comments, setComments] = useState<FiresideComment[]>([]);
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
+  const [promptViews, setPromptViews] = useState<Record<string, string[]>>({});
   const [signedPhotoUrl, setSignedPhotoUrl] = useState<string | null>(null);
   const [showCommentSheet, setShowCommentSheet] = useState(false);
   const [quiplashVoters, setQuiplashVoters] = useState<QuiplashVoter[]>([]);
@@ -503,6 +505,13 @@ export default function LowdownScreen() {
         if (allResponseIds.length > 0) {
           const counts = await getCommentCounts(allResponseIds);
           setCommentCounts(counts);
+        }
+
+        // Load prompt views for status dots (green/blue/red)
+        const allGroupPromptIds = data.prompts.map((p: FiresidePrompt) => p.group_prompt_id).filter(Boolean);
+        if (allGroupPromptIds.length > 0) {
+          const views = await getPromptViews(allGroupPromptIds);
+          setPromptViews(views);
         }
       } else {
         setScreenState("locked");
@@ -1391,6 +1400,26 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
             </Text>
             <AutoShrinkText style={styles.promptTitle} text={currentPrompt.content || currentPrompt.title || ''} />
 
+            {/* Member status dots - green=answered, blue=seen, red=not seen */}
+            {firesideData?.leaderboard && firesideData.leaderboard.length > 0 && (
+              <View style={styles.statusDotsRow}>
+                {firesideData.leaderboard.map((member) => {
+                  const responded = (currentPrompt.responses || []).some(r => r.user_id === member.user_id);
+                  const seen = (promptViews[currentPrompt.group_prompt_id] || []).includes(member.user_id);
+                  const dotColor = responded ? '#4ADE80' : seen ? '#60A5FA' : '#EF4444';
+                  return (
+                    <View key={member.user_id} style={styles.statusDotMember}>
+                      <PixelCharacter
+                        config={(member.avatar_config as unknown as CharacterConfig) || DEFAULT_CHARACTER}
+                        size={20}
+                      />
+                      <View style={[styles.statusDot, { backgroundColor: dotColor }]} />
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
             {isQuizOrMC && revealStep >= 1 && (
               <View style={styles.optionsContainer}>
                 {/* Show enhanced results component when fully revealed */}
@@ -1878,6 +1907,25 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 38,
     paddingHorizontal: 10,
+  },
+  statusDotsRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 16,
+    flexWrap: "wrap",
+  },
+  statusDotMember: {
+    alignItems: "center",
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginTop: 2,
+    borderWidth: 1,
+    borderColor: "#0B1026",
   },
   swipeHint: {
     color: COLORS.muted,

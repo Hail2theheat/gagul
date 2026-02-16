@@ -282,6 +282,31 @@ export async function getCommentCounts(responseIds: string[]): Promise<Record<st
 }
 
 /**
+ * Get prompt views for multiple group_prompt_ids
+ * Returns a map of group_prompt_id -> set of user_ids who viewed it
+ */
+export async function getPromptViews(groupPromptIds: string[]): Promise<Record<string, string[]>> {
+  if (groupPromptIds.length === 0) return {};
+
+  const { data, error } = await supabase
+    .from('prompt_views')
+    .select('group_prompt_id, user_id')
+    .in('group_prompt_id', groupPromptIds);
+
+  if (error) {
+    console.error('Error getting prompt views:', error);
+    return {};
+  }
+
+  const views: Record<string, string[]> = {};
+  for (const row of data || []) {
+    if (!views[row.group_prompt_id]) views[row.group_prompt_id] = [];
+    views[row.group_prompt_id].push(row.user_id);
+  }
+  return views;
+}
+
+/**
  * Get comments for a response (flat list, no threading)
  */
 export async function getComments(responseId: string): Promise<FiresideComment[]> {
