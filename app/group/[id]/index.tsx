@@ -7,6 +7,7 @@ import * as Clipboard from "expo-clipboard";
 import { supabase } from "../../../lib/supabase";
 import { PromptCard, PromptRating } from "../../../components/prompts";
 import { recordPromptView, getMemberPromptStatuses } from "../../../lib/services/promptService";
+import { getFiresideProgress } from "../../../lib/services/firesideService";
 import { QuiplashCard } from "../../../components/prompts/QuiplashCard";
 import { QuiplashVotingCard } from "../../../components/prompts/QuiplashVotingCard";
 import { TelephoneCard } from "../../../components/prompts/TelephoneCard";
@@ -1311,6 +1312,7 @@ function GroupScreenInner() {
   const [allMembers, setAllMembers] = useState<Array<{ user_id: string; avatar_config: CharacterConfig | null; username: string | null }>>([]);
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [memberStatuses, setMemberStatuses] = useState<Record<string, 'not_seen' | 'seen' | 'responded'>>({});
+  const [firesideProgress, setFiresideProgress] = useState<Record<string, 'completed' | 'partial' | 'not_started'>>({});
   const [quiplashAssignment, setQuiplashAssignment] = useState<QuiplashAssignment | null>(null);
   const [pendingQuiplashVotes, setPendingQuiplashVotes] = useState<QuiplashMatchup[]>([]);
   const [telephoneAssignment, setTelephoneAssignment] = useState<TelephoneAssignment | null>(null);
@@ -1473,6 +1475,25 @@ function GroupScreenInner() {
         statusMap[s.user_id] = s.status;
       }
       setMemberStatuses(statusMap);
+
+      // On Sundays, also load fireside viewing progress for status dots
+      const currentSundayState = getSundayState();
+      if (currentSundayState !== 'not-sunday' && groupId) {
+        // Calculate the Monday of the current week (week_of)
+        const now = new Date();
+        const day = now.getDay(); // 0=Sun, 1=Mon...
+        const mondayOffset = day === 0 ? -6 : 1 - day;
+        const monday = new Date(now);
+        monday.setDate(now.getDate() + mondayOffset);
+        const weekOf = monday.toISOString().split('T')[0];
+
+        const progress = await getFiresideProgress(groupId, weekOf);
+        const progressMap: Record<string, 'completed' | 'partial' | 'not_started'> = {};
+        for (const p of progress) {
+          progressMap[p.user_id] = p.status;
+        }
+        setFiresideProgress(progressMap);
+      }
 
       // Load quiplash assignment (for submitting)
       const quiplash = await getMyQuiplash(groupId);
@@ -1819,17 +1840,32 @@ function GroupScreenInner() {
               <Pressable onPress={() => setShowMembersModal(true)} hitSlop={10} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 4 }}>
                 {/* Show all member avatars with status dots */}
                 {allMembers.slice(0, 6).map((member, idx) => {
-                  const promptStatus = memberStatuses[member.user_id];
-                  const dotColor = promptStatus === 'responded' ? '#4ADE80'
-                    : promptStatus === 'seen' ? '#60A5FA'
-                    : '#EF4444';
+                  const isSunday = sundayState !== 'not-sunday';
+                  const hasFiresideData = Object.keys(firesideProgress).length > 0;
+                  const hasPromptData = Object.keys(memberStatuses).length > 0;
+
+                  let dotColor = '#EF4444'; // default red
+                  if (isSunday && hasFiresideData) {
+                    // Sunday: show fireside viewing progress
+                    const status = firesideProgress[member.user_id] || 'not_started';
+                    dotColor = status === 'completed' ? '#4ADE80'
+                      : status === 'partial' ? '#60A5FA'
+                      : '#EF4444';
+                  } else if (hasPromptData) {
+                    // Weekday: show prompt answer status
+                    const promptStatus = memberStatuses[member.user_id];
+                    dotColor = promptStatus === 'responded' ? '#4ADE80'
+                      : promptStatus === 'seen' ? '#60A5FA'
+                      : '#EF4444';
+                  }
+
                   return (
                     <View key={member.user_id} style={{ marginLeft: idx > 0 ? -6 : 0, zIndex: allMembers.length - idx, alignItems: 'center' }}>
                       <PixelCharacter
                         config={member.avatar_config || DEFAULT_CHARACTER}
                         size={22}
                       />
-                      {Object.keys(memberStatuses).length > 0 && (
+                      {(hasPromptData || hasFiresideData) && (
                         <View style={{
                           width: 8,
                           height: 8,
@@ -2284,7 +2320,7 @@ function GroupScreenInner() {
             {pendingQuiplashVotes.length > 0 && (
               <>
                 {(hasRegularPrompt || hasUnansweredQuiplash) && <View style={{ height: 16 }} />}
-                <QuiplashVotingCard groupId={groupId} onVoted={handleSubmitted} />
+                <QuiplashVotingCard groupId={groupId} onVoted={handleSubmitted} onDismiss={() => setPendingQuiplashVotes([])} />
               </>
             )}
 
@@ -2305,18 +2341,6 @@ function GroupScreenInner() {
         <View style={{ height: 12 }} />
         <Button title="Refresh" variant="outline" onPress={loadStatus} disabled={loading} />
 
-        <Pressable
-          onPress={openRecommendModal}
-          style={{
-            marginTop: 10,
-            paddingVertical: 10,
-            alignItems: "center",
-          }}
-        >
-          <Text style={{ color: MUTED, fontSize: 13, fontFamily: "Paaxel", textDecorationLine: "underline" }}>
-            Recommend a custom prompt
-          </Text>
-        </Pressable>
 
         {/* Fireside Button - only show during fireside hours */}
         {showFireside && (

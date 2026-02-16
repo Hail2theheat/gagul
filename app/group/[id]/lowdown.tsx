@@ -1446,27 +1446,6 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
             </Text>
             <AutoShrinkText style={styles.promptTitle} text={currentPrompt.content || currentPrompt.title || ''} />
 
-            {/* Member fireside progress dots - green=completed, blue=started, red=not opened */}
-            {firesideData?.leaderboard && firesideData.leaderboard.length > 0 && Object.keys(firesideProgress).length > 0 && (
-              <View style={styles.statusDotsRow}>
-                {firesideData.leaderboard.map((member) => {
-                  const status = firesideProgress[member.user_id] || 'not_started';
-                  const dotColor = status === 'completed' ? '#4ADE80'
-                    : status === 'partial' ? '#60A5FA'
-                    : '#EF4444';
-                  return (
-                    <View key={member.user_id} style={styles.statusDotMember}>
-                      <PixelCharacter
-                        config={(member.avatar_config as unknown as CharacterConfig) || DEFAULT_CHARACTER}
-                        size={20}
-                      />
-                      <View style={[styles.statusDot, { backgroundColor: dotColor }]} />
-                    </View>
-                  );
-                })}
-              </View>
-            )}
-
             {isQuizOrMC && revealStep >= 1 && (
               <View style={styles.optionsContainer}>
                 {/* Show enhanced results component when fully revealed */}
