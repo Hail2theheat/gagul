@@ -718,6 +718,7 @@ export default function LowdownScreen() {
       <View style={[styles.container, { backgroundColor: "#0B1026" }]}>
         <NightSky density="minimal" showMoon={false} showShootingStars={false} showFireflies={false} showGradient={false} />
         <ActivityIndicator size="large" color={COLORS.accent} />
+        <Text style={{ color: COLORS.muted, fontFamily: "Paaxel", fontSize: 16, marginTop: 12 }}>Warming up...</Text>
       </View>
     );
   }
