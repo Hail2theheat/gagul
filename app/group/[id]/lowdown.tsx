@@ -13,6 +13,8 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { CampfireColors } from "../../../constants/theme";
+import { SilhouetteTree } from "../../../components/campfire/SilhouetteTree";
 import { Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -33,6 +35,7 @@ import {
   FiresideComment,
   WeeklyWinner,
   QuiplashVoter,
+  MemeFiresideData,
 } from "../../../lib/services/firesideService";
 import { awardPoints } from "../../../lib/services/pointsService";
 import { supabase } from "../../../lib/supabase";
@@ -43,27 +46,22 @@ import { AudioPlayer } from "../../../components/prompts/AudioPlayer";
 import { VideoPlayer } from "../../../components/prompts/VideoPlayer";
 import { trackViewStart, trackViewEnd } from "../../../lib/services/metricsService";
 import { PixelCharacter, CharacterConfig, DEFAULT_CHARACTER } from "../../../components/PixelCharacter";
-import { DetailedCampfire } from "../../../components/PixelArt";
+import { AnimatedLogo } from "../../../components/AnimatedLogo";
 import { PixelTitle } from "../../../components/PixelTitle";
 import { NightSky } from "../../../components/sky";
 import { FiresideIntro } from "../../../components/FiresideIntro";
+import { FireworkShow } from "../../../components/effects/FireworkShow";
+import {
+  getFiresideCount,
+  incrementFiresideCount,
+  getFiresideMilestone,
+  getFiresideCelebrationType,
+} from "../../../lib/services/firesideCounter";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 // Simple tree for lowdown background
-function PixelTree({ x, height, shade }: { x: number; height: number; shade: number }) {
-  const treeColor = `rgba(15, ${30 + shade * 15}, ${20 + shade * 10}, 1)`;
-  const trunkColor = `rgba(40, ${25 + shade * 5}, 15, 1)`;
-
-  return (
-    <View style={{ position: "absolute", bottom: 0, left: x, alignItems: "center" }}>
-      <View style={{ width: 0, height: 0, borderLeftWidth: height * 0.4, borderRightWidth: height * 0.4, borderBottomWidth: height * 0.35, borderLeftColor: "transparent", borderRightColor: "transparent", borderBottomColor: treeColor, marginBottom: -8 }} />
-      <View style={{ width: 0, height: 0, borderLeftWidth: height * 0.5, borderRightWidth: height * 0.5, borderBottomWidth: height * 0.4, borderLeftColor: "transparent", borderRightColor: "transparent", borderBottomColor: treeColor, marginBottom: -10 }} />
-      <View style={{ width: 0, height: 0, borderLeftWidth: height * 0.6, borderRightWidth: height * 0.6, borderBottomWidth: height * 0.45, borderLeftColor: "transparent", borderRightColor: "transparent", borderBottomColor: treeColor }} />
-      <View style={{ width: height * 0.15, height: height * 0.2, backgroundColor: trunkColor }} />
-    </View>
-  );
-}
+// PixelTree replaced by shared SilhouetteTree component
 
 // Max height for text before it hits the emoji area
 const TEXT_MAX_HEIGHT = SCREEN_HEIGHT * 0.45;
@@ -327,18 +325,18 @@ function FloatingComment({ comment, index, total }: { comment: FiresideComment; 
 }
 
 const COLORS = {
-  bg: "#0A0A0F",
-  card: "#1A1A2E",
-  border: "#2D2D44",
-  text: "#F5F5F5",
-  muted: "#9CA3AF",
-  accent: "#FF6B35", // Bonfire orange
+  bg: CampfireColors.BG,
+  card: CampfireColors.CARD_SOLID,
+  border: CampfireColors.BORDER,
+  text: CampfireColors.TEXT,
+  muted: CampfireColors.MUTED,
+  accent: CampfireColors.BTN_PRIMARY,
   purple: "#8B5CF6",
-  green: "#4ADE80",
+  green: CampfireColors.SUCCESS,
   gold: "#FFD700",
 };
 
-type ScreenState = "loading" | "locked" | "intro" | "bonfire" | "prompts" | "leaderboard";
+type ScreenState = "loading" | "locked" | "intro" | "celebration" | "bonfire" | "prompts" | "leaderboard";
 
 export default function LowdownScreen() {
   const params = useGlobalSearchParams();
@@ -361,6 +359,10 @@ export default function LowdownScreen() {
   const viewStartTime = useRef<number | null>(null);
   const hasAwardedFiresidePoints = useRef(false);
 
+  // DESIGN.md §15.2: Fireside milestone celebration state
+  const [celebrationMessage, setCelebrationMessage] = useState<string | null>(null);
+  const [celebrationType, setCelebrationType] = useState<'fireworks' | 'confetti' | null>(null);
+
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const fireAnim = useRef(new Animated.Value(0)).current;
@@ -369,11 +371,25 @@ export default function LowdownScreen() {
     loadData();
   }, [groupId]);
 
-  // Fetch signed URL when showing a photo response
+  // Fetch signed URL when showing a photo response or meme game prompt
   useEffect(() => {
     let cancelled = false;
     const fetchSignedUrl = async () => {
       const prompt = firesideData?.prompts[currentPromptIndex];
+
+      // Meme game: fetch signed URL for the meme photo
+      if (prompt?.type === 'meme_game' && prompt.media_url) {
+        setSignedPhotoUrl(null);
+        try {
+          const signedUrl = await getSignedImageUrl(prompt.media_url);
+          if (!cancelled) setSignedPhotoUrl(signedUrl);
+        } catch (error) {
+          console.error('[Fireside] Failed to fetch meme signed URL:', error);
+          if (!cancelled) setSignedPhotoUrl(null);
+        }
+        return;
+      }
+
       if (currentResponseIndex >= 0 && prompt) {
         const response = prompt.responses?.[currentResponseIndex];
         if (response?.media_url) {
@@ -489,6 +505,21 @@ export default function LowdownScreen() {
 
       const data = await getFiresideData(groupId);
       if (data) {
+        // Inject meme game as a synthetic prompt if data exists
+        if (data.meme_data && data.meme_data.captions && data.meme_data.captions.length > 0) {
+          const memePrompt: FiresidePrompt = {
+            group_prompt_id: data.meme_data.game_id,
+            scheduled_for: '',
+            prompt_id: data.meme_data.game_id,
+            type: 'meme_game',
+            content: 'What do you Meme',
+            title: 'What do you Meme',
+            media_url: data.meme_data.photo_url,
+            responses: [],
+            caption_data: data.meme_data.captions,
+          };
+          data.prompts = [...data.prompts, memePrompt];
+        }
         setFiresideData(data);
         setScreenState("intro");
         startFireAnimation();
@@ -583,6 +614,17 @@ export default function LowdownScreen() {
     const responses = currentPrompt.responses || [];
     const isQuizOrMC = ["quiz", "multiple_choice"].includes(currentPrompt.type);
     const isQuiplash = currentPrompt.type === "quiplash";
+    const isMemeGame = currentPrompt.type === "meme_game";
+
+    // Meme Game: 2-step reveal (0→photo+captions+authors, 1→votes+winner)
+    if (isMemeGame) {
+      if (revealStep < 1) {
+        setRevealStep(revealStep + 1);
+        return;
+      }
+      goToNextPrompt();
+      return;
+    }
 
     // Quiplash: progressive 4-step reveal
     if (isQuiplash) {
@@ -607,9 +649,9 @@ export default function LowdownScreen() {
       }
     }
 
-    // Showing prompt - move to responses (but NOT for quiz/MC/quiplash)
+    // Showing prompt - move to responses (but NOT for quiz/MC/quiplash/meme_game)
     if (currentResponseIndex === -1) {
-      if (responses.length > 0 && !isQuizOrMC && !isQuiplash) {
+      if (responses.length > 0 && !isQuizOrMC && !isQuiplash && !isMemeGame) {
         setCurrentResponseIndex(0);
       } else {
         // No responses or quiz/quiplash done, next prompt
@@ -618,8 +660,8 @@ export default function LowdownScreen() {
       return;
     }
 
-    // Showing responses - move to next or next prompt (never for quiplash)
-    if (!isQuiplash && currentResponseIndex < responses.length - 1) {
+    // Showing responses - move to next or next prompt (never for quiplash/meme_game)
+    if (!isQuiplash && !isMemeGame && currentResponseIndex < responses.length - 1) {
       setCurrentResponseIndex(currentResponseIndex + 1);
     } else {
       goToNextPrompt();
@@ -653,6 +695,16 @@ export default function LowdownScreen() {
     const responses = currentPrompt.responses || [];
     const isQuizOrMC = ["quiz", "multiple_choice"].includes(currentPrompt.type);
     const isQuiplash = currentPrompt.type === "quiplash";
+    const isMemeGame = currentPrompt.type === "meme_game";
+
+    // Meme Game: step back through reveal stages
+    if (isMemeGame) {
+      if (revealStep > 0) {
+        setRevealStep(revealStep - 1);
+        return;
+      }
+      // revealStep is 0, go to previous prompt (handled below)
+    }
 
     // Quiplash: step back through reveal stages
     if (isQuiplash) {
@@ -663,14 +715,14 @@ export default function LowdownScreen() {
       // revealStep is 0, go to previous prompt (handled below)
     }
 
-    // If showing responses (not for quiplash), go to previous response or back to prompt
-    if (!isQuiplash && currentResponseIndex > 0) {
+    // If showing responses (not for quiplash/meme_game), go to previous response or back to prompt
+    if (!isQuiplash && !isMemeGame && currentResponseIndex > 0) {
       setCurrentResponseIndex(currentResponseIndex - 1);
       return;
     }
 
-    // If showing first response (not for quiplash), go back to prompt view
-    if (!isQuiplash && currentResponseIndex === 0) {
+    // If showing first response (not for quiplash/meme_game), go back to prompt view
+    if (!isQuiplash && !isMemeGame && currentResponseIndex === 0) {
       setCurrentResponseIndex(-1);
       return;
     }
@@ -688,14 +740,18 @@ export default function LowdownScreen() {
       const prevResponses = prevPrompt?.responses || [];
       const prevIsQuizOrMC = prevPrompt && ["quiz", "multiple_choice"].includes(prevPrompt.type);
       const prevIsQuiplash = prevPrompt?.type === "quiplash";
+      const prevIsMemeGame = prevPrompt?.type === "meme_game";
 
       setCurrentPromptIndex(prevPromptIndex);
       setComments([]);
 
-      // Go to last response of previous prompt (or prompt itself for quiz/MC/quiplash)
+      // Go to last response of previous prompt (or prompt itself for quiz/MC/quiplash/meme_game)
       if (prevIsQuizOrMC) {
         setCurrentResponseIndex(-1);
         setRevealStep(3); // Show fully revealed
+      } else if (prevIsMemeGame) {
+        setCurrentResponseIndex(-1);
+        setRevealStep(1); // Show fully revealed (meme_game has 2 steps: 0,1)
       } else if (prevIsQuiplash) {
         setCurrentResponseIndex(-1);
         setRevealStep(3); // Show fully revealed
@@ -784,17 +840,61 @@ function PixelLock({ size = 40 }: { size?: number }) {
       <FiresideIntro
         members={firesideData?.leaderboard || []}
         promptCount={firesideData?.prompts.length || 0}
-        onComplete={() => {
+        onComplete={async () => {
           // Award fireside points
           if (!hasAwardedFiresidePoints.current) {
             hasAwardedFiresidePoints.current = true;
             awardPoints('fireside', groupId!);
           }
+
+          // DESIGN.md §15.2: Check for Fireside milestone celebrations
+          if (firesideData?.week_of) {
+            const { count, incremented } = await incrementFiresideCount(firesideData.week_of);
+
+            if (incremented) {
+              const milestone = getFiresideMilestone(count);
+              const type = getFiresideCelebrationType(count);
+
+              if (milestone && type) {
+                // Show celebration screen for this milestone
+                setCelebrationMessage(milestone);
+                setCelebrationType(type);
+                setScreenState("celebration");
+                return;
+              }
+            }
+          }
+
+          // No celebration, go directly to prompts
           setScreenState("prompts");
           setCurrentPromptIndex(0);
           setCurrentResponseIndex(-1);
         }}
       />
+    );
+  }
+
+  // DESIGN.md §15.2: Fireside milestone celebration (100th, 250th, 500th)
+  if (screenState === "celebration" && celebrationType === "fireworks") {
+    return (
+      <View style={[styles.container, { backgroundColor: CampfireColors.SKY_TOP }]}>
+        {/* Shared sky background for context */}
+        <NightSky density="minimal" showMoon showShootingStars={false} showFireflies={false} showGradient />
+
+        {/* Firework show overlay */}
+        <FireworkShow
+          count={12} // 100th = big celebration with 12 fireworks
+          message={celebrationMessage || '🎆 MILESTONE ACHIEVED! 🎆'}
+          onComplete={() => {
+            // Transition to prompts after fireworks complete
+            setScreenState("prompts");
+            setCurrentPromptIndex(0);
+            setCurrentResponseIndex(-1);
+            setCelebrationMessage(null);
+            setCelebrationType(null);
+          }}
+        />
+      </View>
     );
   }
 
@@ -824,7 +924,7 @@ function PixelLock({ size = 40 }: { size?: number }) {
         {/* Forest tree line */}
         <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 200 }}>
           {trees.map((tree, i) => (
-            <PixelTree key={i} x={tree.x} height={tree.height} shade={tree.shade} />
+            <SilhouetteTree key={i} x={tree.x} height={tree.height} shade={tree.shade} />
           ))}
         </View>
 
@@ -851,9 +951,9 @@ function PixelLock({ size = 40 }: { size?: number }) {
           opacity: fireAnim.interpolate({ inputRange: [0, 1], outputRange: [0.15, 0.25] }),
         }} />
 
-        {/* Campfire area - using DetailedCampfire */}
+        {/* Campfire area */}
         <View style={{ position: "absolute", bottom: 30, left: 0, right: 0, alignItems: "center" }}>
-          <DetailedCampfire size={120} showSmoke={false} />
+          <AnimatedLogo size={120} />
         </View>
 
         {/* Title area */}
@@ -998,6 +1098,7 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
                   <PixelCharacter
                     config={(entry.avatar_config as unknown as CharacterConfig) || DEFAULT_CHARACTER}
                     size={36}
+                    showWeeklyCrown={!!entry.weekly_crown_until && new Date(entry.weekly_crown_until) > new Date()}
                   />
                 </View>
                 <View style={styles.leaderboardInfo}>
@@ -1007,7 +1108,7 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
                     isSilver && { color: "#E8E8E8" },
                     isBronze && { color: "#CD7F32" },
                   ]}>
-                    {entry.username || 'Anonymous'}
+                    {entry.username || 'Anonymous'}{entry.perfect_week ? ' ★' : ''}
                   </Text>
                   <Text style={styles.leaderboardBreakdown}>
                     A: {entry.points_answering} | V: {entry.points_voting} | Q: {entry.points_quiplash_wins}
@@ -1196,6 +1297,7 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
   const currentResponse = responses[currentResponseIndex];
   const isQuizOrMC = ["quiz", "multiple_choice"].includes(currentPrompt.type);
   const isQuiplash = currentPrompt.type === "quiplash";
+  const isMemeGame = currentPrompt.type === "meme_game";
 
   // Helper to determine media type
   const getMediaType = (promptType: string, mediaUrl?: string): 'photo' | 'video' | 'audio' | null => {
@@ -1286,7 +1388,7 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
   }
 
   // Get the response ID for comments - for quiz/MC/quiplash use first response, otherwise current
-  const commentResponseId = (isQuizOrMC || isQuiplash) && responses.length > 0
+  const commentResponseId = (isQuizOrMC || isQuiplash || isMemeGame) && responses.length > 0
     ? responses[0].response_id
     : currentResponse?.response_id;
 
@@ -1305,7 +1407,7 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
       {/* Forest silhouettes */}
       <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 150, zIndex: 1 }}>
         {promptTrees.map((tree, i) => (
-          <PixelTree key={i} x={tree.x} height={tree.height} shade={tree.shade} />
+          <SilhouetteTree key={i} x={tree.x} height={tree.height} shade={tree.shade} />
         ))}
       </View>
 
@@ -1334,7 +1436,7 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
 
       {/* Small campfire at bottom */}
       <View style={{ position: "absolute", bottom: 15, left: "50%", marginLeft: -30, zIndex: 3 }}>
-        <DetailedCampfire size={60} showSmoke={false} />
+        <AnimatedLogo size={60} />
       </View>
 
       {/* Close button */}
@@ -1377,34 +1479,39 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
         <Ionicons name="chevron-forward" size={32} color={COLORS.text} />
       </TouchableOpacity>
 
-      <View style={styles.promptContainer}>
-        {/* Prompt type badge - only show for Quiplash */}
+      <View style={[styles.promptContainer, isMemeGame && { paddingTop: 8, paddingBottom: 20 }]}>
+        {/* Prompt type badge - show for Quiplash and Photo Caption */}
         {showingPrompt && isQuiplash && (
           <View style={[styles.typeBadge, styles.quiplashBadge]}>
             <Text style={styles.typeBadgeText}>Mano e Mano</Text>
           </View>
         )}
+        {/* No badge for meme game */}
 
         {showingPrompt ? (
           // Show the prompt
-          <View style={styles.promptContent}>
-            {/* Navigation hint at top */}
-            <Text style={styles.swipeHintTop}>
-              {isQuizOrMC && revealStep < 3
-                ? "→ reveal"
-                : isQuiplash
-                ? revealStep === 0
-                  ? "→ see answers"
-                  : revealStep === 1
-                  ? "→ reveal votes"
-                  : revealStep === 2
-                  ? "→ see who wrote them"
-                  : "→ next"
-                : responses.length > 0 && !isQuizOrMC
-                ? "→ see responses"
-                : "→ next"}
-            </Text>
-            <AutoShrinkText style={styles.promptTitle} text={currentPrompt.content || currentPrompt.title || ''} />
+          <View style={[styles.promptContent, isMemeGame && { paddingTop: 0, paddingBottom: 0 }]}>
+            {/* Navigation hint at top — hidden for meme game */}
+            {!isMemeGame && (
+              <Text style={styles.swipeHintTop}>
+                {isQuizOrMC && revealStep < 3
+                  ? "→ reveal"
+                  : isQuiplash
+                  ? revealStep === 0
+                    ? "→ see answers"
+                    : revealStep === 1
+                    ? "→ reveal votes"
+                    : revealStep === 2
+                    ? "→ see who wrote them"
+                    : "→ next"
+                  : responses.length > 0 && !isQuizOrMC
+                  ? "→ see responses"
+                  : "→ next"}
+              </Text>
+            )}
+            {!isMemeGame && (
+              <AutoShrinkText style={styles.promptTitle} text={currentPrompt.content || currentPrompt.title || ''} />
+            )}
 
             {isQuizOrMC && revealStep >= 1 && (
               <View style={styles.optionsContainer}>
@@ -1572,9 +1679,109 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
                 })()}
               </View>
             )}
+
+            {/* Meme Game — Title + Photo + compact captions */}
+            {isMemeGame && (
+              <Text style={{ color: COLORS.text, fontSize: 18, fontFamily: 'Paaxel', textAlign: 'center', marginBottom: 8 }}>
+                What do you Meme
+              </Text>
+            )}
+            {isMemeGame && (signedPhotoUrl || currentPrompt.media_url) && (
+              <Image
+                source={{ uri: signedPhotoUrl || currentPrompt.media_url! }}
+                style={{ width: '100%', height: 260, borderRadius: 12, marginTop: 0 }}
+                resizeMode="cover"
+              />
+            )}
+
+            {isMemeGame && currentPrompt.caption_data && (
+              <View style={{ width: '100%', marginTop: 10, gap: 6 }}>
+                {currentPrompt.caption_data.map((entry, i) => {
+                  const maxVotes = Math.max(...(currentPrompt.caption_data?.map(e => e.votes) || [0]));
+                  const isWinner = entry.votes === maxVotes && maxVotes > 0;
+
+                  return (
+                    <View
+                      key={i}
+                      style={[
+                        {
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          backgroundColor: COLORS.card,
+                          borderRadius: 12,
+                          paddingVertical: 8,
+                          paddingHorizontal: 10,
+                          gap: 10,
+                        },
+                        revealStep >= 1 && isWinner && {
+                          borderWidth: 2,
+                          borderColor: COLORS.gold,
+                          backgroundColor: COLORS.gold + '10',
+                        },
+                      ]}
+                    >
+                      {/* Avatar + name column */}
+                      <View style={{ alignItems: 'center', width: 36 }}>
+                        <View style={{ width: 24, height: 30 }}>
+                          <PixelCharacter
+                            config={(entry.avatar_config as unknown as CharacterConfig) || DEFAULT_CHARACTER}
+                            size={20}
+                          />
+                        </View>
+                        <Text style={{ color: COLORS.muted, fontSize: 9, fontFamily: 'Paaxel', marginTop: 2 }} numberOfLines={1}>
+                          {entry.username || '?'}
+                        </Text>
+                      </View>
+
+                      {/* Caption text */}
+                      <Text style={{ flex: 1, color: COLORS.text, fontSize: 14, fontFamily: 'Paaxel', fontStyle: 'italic' }} numberOfLines={2}>
+                        "{entry.content}"
+                      </Text>
+
+                      {/* Vote count — step 1 (blank if 0) */}
+                      {revealStep >= 1 && entry.votes > 0 && (
+                        <Text style={{
+                          color: isWinner ? COLORS.gold : COLORS.muted,
+                          fontSize: 13,
+                          fontFamily: 'Paaxel',
+                          fontWeight: isWinner ? '700' : '400',
+                          minWidth: 20,
+                          textAlign: 'right',
+                        }}>
+                          {isWinner ? '👑 ' : ''}{entry.votes}
+                        </Text>
+                      )}
+
+                      {/* +5 Pts badge on winner — floats top-right of bubble */}
+                      {revealStep >= 1 && isWinner && (
+                        <View style={{
+                          position: 'absolute',
+                          top: -10,
+                          right: -6,
+                          backgroundColor: COLORS.gold,
+                          paddingHorizontal: 8,
+                          paddingVertical: 3,
+                          borderRadius: 10,
+                          zIndex: 10,
+                        }}>
+                          <Text style={{
+                            color: '#1a1a2e',
+                            fontSize: 13,
+                            fontFamily: 'Paaxel',
+                            fontWeight: '700',
+                          }}>
+                            +5 Pts
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            )}
           </View>
-        ) : !isQuiplash ? (
-          // Regular response view (never shown for quiplash)
+        ) : !isQuiplash && !isMemeGame ? (
+          // Regular response view (never shown for quiplash or meme_game)
           <View style={styles.responseContainer}>
             {/* Photo author - top left, OUTSIDE the photo */}
             {mediaType === 'photo' && (

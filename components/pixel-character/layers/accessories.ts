@@ -306,6 +306,116 @@ export function accessoryBackPixels(accessory: string, hairStyle: string, pose: 
       ];
     }
 
+    // === SEASONAL ACCESSORIES (back layer) ===
+    case "butterfly_wings": {
+      // Colorful butterfly wings behind character
+      const wy = TORSO_TOP - 2;
+      return [
+        // Left wing
+        r(0, wy, 8, 10, "#FF69B4"),
+        r(1, wy + 1, 6, 8, "#FF85C2"),
+        r(2, wy + 2, 2, 2, "#FFB0D0"),
+        r(0, wy + 6, 3, 2, "#E050A0"),
+        r(-2, wy + 2, 3, 6, "#FF50A0"),
+        // Right wing
+        r(24, wy, 8, 10, "#FF69B4"),
+        r(25, wy + 1, 6, 8, "#FF85C2"),
+        r(28, wy + 2, 2, 2, "#FFB0D0"),
+        r(29, wy + 6, 3, 2, "#E050A0"),
+        r(31, wy + 2, 3, 6, "#FF50A0"),
+        // Wing spots
+        r(3, wy + 4, 2, 2, "#4080FF"),
+        r(27, wy + 4, 2, 2, "#4080FF"),
+      ];
+    }
+
+    case "surfboard": {
+      // Surfboard behind character, angled
+      return [
+        // Board body
+        r(26, 18, 4, 30, OUTLINE),
+        r(27, 16, 2, 2, OUTLINE),
+        r(27, 19, 2, 28, "#40B8E0"),
+        r(28, 20, 1, 24, "#60D0F0"),
+        r(27, 30, 2, 4, "#FFFFFF"),   // stripe
+        r(27, 36, 2, 2, "#FF6B35"),   // accent stripe
+        // Fin
+        r(28, 46, 2, 2, "#40B8E0"),
+      ];
+    }
+
+    case "camping_backpack": {
+      // Backpack behind character, anchored to torso
+      return [
+        // Main backpack body (behind torso)
+        r(24, 26, 10, 14, OUTLINE),
+        r(25, 27, 8, 12, "#6B4423"),   // leather brown
+        r(26, 28, 6, 4, "#8B6914"),    // front pocket
+        r(27, 29, 4, 2, "#A08030"),    // pocket highlight
+        r(25, 27, 2, 10, "#7D5428"),   // side highlight
+        // Straps
+        r(24, 27, 1, 8, "#5C3A1E"),
+        r(33, 27, 1, 8, "#5C3A1E"),
+        // Top flap
+        r(25, 26, 8, 2, "#7D5428"),
+        r(26, 26, 6, 1, "#8B7030"),
+        // Buckle
+        r(28, 32, 2, 1, "#FFD700"),
+        // Bedroll on top
+        r(26, 24, 6, 3, OUTLINE),
+        r(27, 24, 4, 2, "#808060"),
+        r(27, 24, 2, 1, "#909070"),
+      ];
+    }
+
+    case "tiny_wings": {
+      // Small fairy-like wings behind character (smaller than regular wings)
+      const wy = TORSO_TOP - 1;
+      return [
+        // Left wing
+        r(2, wy + 2, 5, 6, OUTLINE),
+        r(3, wy + 3, 3, 4, "#B0C4FF"),
+        r(3, wy + 3, 2, 2, "#D0E0FF"),
+        r(4, wy + 4, 1, 1, "#FFFFFF"),
+        // Right wing
+        r(25, wy + 2, 5, 6, OUTLINE),
+        r(26, wy + 3, 3, 4, "#B0C4FF"),
+        r(27, wy + 3, 2, 2, "#D0E0FF"),
+        r(27, wy + 4, 1, 1, "#FFFFFF"),
+        // Sparkle accents
+        r(1, wy + 4, 1, 1, "#FFFFFF"),
+        r(30, wy + 3, 1, 1, "#FFFFFF"),
+      ];
+    }
+
+    case "golden_cape": {
+      // Flowing golden cape behind character
+      return [
+        // Cape outline
+        r(6, 26, 1, 18, OUTLINE),
+        r(25, 26, 1, 18, OUTLINE),
+        r(6, 44, 20, 1, OUTLINE),
+        // Cape body — rich gold
+        r(7, 26, 18, 17, "#B8960C"),
+        // Gold shimmer stripes
+        r(8, 27, 4, 15, "#FFD700"),
+        r(14, 28, 3, 14, "#FFEC8B"),
+        r(20, 27, 4, 15, "#FFD700"),
+        // Dark folds
+        r(12, 28, 2, 14, "#8B6914"),
+        r(18, 29, 1, 13, "#8B6914"),
+        // Bottom scallop
+        r(7, 42, 3, 1, "#FFD700"),
+        r(12, 43, 3, 1, "#FFD700"),
+        r(17, 42, 3, 1, "#FFD700"),
+        r(22, 43, 2, 1, "#FFD700"),
+        // Clasp at neck
+        r(10, 25, 12, 2, OUTLINE),
+        r(11, 25, 10, 1, "#FFD700"),
+        r(15, 25, 2, 1, "#DC2626"), // ruby
+      ];
+    }
+
     default:
       return [];
   }
@@ -666,6 +776,417 @@ export function accessoryFrontPixels(accessory: string, hairStyle: string, pose:
         r(19, 25, 1, 3, OUTLINE),      // right outline
         r(16, 25, 3, 3, "#DC2626"),    // right wing fill
         r(17, 25, 2, 1, "#F04040"),    // highlight
+      ];
+    }
+
+    // === SEASONAL ACCESSORIES (front layer) ===
+    case "winter_scarf": {
+      // Cozy knit scarf
+      return [
+        r(6, 24, 20, 3, "#DC2626"),    // main scarf
+        r(8, 24, 8, 1, "#F04040"),     // highlight stripe
+        r(18, 24, 4, 1, "#F04040"),
+        r(6, 26, 20, 1, "#9c1818"),    // bottom shadow
+        // Knit pattern dots
+        r(9, 25, 1, 1, "#FFFFFF"),
+        r(13, 25, 1, 1, "#FFFFFF"),
+        r(17, 25, 1, 1, "#FFFFFF"),
+        r(21, 25, 1, 1, "#FFFFFF"),
+        // Dangling end
+        r(20, 27, 4, 6, "#DC2626"),
+        r(20, 27, 2, 2, "#F04040"),
+        r(20, 31, 4, 2, "#9c1818"),
+        r(21, 33, 2, 1, "#9c1818"),
+        // Fringe
+        r(20, 33, 1, 2, "#DC2626"),
+        r(22, 33, 1, 2, "#DC2626"),
+      ];
+    }
+
+    case "snow_goggles": {
+      // Ski goggles over eyes
+      return [
+        // Strap
+        r(7, 12, 18, 1, "#333333"),
+        // Left lens
+        r(9, 11, 6, 4, OUTLINE),
+        r(10, 12, 4, 2, "#80D0FF"),    // blue lens
+        r(10, 12, 2, 1, "#B0E8FF"),    // lens highlight
+        // Right lens
+        r(17, 11, 6, 4, OUTLINE),
+        r(18, 12, 4, 2, "#80D0FF"),
+        r(18, 12, 2, 1, "#B0E8FF"),
+        // Bridge
+        r(15, 12, 2, 2, "#333333"),
+      ];
+    }
+
+    case "earmuffs": {
+      // Fluffy earmuffs
+      return [
+        // Headband
+        r(8, 6, 16, 1, "#333333"),
+        r(7, 7, 1, 1, "#333333"),
+        r(24, 7, 1, 1, "#333333"),
+        // Left muff
+        r(5, 12, 5, 6, OUTLINE),
+        r(6, 13, 3, 4, "#E0E0E0"),
+        r(6, 13, 2, 2, "#F5F5F5"),
+        // Right muff
+        r(22, 12, 5, 6, OUTLINE),
+        r(23, 13, 3, 4, "#E0E0E0"),
+        r(23, 13, 2, 2, "#F5F5F5"),
+      ];
+    }
+
+    case "flower_crown": {
+      // Ring of flowers on head
+      const topY = hairTopY(hairStyle);
+      return [
+        // Vine base
+        r(7, topY + 2, 18, 1, "#228B22"),
+        // Flowers
+        r(8, topY + 1, 2, 2, "#FF69B4"),    // pink
+        r(9, topY + 1, 1, 1, "#FFD700"),    // center
+        r(12, topY, 2, 2, "#FFFFFF"),         // white
+        r(13, topY, 1, 1, "#FFD700"),
+        r(16, topY + 1, 2, 2, "#FF6B35"),   // orange
+        r(17, topY + 1, 1, 1, "#FFD700"),
+        r(20, topY, 2, 2, "#9370DB"),        // purple
+        r(21, topY, 1, 1, "#FFD700"),
+        // Leaves
+        r(10, topY + 2, 2, 1, "#32CD32"),
+        r(18, topY + 2, 2, 1, "#32CD32"),
+      ];
+    }
+
+    case "rain_boots": {
+      // Yellow rubber rain boots
+      return [
+        // Left boot
+        r(9, 40, 6, 8, OUTLINE),
+        r(10, 41, 4, 6, "#FFD700"),    // yellow rubber
+        r(10, 41, 2, 3, "#FFEC8B"),    // highlight
+        r(10, 46, 4, 1, "#B8960C"),    // sole
+        // Right boot
+        r(17, 40, 6, 8, OUTLINE),
+        r(18, 41, 4, 6, "#FFD700"),
+        r(18, 41, 2, 3, "#FFEC8B"),
+        r(18, 46, 4, 1, "#B8960C"),
+      ];
+    }
+
+    case "lei": {
+      // Hawaiian flower lei around neck
+      return [
+        r(8, 25, 16, 2, "#228B22"),     // vine
+        // Flowers around neck
+        r(8, 25, 2, 2, "#FF69B4"),
+        r(11, 25, 2, 2, "#FFD700"),
+        r(14, 25, 2, 2, "#FF6B35"),
+        r(17, 25, 2, 2, "#FF69B4"),
+        r(20, 25, 2, 2, "#FFD700"),
+        // Hanging part
+        r(12, 27, 2, 3, "#228B22"),
+        r(12, 27, 2, 1, "#FF6B35"),
+        r(12, 29, 2, 1, "#FF69B4"),
+      ];
+    }
+
+    case "beach_hat": {
+      // Straw beach hat
+      const topY = hairTopY(hairStyle);
+      return [
+        // Wide brim
+        r(2, topY + 2, 28, 1, OUTLINE),
+        r(1, topY + 3, 30, 1, OUTLINE),
+        r(2, topY + 4, 28, 1, OUTLINE),
+        r(3, topY + 3, 26, 1, "#F0E68C"),   // straw
+        // Crown
+        r(8, topY - 2, 16, 5, OUTLINE),
+        r(9, topY - 1, 14, 3, "#F0E68C"),
+        r(10, topY - 1, 6, 2, "#F5EE9E"),   // highlight
+        // Ribbon
+        r(9, topY + 1, 14, 1, "#FF6B35"),
+        r(12, topY + 1, 4, 1, "#FF8C42"),
+      ];
+    }
+
+    case "leaf_crown": {
+      // Autumn leaves crown
+      const topY = hairTopY(hairStyle);
+      return [
+        // Vine
+        r(7, topY + 2, 18, 1, "#8B4513"),
+        // Leaves in autumn colors
+        r(7, topY, 3, 2, "#DC2626"),     // red leaf
+        r(11, topY + 1, 3, 2, "#FF8C00"),  // orange leaf
+        r(15, topY, 3, 2, "#FFD700"),    // gold leaf
+        r(19, topY + 1, 3, 2, "#DC2626"), // red leaf
+        r(23, topY, 2, 2, "#FF8C00"),    // orange leaf
+        // Stems
+        r(8, topY + 2, 1, 1, "#654321"),
+        r(16, topY + 2, 1, 1, "#654321"),
+      ];
+    }
+
+    case "pumpkin_hat": {
+      // Cute pumpkin on head
+      const topY = hairTopY(hairStyle);
+      return [
+        // Pumpkin body
+        r(9, topY - 4, 14, 1, OUTLINE),
+        r(8, topY - 3, 16, 5, OUTLINE),
+        r(9, topY - 3, 14, 4, "#FF6B35"),   // orange
+        r(10, topY - 3, 4, 3, "#FF8C42"),   // highlight
+        r(17, topY - 2, 3, 2, "#E05520"),   // shadow
+        // Ridges
+        r(13, topY - 3, 1, 4, "#E05520"),
+        r(18, topY - 3, 1, 4, "#E05520"),
+        // Stem
+        r(15, topY - 6, 2, 3, "#228B22"),
+        r(14, topY - 5, 1, 1, "#32CD32"),   // leaf
+        // Face
+        r(11, topY - 1, 2, 1, "#1a1a1a"),   // left eye
+        r(19, topY - 1, 2, 1, "#1a1a1a"),   // right eye
+        r(14, topY, 4, 1, "#1a1a1a"),        // mouth
+      ];
+    }
+
+    case "cozy_sweater": {
+      // Knit sweater over torso (front layer covers shirt)
+      return [
+        // Main sweater body
+        r(7, 27, 18, 7, "#8B4513"),
+        r(8, 27, 6, 4, "#A0522D"),     // highlight
+        r(16, 28, 4, 3, "#7B3A10"),    // shadow
+        // Collar
+        r(10, 26, 12, 2, "#8B4513"),
+        r(11, 26, 10, 1, "#A0522D"),
+        // Knit pattern (zigzag)
+        r(8, 29, 1, 1, "#FFD700"),
+        r(10, 30, 1, 1, "#FFD700"),
+        r(12, 29, 1, 1, "#FFD700"),
+        r(14, 30, 1, 1, "#FFD700"),
+        r(16, 29, 1, 1, "#FFD700"),
+        r(18, 30, 1, 1, "#FFD700"),
+        r(20, 29, 1, 1, "#FFD700"),
+        r(22, 30, 1, 1, "#FFD700"),
+        // Bottom ribbing
+        r(7, 33, 18, 1, "#7B3A10"),
+      ];
+    }
+
+    case "bandana": {
+      // Tied bandana across forehead
+      return [
+        // Band across forehead
+        r(7, 7, 18, 3, OUTLINE),
+        r(8, 8, 16, 1, "#2563EB"),              // blue bandana
+        r(10, 8, 8, 1, "#4080FF"),              // highlight
+        // Knot on right side with trailing ends
+        r(25, 7, 2, 3, "#2563EB"),
+        r(27, 7, 1, 2, "#2563EB"),
+        r(27, 9, 2, 1, "#2563EB"),
+        r(28, 10, 2, 1, "#1845a8"),
+        r(29, 11, 1, 1, "#1845a8"),
+        r(26, 9, 2, 1, "#2563EB"),
+        r(27, 10, 1, 1, "#1845a8"),
+      ];
+    }
+
+    case "monocle": {
+      // Fancy monocle on right eye with chain
+      return [
+        // Monocle rim (circle around right eye)
+        r(17, 11, 7, 1, "#B8960C"),
+        r(16, 12, 1, 3, "#B8960C"),
+        r(24, 12, 1, 3, "#B8960C"),
+        r(17, 15, 7, 1, "#B8960C"),
+        // Lens (light blue tint)
+        r(18, 12, 5, 3, "#E8F0FF"),
+        r(19, 12, 2, 1, "#FFFFFF"),              // lens glint
+        // Gold highlight on rim
+        r(18, 11, 3, 1, "#FFD700"),
+        r(18, 15, 3, 1, "#FFD700"),
+        // Chain down to vest
+        r(20, 16, 1, 1, "#B8960C"),
+        r(21, 17, 1, 1, "#B8960C"),
+        r(22, 18, 1, 2, "#B8960C"),
+        r(21, 20, 1, 2, "#B8960C"),
+        r(20, 22, 1, 2, "#B8960C"),
+        r(19, 24, 1, 2, "#B8960C"),
+      ];
+    }
+
+    case "war_paint": {
+      // Tribal war paint on face
+      return [
+        // Left cheek stripe (red)
+        r(8, 14, 3, 1, "#DC2626"),
+        r(7, 15, 4, 1, "#DC2626"),
+        r(8, 16, 3, 1, "#DC2626"),
+        // Right cheek stripe
+        r(21, 14, 3, 1, "#DC2626"),
+        r(21, 15, 4, 1, "#DC2626"),
+        r(21, 16, 3, 1, "#DC2626"),
+        // Forehead mark (diamond)
+        r(15, 8, 2, 1, "#DC2626"),
+        r(14, 9, 4, 1, "#DC2626"),
+        r(15, 10, 2, 1, "#DC2626"),
+        // Under-eye marks
+        r(10, 15, 2, 1, "#1a1a1a"),
+        r(20, 15, 2, 1, "#1a1a1a"),
+      ];
+    }
+
+    case "demon_horns": {
+      // Curved demon horns from top of head
+      const topY = hairTopY(hairStyle);
+      return [
+        // Left horn
+        r(7, topY - 1, 2, 3, OUTLINE),
+        r(5, topY - 3, 2, 3, OUTLINE),
+        r(4, topY - 5, 2, 3, OUTLINE),
+        r(3, topY - 7, 2, 2, OUTLINE),
+        r(8, topY, 1, 2, "#8B1818"),
+        r(6, topY - 2, 2, 2, "#DC2626"),
+        r(5, topY - 4, 2, 2, "#DC2626"),
+        r(4, topY - 6, 2, 2, "#F04040"),
+        r(4, topY - 7, 1, 1, "#FF6060"),         // tip highlight
+        // Right horn
+        r(23, topY - 1, 2, 3, OUTLINE),
+        r(25, topY - 3, 2, 3, OUTLINE),
+        r(26, topY - 5, 2, 3, OUTLINE),
+        r(27, topY - 7, 2, 2, OUTLINE),
+        r(23, topY, 1, 2, "#8B1818"),
+        r(24, topY - 2, 2, 2, "#DC2626"),
+        r(25, topY - 4, 2, 2, "#DC2626"),
+        r(26, topY - 6, 2, 2, "#F04040"),
+        r(27, topY - 7, 1, 1, "#FF6060"),
+      ];
+    }
+
+    case "fire_crown": {
+      // Blazing fire crown on head
+      return [
+        // Crown base (gold)
+        r(8, 3, 16, 4, "#FFD700"),
+        r(8, 7, 16, 1, "#B8960C"),
+        r(10, 3, 8, 2, "#FFEC8B"),
+        // Crown spikes
+        r(8, 0, 4, 3, "#FFD700"),
+        r(14, -2, 4, 5, "#FFD700"),
+        r(20, 0, 4, 3, "#FFD700"),
+        // Fire on top of each spike
+        r(9, -2, 2, 2, "#FF6B35"),
+        r(9, -4, 1, 2, "#FFD700"),
+        r(10, -3, 1, 1, "#FFEC8B"),
+        r(15, -4, 2, 2, "#FF6B35"),
+        r(15, -6, 1, 2, "#FFD700"),
+        r(16, -5, 1, 1, "#FFEC8B"),
+        r(21, -2, 2, 2, "#FF6B35"),
+        r(21, -4, 1, 2, "#FFD700"),
+        r(22, -3, 1, 1, "#FFEC8B"),
+        // Extra flame wisps
+        r(12, -1, 1, 1, "#FF8C42"),
+        r(19, -1, 1, 1, "#FF8C42"),
+        // Gems (like regular crown)
+        r(16, 1, 1, 1, "#DC2626"),
+        r(10, 5, 2, 2, "#FF6B35"),
+        r(20, 5, 2, 2, "#FF6B35"),
+        // Outline
+        r(8, 2, 16, 1, OUTLINE),
+        r(7, 3, 1, 5, OUTLINE),
+        r(24, 3, 1, 5, OUTLINE),
+      ];
+    }
+
+    case "flame_aura": {
+      // Orange glow outline around character silhouette
+      return [
+        // Top glow (above head)
+        r(10, 4, 12, 1, "#FF6B35"),
+        r(8, 5, 2, 1, "#FF8C42"),
+        r(22, 5, 2, 1, "#FF8C42"),
+        // Side glows
+        r(6, 10, 1, 14, "#FF6B35"),
+        r(5, 14, 1, 8, "#FF8C42"),
+        r(25, 10, 1, 14, "#FF6B35"),
+        r(26, 14, 1, 8, "#FF8C42"),
+        // Torso glow
+        r(5, 28, 1, 8, "#FF6B35"),
+        r(26, 28, 1, 8, "#FF6B35"),
+        // Flicker accents
+        r(9, 2, 1, 1, "#FFEC8B"),
+        r(22, 3, 1, 1, "#FFEC8B"),
+        r(4, 18, 1, 1, "#FFD700"),
+        r(27, 20, 1, 1, "#FFD700"),
+      ];
+    }
+
+    case "hiking_boots": {
+      // Rugged brown boots replacing the shoe area (rendered on top)
+      return [
+        // Left boot
+        r(9, 42, 6, 6, OUTLINE),
+        r(10, 42, 4, 5, "#6B3A1F"),   // dark leather
+        r(10, 42, 2, 3, "#8B5A30"),   // leather highlight
+        r(10, 46, 4, 1, "#5C2D0C"),   // sole
+        r(8, 46, 1, 1, "#5C2D0C"),    // toe cap
+        r(10, 44, 3, 1, "#A07040"),   // lace line
+        // Right boot
+        r(17, 42, 6, 6, OUTLINE),
+        r(18, 42, 4, 5, "#6B3A1F"),
+        r(18, 42, 2, 3, "#8B5A30"),
+        r(18, 46, 4, 1, "#5C2D0C"),
+        r(16, 46, 1, 1, "#5C2D0C"),
+        r(18, 44, 3, 1, "#A07040"),
+      ];
+    }
+
+    case "marshmallow_stick": {
+      // Held marshmallow on a stick — extends from right hand
+      const g = staffGrip(pose);
+      return [
+        // Stick
+        r(g.x, g.y - 12, 1, 14, "#8B6840"),
+        r(g.x + 1, g.y - 12, 1, 14, "#A07848"),
+        // Marshmallow (slightly toasted)
+        r(g.x - 1, g.y - 16, 4, 4, "#FFF8E7"),    // white marshmallow
+        r(g.x, g.y - 16, 2, 1, "#FFFFFF"),          // top highlight
+        r(g.x - 1, g.y - 13, 4, 1, "#D4A060"),     // toasted bottom
+        r(g.x, g.y - 13, 2, 1, "#C08040"),          // darker toast
+      ];
+    }
+
+    case "ranger_hat": {
+      // Wide-brimmed park ranger hat
+      const topY = hairTopY(hairStyle);
+      return [
+        // Brim outline
+        r(4, topY + 2, 24, 1, OUTLINE),
+        r(3, topY + 3, 26, 1, OUTLINE),
+        r(4, topY + 4, 24, 1, OUTLINE),
+        // Brim fill
+        r(5, topY + 3, 22, 1, "#8B6914"),
+        // Crown
+        r(8, topY - 3, 16, 1, OUTLINE),
+        r(7, topY - 2, 18, 1, OUTLINE),
+        r(7, topY - 1, 18, 1, OUTLINE),
+        r(7, topY, 18, 1, OUTLINE),
+        r(7, topY + 1, 18, 1, OUTLINE),
+        r(7, topY + 2, 18, 1, OUTLINE),
+        // Crown fill
+        r(8, topY - 2, 16, 4, "#8B6914"),     // main hat body
+        r(9, topY - 2, 6, 2, "#A08030"),      // left highlight
+        r(17, topY - 1, 4, 2, "#7D5428"),     // right shadow
+        // Pinch at top
+        r(11, topY - 3, 10, 1, "#8B6914"),
+        r(13, topY - 4, 6, 1, "#A08030"),
+        // Hat band
+        r(8, topY + 1, 16, 1, "#5C3A1E"),
+        r(14, topY + 1, 4, 1, "#B8960C"),   // gold badge
       ];
     }
 

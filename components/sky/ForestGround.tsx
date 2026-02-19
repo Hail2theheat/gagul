@@ -1,7 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Dimensions } from 'react-native';
 import { DetailedPineTree } from '../PixelArt';
+import { SwayingTree } from './SwayingTree';
+import { GhostCamper } from '../effects/GhostCamper';
+import { CharacterConfig } from '../PixelCharacter';
 import { CampfireColors } from '../../constants/theme';
+import { useSeasonal } from '../../lib/hooks/useSeasonal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -26,16 +30,28 @@ function MountainTriangle({ x, w, h, color }: { x: number; w: number; h: number;
   );
 }
 
-// Wildflower cluster
-function Wildflowers({ x }: { x: number }) {
+// Wildflower cluster - DESIGN.md §15.3: Seasonal colors
+function Wildflowers({
+  x,
+  color1,
+  color2,
+  color3,
+  stemColor,
+}: {
+  x: number;
+  color1: string;
+  color2: string;
+  color3: string;
+  stemColor: string;
+}) {
   return (
     <View style={{ position: 'absolute', bottom: 18, left: x }}>
-      <View style={{ width: 3, height: 3, backgroundColor: '#E890B0', borderRadius: 1.5, position: 'absolute', bottom: 8, left: 0 }} />
-      <View style={{ width: 2, height: 6, backgroundColor: '#2D5B2D', position: 'absolute', bottom: 2, left: 0.5 }} />
-      <View style={{ width: 3, height: 3, backgroundColor: '#FFD060', borderRadius: 1.5, position: 'absolute', bottom: 10, left: 6 }} />
-      <View style={{ width: 2, height: 7, backgroundColor: '#1F5F1F', position: 'absolute', bottom: 3, left: 6.5 }} />
-      <View style={{ width: 2.5, height: 2.5, backgroundColor: '#B0C0FF', borderRadius: 1.5, position: 'absolute', bottom: 7, left: 12 }} />
-      <View style={{ width: 2, height: 5, backgroundColor: '#2D5B2D', position: 'absolute', bottom: 2, left: 12 }} />
+      <View style={{ width: 3, height: 3, backgroundColor: color1, borderRadius: 1.5, position: 'absolute', bottom: 8, left: 0 }} />
+      <View style={{ width: 2, height: 6, backgroundColor: stemColor, position: 'absolute', bottom: 2, left: 0.5 }} />
+      <View style={{ width: 3, height: 3, backgroundColor: color2, borderRadius: 1.5, position: 'absolute', bottom: 10, left: 6 }} />
+      <View style={{ width: 2, height: 7, backgroundColor: stemColor, position: 'absolute', bottom: 3, left: 6.5 }} />
+      <View style={{ width: 2.5, height: 2.5, backgroundColor: color3, borderRadius: 1.5, position: 'absolute', bottom: 7, left: 12 }} />
+      <View style={{ width: 2, height: 5, backgroundColor: stemColor, position: 'absolute', bottom: 2, left: 12 }} />
     </View>
   );
 }
@@ -47,13 +63,52 @@ interface ForestGroundProps {
   showWildflowers?: boolean;
   /** Show the dense forest */
   showForest?: boolean;
+  /** Use seasonal colors (DESIGN.md §15.3) */
+  useSeasonal?: boolean;
 }
 
 export function ForestGround({
   showMountains = true,
   showWildflowers = true,
   showForest = true,
+  useSeasonal = false,
 }: ForestGroundProps) {
+  // DESIGN.md §15.3: Seasonal color palette
+  const { palette } = useSeasonal();
+
+  // Choose colors based on seasonal mode
+  const groundDark = useSeasonal ? palette.groundDark : CampfireColors.GROUND_DARK;
+  const groundGrass = useSeasonal ? palette.groundGrass : CampfireColors.GROUND_GRASS;
+  const groundMoss = useSeasonal ? palette.groundMoss : CampfireColors.GROUND_MOSS;
+
+  // DESIGN.md §15.2: Ghost camper easter egg (5% spawn chance)
+  const ghostCamper = useMemo(() => {
+    const shouldSpawn = Math.random() < 0.05; // 5% chance
+    if (!shouldSpawn) return null;
+
+    // Random ghost character configuration
+    const skinTones = ['light', 'tan', 'olive', 'brown', 'dark'] as const;
+    const hairStyles = ['short', 'long', 'bald', 'ponytail', 'curly'] as const;
+    const hairColors = ['black', 'brown', 'blonde', 'ginger', 'silver', 'pink'] as const;
+    const shirtColors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'white', 'black'] as const;
+    const pantsColors = ['blue', 'black', 'brown', 'green', 'gray'] as const;
+
+    const config: CharacterConfig = {
+      skinTone: skinTones[Math.floor(Math.random() * skinTones.length)],
+      hairStyle: hairStyles[Math.floor(Math.random() * hairStyles.length)],
+      hairColor: hairColors[Math.floor(Math.random() * hairColors.length)],
+      shirt: shirtColors[Math.floor(Math.random() * shirtColors.length)],
+      pants: pantsColors[Math.floor(Math.random() * pantsColors.length)],
+      shoes: 'brown',
+      pose: 'idle',
+    };
+
+    return {
+      config,
+      startY: 80 + Math.random() * 60, // Random Y between 80-140px from top (mid-forest)
+    };
+  }, []); // Only evaluate once per component mount
+
   // Dense forest with 4 depth layers
   const trees = useMemo(() => [
     // Far background (shade 0 - darkest, smallest)
@@ -135,38 +190,74 @@ export function ForestGround({
         </>
       )}
 
-      {/* Forest */}
+      {/* Forest - DESIGN.md §15.1: Trees sway with staggered timing */}
       {showForest && (
         <View style={{ position: 'absolute', bottom: 22, left: 0, right: 0, height: 250, zIndex: 1 }}>
           {trees.map((tree, i) => (
             <View key={i} style={{ position: 'absolute', left: tree.x, bottom: 0 }}>
-              <DetailedPineTree height={tree.height} shade={tree.shade} />
+              <SwayingTree height={tree.height} shade={tree.shade} stagger={i * 0.05}>
+                <DetailedPineTree height={tree.height} shade={tree.shade} />
+              </SwayingTree>
             </View>
           ))}
+
+          {/* DESIGN.md §15.2: Ghost camper easter egg (5% spawn, drifts across screen) */}
+          {ghostCamper && (
+            <GhostCamper
+              screenWidth={SCREEN_WIDTH}
+              startY={ghostCamper.startY}
+              config={ghostCamper.config}
+              delay={2000} // Wait 2s before starting drift
+            />
+          )}
         </View>
       )}
 
-      {/* Ground layers */}
+      {/* Ground layers - DESIGN.md §15.3: Seasonal colors */}
       <View style={{
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
         height: 30,
-        backgroundColor: CampfireColors.GROUND_DARK,
+        backgroundColor: groundDark,
         zIndex: 2,
       }}>
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, backgroundColor: CampfireColors.GROUND_GRASS }} />
-        <View style={{ position: 'absolute', top: 4, left: 0, right: 0, height: 2, backgroundColor: CampfireColors.GROUND_MOSS }} />
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, backgroundColor: groundGrass }} />
+        <View style={{ position: 'absolute', top: 4, left: 0, right: 0, height: 2, backgroundColor: groundMoss }} />
       </View>
 
-      {/* Wildflowers */}
+      {/* Wildflowers - DESIGN.md §15.3: Seasonal accent colors */}
       {showWildflowers && (
         <>
-          <Wildflowers x={30} />
-          <Wildflowers x={SCREEN_WIDTH - 50} />
-          <Wildflowers x={SCREEN_WIDTH / 2 - 80} />
-          <Wildflowers x={SCREEN_WIDTH / 2 + 60} />
+          <Wildflowers
+            x={30}
+            color1={useSeasonal ? palette.accent1 : '#E890B0'}
+            color2={useSeasonal ? palette.accent2 : '#FFD060'}
+            color3={useSeasonal ? palette.accent3 : '#B0C0FF'}
+            stemColor={useSeasonal ? palette.treeLight : '#2D5B2D'}
+          />
+          <Wildflowers
+            x={SCREEN_WIDTH - 50}
+            color1={useSeasonal ? palette.accent2 : '#FFD060'}
+            color2={useSeasonal ? palette.accent3 : '#B0C0FF'}
+            color3={useSeasonal ? palette.accent1 : '#E890B0'}
+            stemColor={useSeasonal ? palette.treeLight : '#2D5B2D'}
+          />
+          <Wildflowers
+            x={SCREEN_WIDTH / 2 - 80}
+            color1={useSeasonal ? palette.accent3 : '#B0C0FF'}
+            color2={useSeasonal ? palette.accent1 : '#E890B0'}
+            color3={useSeasonal ? palette.accent2 : '#FFD060'}
+            stemColor={useSeasonal ? palette.treeLight : '#2D5B2D'}
+          />
+          <Wildflowers
+            x={SCREEN_WIDTH / 2 + 60}
+            color1={useSeasonal ? palette.accent1 : '#E890B0'}
+            color2={useSeasonal ? palette.accent3 : '#B0C0FF'}
+            color3={useSeasonal ? palette.accent2 : '#FFD060'}
+            stemColor={useSeasonal ? palette.treeLight : '#2D5B2D'}
+          />
         </>
       )}
     </>

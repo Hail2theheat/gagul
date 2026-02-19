@@ -4,6 +4,10 @@ import { PixelStar } from './PixelStar';
 import { Firefly } from './Firefly';
 import { ShootingStar } from './ShootingStar';
 import { PixelMoon } from './PixelMoon';
+import { MoonPhases } from './MoonPhases';
+import { DriftingClouds } from './DriftingClouds';
+import { isMoonVisible } from '../../lib/services/lunarService';
+import { useSeasonal } from '../../lib/hooks/useSeasonal';
 import { SkyDensity, StarColors } from '../../constants/animations';
 import { CampfireColors } from '../../constants/theme';
 
@@ -16,14 +20,20 @@ interface NightSkyProps {
   density?: DensityPreset;
   /** Show the crescent moon */
   showMoon?: boolean;
+  /** Use realistic moon phases (DESIGN.md §15.3) */
+  useRealisticMoon?: boolean;
   /** Show shooting stars */
   showShootingStars?: boolean;
+  /** Show drifting clouds (DESIGN.md §15.3) */
+  showClouds?: boolean;
   /** Show fireflies (typically near ground level) */
   showFireflies?: boolean;
   /** Background color for moon crescent shadow */
   moonBgColor?: string;
   /** Show the sky gradient bands */
   showGradient?: boolean;
+  /** Use seasonal sky colors (DESIGN.MD §15.3) */
+  useSeasonal?: boolean;
 }
 
 /** Seeded pseudo-random number generator for deterministic star placement */
@@ -38,12 +48,21 @@ function createRng(seed: number) {
 export function NightSky({
   density = 'default',
   showMoon = true,
+  useRealisticMoon = false,
   showShootingStars = true,
+  showClouds = false,
   showFireflies = true,
   moonBgColor,
   showGradient = true,
+  useSeasonal = false,
 }: NightSkyProps) {
   const config = SkyDensity[density];
+
+  // DESIGN.md §15.3: Seasonal sky colors
+  const { palette } = useSeasonal();
+  const skyTop = useSeasonal ? palette.skyTop : CampfireColors.BG_TOP;
+  const skyMid = useSeasonal ? palette.skyMid : CampfireColors.BG_MID;
+  const skyLow = useSeasonal ? palette.skyLow : CampfireColors.BG_LOW;
 
   const stars = useMemo(() => {
     const result: { x: number; y: number; size: number; delay: number; color: string }[] = [];
@@ -91,7 +110,7 @@ export function NightSky({
       });
     }
     return result;
-  }, [config]);
+  }, [config.largeBrightStars, config.mediumStars, config.smallStars, config.tinyStars]);
 
   const shootingStarDelays = useMemo(() => {
     const delays: number[] = [];
@@ -116,12 +135,12 @@ export function NightSky({
 
   return (
     <>
-      {/* Sky gradient background */}
+      {/* Sky gradient background - DESIGN.md §15.3: Seasonal colors */}
       {showGradient && (
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-          <View style={{ flex: 1, backgroundColor: CampfireColors.BG_TOP }} />
-          <View style={{ flex: 1, backgroundColor: CampfireColors.BG_MID }} />
-          <View style={{ flex: 1, backgroundColor: CampfireColors.BG_LOW }} />
+          <View style={{ flex: 1, backgroundColor: skyTop }} />
+          <View style={{ flex: 1, backgroundColor: skyMid }} />
+          <View style={{ flex: 1, backgroundColor: skyLow }} />
           <View style={{ flex: 1, backgroundColor: CampfireColors.BG_HORIZON }} />
           <View style={{ flex: 1, backgroundColor: CampfireColors.BG_BOTTOM }} />
         </View>
@@ -150,8 +169,21 @@ export function NightSky({
         </>
       )}
 
-      {/* Moon */}
-      {showMoon && <PixelMoon bgColor={moonBgColor} />}
+      {/* Drifting clouds - DESIGN.md §15.3: Slow parallax cloud movement */}
+      {showClouds && <DriftingClouds layers={3} />}
+
+      {/* Moon - DESIGN.md §15.3: Realistic phases or tappable crescent */}
+      {showMoon && (
+        useRealisticMoon ? (
+          isMoonVisible() ? (
+            <View style={{ position: 'absolute', top: 50, right: SCREEN_WIDTH * 0.15 }}>
+              <MoonPhases size={32} showGlow />
+            </View>
+          ) : null
+        ) : (
+          <PixelMoon bgColor={moonBgColor} />
+        )
+      )}
 
       {/* Stars */}
       {stars.map((star, i) => (

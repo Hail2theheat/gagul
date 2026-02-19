@@ -13,7 +13,12 @@ export function legPixels(
 ): PixelRect[] {
   if (pantsStyle === "dress") return dressPixels(pants);
   if (pose === "karate") return karateLegs(pants, shoes);
-  if (pose === "sitting") return sittingLegs(pants, skin);
+  if (pose === "sitting" || pose === "throne") return sittingLegs(pants, skin);
+  if (pose === "meditation") return meditationLegs(pants, skin);
+  if (pose === "surfing") return surfingLegs(pants, shoes);
+  if (pose === "levitating") return levitatingLegs(pants);
+  if (pose === "breakdance") return breakdanceLegs(pants, skin);
+  if (pose === "moonwalk") return moonwalkLegs(pants, shoes);
   if (pantsStyle === "skirt") return skirtPixels(pants, skin);
   if (pantsStyle === "shorts") return shortsPixels(pants, skin);
   if (pantsStyle === "skinny") return skinnyLegs(pants);
@@ -216,6 +221,119 @@ function karateLegs(pants: ColorPalette, shoes: ColorPalette): PixelRect[] {
     r(34, 37, 4, 5, shoes.base),
     r(35, 37, 3, 2, shoes.highlight),
     r(34, 41, 4, 1, shoes.shadow),
+  ];
+}
+
+function meditationLegs(pants: ColorPalette, skin: ColorPalette): PixelRect[] {
+  return [
+    // Cross-legged (lotus position)
+    // Left leg (crossed, thigh horizontal going right)
+    r(4, 33, 12, 1, OUTLINE),
+    r(3, 34, 1, 5, OUTLINE),
+    r(16, 34, 1, 5, OUTLINE),
+    r(4, 34, 12, 5, pants.base),
+    r(4, 34, 6, 2, pants.highlight),
+    r(4, 37, 12, 2, pants.shadow),
+    // Left foot (tucked under right thigh)
+    r(16, 36, 4, 3, skin.base),
+    r(16, 38, 4, 1, skin.shadow),
+    // Right leg (crossed, thigh horizontal going left)
+    r(16, 33, 12, 1, OUTLINE),
+    r(15, 34, 1, 5, OUTLINE),
+    r(28, 34, 1, 5, OUTLINE),
+    r(16, 34, 12, 5, pants.base),
+    r(22, 34, 6, 2, pants.highlight),
+    r(16, 37, 12, 2, pants.shadow),
+    // Right foot (tucked)
+    r(12, 36, 4, 3, skin.base),
+    r(12, 38, 4, 1, skin.shadow),
+  ];
+}
+
+function surfingLegs(pants: ColorPalette, shoes: ColorPalette): PixelRect[] {
+  return [
+    // Wide stance (legs apart, bent slightly)
+    // Left leg (shifted left)
+    r(2, 33, 8, 1, OUTLINE),
+    r(1, 34, 1, 9, OUTLINE),
+    r(10, 34, 1, 9, OUTLINE),
+    r(2, 34, 8, 9, pants.base),
+    r(2, 34, 4, 4, pants.highlight),
+    r(2, 39, 8, 4, pants.shadow),
+    // Right leg (shifted right)
+    r(22, 33, 8, 1, OUTLINE),
+    r(21, 34, 1, 9, OUTLINE),
+    r(30, 34, 1, 9, OUTLINE),
+    r(22, 34, 8, 9, pants.base),
+    r(26, 34, 4, 4, pants.highlight),
+    r(22, 39, 8, 4, pants.shadow),
+  ];
+}
+
+function levitatingLegs(pants: ColorPalette): PixelRect[] {
+  return [
+    // Legs slightly tucked (floating), shifted up a bit
+    // Left leg
+    r(6, 33, 8, 1, OUTLINE),
+    r(5, 34, 1, 7, OUTLINE),
+    r(14, 34, 1, 7, OUTLINE),
+    r(6, 34, 8, 7, pants.base),
+    r(6, 34, 4, 3, pants.highlight),
+    r(6, 38, 8, 3, pants.shadow),
+    // Right leg
+    r(18, 33, 8, 1, OUTLINE),
+    r(17, 34, 1, 7, OUTLINE),
+    r(26, 34, 1, 7, OUTLINE),
+    r(18, 34, 8, 7, pants.base),
+    r(22, 34, 4, 3, pants.highlight),
+    r(18, 38, 8, 3, pants.shadow),
+    // Glow particles under feet
+    r(8, 42, 2, 1, "#7B68EE"),
+    r(6, 44, 1, 1, "#9890FF"),
+    r(12, 43, 1, 1, "#B8B0FF"),
+    r(20, 42, 2, 1, "#7B68EE"),
+    r(24, 44, 1, 1, "#9890FF"),
+    r(18, 43, 1, 1, "#B8B0FF"),
+  ];
+}
+
+function breakdanceLegs(pants: ColorPalette, skin: ColorPalette): PixelRect[] {
+  return [
+    // One leg up in the air (freeze pose)
+    // Left leg (on ground, supporting)
+    r(6, 33, 8, 1, OUTLINE),
+    r(5, 34, 1, 9, OUTLINE),
+    r(14, 34, 1, 9, OUTLINE),
+    r(6, 34, 8, 9, pants.base),
+    r(6, 34, 4, 4, pants.highlight),
+    r(6, 39, 8, 4, pants.shadow),
+    // Right leg (kicked up)
+    r(18, 33, 8, 1, OUTLINE),
+    r(17, 28, 1, 6, OUTLINE),
+    r(26, 28, 1, 6, OUTLINE),
+    r(18, 28, 8, 1, OUTLINE),
+    r(18, 29, 8, 5, pants.base),
+    r(22, 29, 4, 2, pants.highlight),
+    r(18, 32, 8, 2, pants.shadow),
+  ];
+}
+
+function moonwalkLegs(pants: ColorPalette, shoes: ColorPalette): PixelRect[] {
+  return [
+    // Left leg (forward, on toes)
+    r(4, 33, 8, 1, OUTLINE),
+    r(3, 34, 1, 9, OUTLINE),
+    r(12, 34, 1, 9, OUTLINE),
+    r(4, 34, 8, 9, pants.base),
+    r(4, 34, 4, 4, pants.highlight),
+    r(4, 39, 8, 4, pants.shadow),
+    // Right leg (back, sliding)
+    r(20, 33, 8, 1, OUTLINE),
+    r(19, 34, 1, 9, OUTLINE),
+    r(28, 34, 1, 9, OUTLINE),
+    r(20, 34, 8, 9, pants.base),
+    r(24, 34, 4, 4, pants.highlight),
+    r(20, 39, 8, 4, pants.shadow),
   ];
 }
 

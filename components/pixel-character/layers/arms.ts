@@ -605,6 +605,411 @@ export function armPixels(
         r(25, 36, 5, 1, OUTLINE),
       ];
 
+    // === NEW POSES ===
+
+    case "surfing":
+      return [
+        // Left arm (extended out for balance)
+        r(2, 25, 4, 1, OUTLINE),
+        r(2, 26, 4, 4, sleeveColor),
+        r(-1, 26, 1, 5, OUTLINE),
+        r(-5, 28, 5, 1, OUTLINE),
+        r(-5, 33, 5, 1, OUTLINE),
+        r(-6, 29, 1, 4, OUTLINE),
+        r(-5, 29, 5, 4, skin.base),
+        r(-4, 29, 3, 2, skin.highlight),
+        r(-5, 32, 5, 1, skin.shadow),
+        // Hand (open)
+        r(-8, 29, 2, 3, OUTLINE),
+        r(-7, 29, 2, 2, skin.base),
+        // Right arm (extended out for balance)
+        r(26, 25, 4, 1, OUTLINE),
+        r(26, 26, 4, 4, sleeveColor),
+        r(30, 26, 1, 5, OUTLINE),
+        r(30, 28, 5, 1, OUTLINE),
+        r(30, 33, 5, 1, OUTLINE),
+        r(35, 29, 1, 4, OUTLINE),
+        r(30, 29, 5, 4, skin.base),
+        r(31, 29, 3, 2, skin.highlight),
+        r(30, 32, 5, 1, skin.shadow),
+        r(36, 29, 2, 3, OUTLINE),
+        r(36, 29, 2, 2, skin.base),
+      ];
+
+    case "meditation":
+      return [
+        // Both arms resting on knees, palms up — cross-legged style
+        // Left arm (resting, palm up)
+        r(1, 26, 1, 8, OUTLINE),
+        r(2, 25, 4, 1, OUTLINE),
+        r(2, 26, 4, 4, sleeveColor),
+        r(2, 29, 4, 1, sleeveShadow),
+        r(2, 30, 4, 3, skin.base),
+        r(2, 32, 4, 1, skin.shadow),
+        // Palm up on knee
+        r(1, 33, 6, 1, OUTLINE),
+        r(2, 33, 4, 2, skin.base),
+        r(3, 33, 2, 1, skin.highlight),
+        r(1, 34, 1, 1, OUTLINE),
+        r(6, 34, 1, 1, OUTLINE),
+        r(1, 35, 6, 1, OUTLINE),
+        // Right arm (resting, palm up)
+        r(30, 26, 1, 8, OUTLINE),
+        r(26, 25, 4, 1, OUTLINE),
+        r(26, 26, 4, 4, sleeveColor),
+        r(26, 29, 4, 1, sleeveShadow),
+        r(26, 30, 4, 3, skin.base),
+        r(26, 32, 4, 1, skin.shadow),
+        r(25, 33, 6, 1, OUTLINE),
+        r(26, 33, 4, 2, skin.base),
+        r(27, 33, 2, 1, skin.highlight),
+        r(25, 34, 1, 1, OUTLINE),
+        r(30, 34, 1, 1, OUTLINE),
+        r(25, 35, 6, 1, OUTLINE),
+      ];
+
+    case "superhero":
+      return [
+        // Left arm (hand on hip, power pose)
+        r(2, 25, 4, 1, OUTLINE),
+        r(2, 26, 4, 4, sleeveColor),
+        r(1, 26, 1, 4, OUTLINE),
+        r(2, 30, 4, 3, skin.base),
+        r(2, 32, 4, 1, skin.shadow),
+        r(1, 30, 1, 3, OUTLINE),
+        r(2, 33, 5, 1, OUTLINE),
+        r(2, 34, 5, 2, skin.base),
+        r(3, 34, 3, 1, skin.highlight),
+        r(1, 34, 1, 2, OUTLINE),
+        r(2, 36, 5, 1, OUTLINE),
+        // Right arm (raised fist high, Superman style)
+        r(26, 25, 4, 1, OUTLINE),
+        r(26, 26, 4, 4, sleeveColor),
+        r(30, 26, 1, 4, OUTLINE),
+        r(28, 14, 3, 12, sleeveColor),
+        r(31, 14, 1, 12, OUTLINE),
+        r(27, 14, 1, 12, OUTLINE),
+        r(28, 8, 3, 6, skin.base),
+        r(28, 8, 2, 3, skin.highlight),
+        r(31, 8, 1, 6, OUTLINE),
+        r(27, 8, 1, 6, OUTLINE),
+        // Fist at top
+        r(27, 4, 5, 1, OUTLINE),
+        r(26, 5, 1, 3, OUTLINE),
+        r(27, 5, 5, 3, skin.base),
+        r(28, 5, 3, 1, skin.highlight),
+        r(32, 5, 1, 3, OUTLINE),
+        r(27, 8, 5, 1, OUTLINE),
+      ];
+
+    case "ninja":
+      return [
+        // Left arm (crossed in front, ninja guard)
+        r(2, 25, 4, 1, OUTLINE),
+        r(2, 26, 4, 4, sleeveColor),
+        r(1, 26, 1, 4, OUTLINE),
+        r(6, 28, 10, 1, OUTLINE),
+        r(6, 31, 12, 1, OUTLINE),
+        r(6, 29, 10, 2, skin.base),
+        r(8, 29, 4, 1, skin.highlight),
+        // Hand/fist
+        r(16, 28, 3, 3, OUTLINE),
+        r(17, 29, 2, 1, skin.base),
+        // Right arm (hand sign in front of face)
+        r(26, 25, 4, 1, OUTLINE),
+        r(26, 26, 4, 4, sleeveColor),
+        r(30, 26, 1, 4, OUTLINE),
+        r(20, 18, 8, 1, OUTLINE),
+        r(19, 19, 1, 6, OUTLINE),
+        r(20, 19, 8, 6, skin.base),
+        r(22, 19, 4, 3, skin.highlight),
+        r(28, 19, 1, 6, OUTLINE),
+        r(20, 25, 8, 1, OUTLINE),
+        // Two-finger sign
+        r(20, 15, 1, 4, OUTLINE),
+        r(21, 16, 1, 3, skin.base),
+        r(22, 15, 1, 4, OUTLINE),
+        r(23, 16, 1, 3, skin.base),
+        r(24, 15, 1, 4, OUTLINE),
+      ];
+
+    case "levitating":
+      return [
+        // Arms out slightly, hovering — slight upward angle
+        // Left arm
+        r(2, 25, 4, 1, OUTLINE),
+        r(2, 26, 4, 4, sleeveColor),
+        r(-1, 26, 1, 4, OUTLINE),
+        r(-5, 24, 5, 1, OUTLINE),
+        r(-5, 29, 5, 1, OUTLINE),
+        r(-6, 25, 1, 4, OUTLINE),
+        r(-5, 25, 5, 4, skin.base),
+        r(-4, 25, 3, 2, skin.highlight),
+        // Open palm (power radiating)
+        r(-8, 24, 2, 4, OUTLINE),
+        r(-7, 25, 2, 2, skin.base),
+        // Glow under palms
+        r(-7, 28, 1, 1, "#7B68EE"),
+        r(-9, 26, 1, 1, "#9890FF"),
+        // Right arm
+        r(26, 25, 4, 1, OUTLINE),
+        r(26, 26, 4, 4, sleeveColor),
+        r(30, 26, 1, 4, OUTLINE),
+        r(30, 24, 5, 1, OUTLINE),
+        r(30, 29, 5, 1, OUTLINE),
+        r(35, 25, 1, 4, OUTLINE),
+        r(30, 25, 5, 4, skin.base),
+        r(31, 25, 3, 2, skin.highlight),
+        r(36, 24, 2, 4, OUTLINE),
+        r(36, 25, 2, 2, skin.base),
+        r(37, 28, 1, 1, "#7B68EE"),
+        r(38, 26, 1, 1, "#9890FF"),
+      ];
+
+    case "throne":
+      return [
+        // Left arm (resting on armrest)
+        r(1, 26, 1, 8, OUTLINE),
+        r(2, 25, 4, 1, OUTLINE),
+        r(2, 26, 4, 4, sleeveColor),
+        r(2, 29, 4, 1, sleeveShadow),
+        r(2, 30, 4, 3, skin.base),
+        r(2, 32, 4, 1, skin.shadow),
+        // Hand resting
+        r(0, 33, 6, 1, OUTLINE),
+        r(1, 34, 4, 2, skin.base),
+        r(2, 34, 2, 1, skin.highlight),
+        r(0, 34, 1, 2, OUTLINE),
+        r(5, 34, 1, 2, OUTLINE),
+        r(0, 36, 6, 1, OUTLINE),
+        // Right arm (chin resting on hand, elbow on armrest)
+        r(26, 25, 4, 1, OUTLINE),
+        r(26, 26, 4, 4, sleeveColor),
+        r(30, 26, 1, 4, OUTLINE),
+        r(28, 18, 3, 8, sleeveColor),
+        r(31, 18, 1, 8, OUTLINE),
+        r(27, 18, 1, 8, OUTLINE),
+        // Hand under chin
+        r(20, 16, 8, 1, OUTLINE),
+        r(19, 17, 1, 3, OUTLINE),
+        r(20, 17, 8, 3, skin.base),
+        r(22, 17, 4, 1, skin.highlight),
+        r(20, 19, 8, 1, skin.shadow),
+      ];
+
+    // === DANCES ===
+
+    case "disco":
+      return [
+        // Left arm (pointing down-left)
+        r(2, 25, 4, 1, OUTLINE),
+        r(2, 26, 4, 4, sleeveColor),
+        r(1, 26, 1, 4, OUTLINE),
+        r(-2, 30, 4, 1, OUTLINE),
+        r(-2, 35, 4, 1, OUTLINE),
+        r(-3, 31, 1, 4, OUTLINE),
+        r(-2, 31, 4, 4, skin.base),
+        r(-1, 31, 2, 2, skin.highlight),
+        r(-4, 35, 2, 2, OUTLINE),
+        r(-3, 35, 2, 1, skin.base),
+        // Right arm (pointing up-right — classic disco)
+        r(26, 25, 4, 1, OUTLINE),
+        r(26, 26, 4, 4, sleeveColor),
+        r(30, 26, 1, 4, OUTLINE),
+        r(30, 16, 3, 10, sleeveColor),
+        r(33, 16, 1, 10, OUTLINE),
+        r(30, 8, 3, 8, skin.base),
+        r(30, 8, 2, 4, skin.highlight),
+        r(33, 8, 1, 8, OUTLINE),
+        // Pointing finger
+        r(31, 4, 1, 4, OUTLINE),
+        r(31, 5, 1, 3, skin.base),
+        r(30, 6, 1, 2, skin.base),
+        r(32, 6, 1, 2, skin.base),
+      ];
+
+    case "floss":
+      return [
+        // Left arm (behind body, pulling right)
+        r(2, 25, 4, 1, OUTLINE),
+        r(2, 26, 4, 4, sleeveColor),
+        r(6, 30, 14, 1, OUTLINE),
+        r(6, 35, 14, 1, OUTLINE),
+        r(6, 31, 14, 4, skin.base),
+        r(8, 31, 6, 2, skin.highlight),
+        r(6, 34, 14, 1, skin.shadow),
+        // Right arm (in front, pulling left)
+        r(26, 25, 4, 1, OUTLINE),
+        r(26, 26, 4, 4, sleeveColor),
+        r(10, 28, 16, 1, OUTLINE),
+        r(10, 33, 16, 1, OUTLINE),
+        r(9, 29, 1, 4, OUTLINE),
+        r(10, 29, 16, 4, skin.base),
+        r(14, 29, 6, 2, skin.highlight),
+        r(10, 32, 16, 1, skin.shadow),
+        // Fist
+        r(8, 28, 3, 4, OUTLINE),
+        r(9, 29, 2, 2, skin.base),
+      ];
+
+    case "moonwalk":
+      return [
+        // Left arm (swinging back)
+        r(2, 25, 4, 1, OUTLINE),
+        r(2, 26, 4, 4, sleeveColor),
+        r(1, 26, 1, 4, OUTLINE),
+        r(2, 30, 4, 6, skin.base),
+        r(2, 35, 4, 1, skin.shadow),
+        r(1, 30, 1, 7, OUTLINE),
+        r(2, 37, 4, 1, OUTLINE),
+        // Right arm (forward, bent at elbow)
+        r(26, 25, 4, 1, OUTLINE),
+        r(26, 26, 4, 4, sleeveColor),
+        r(30, 26, 1, 4, OUTLINE),
+        r(28, 20, 3, 6, sleeveColor),
+        r(31, 20, 1, 6, OUTLINE),
+        r(28, 18, 3, 2, skin.base),
+        r(31, 18, 1, 2, OUTLINE),
+        // Open hand
+        r(27, 16, 5, 2, OUTLINE),
+        r(28, 16, 3, 2, skin.base),
+        r(29, 16, 2, 1, skin.highlight),
+      ];
+
+    case "breakdance":
+      return [
+        // Both arms supporting body weight (freeze pose)
+        // Left arm (planted on ground)
+        r(2, 25, 4, 1, OUTLINE),
+        r(2, 26, 4, 4, sleeveColor),
+        r(1, 26, 1, 12, OUTLINE),
+        r(2, 30, 4, 7, skin.base),
+        r(2, 36, 4, 1, skin.shadow),
+        r(2, 37, 4, 1, OUTLINE),
+        // Hand flat on ground
+        r(0, 38, 6, 2, OUTLINE),
+        r(1, 38, 4, 2, skin.base),
+        r(2, 38, 2, 1, skin.highlight),
+        // Right arm (extended up for style)
+        r(26, 25, 4, 1, OUTLINE),
+        r(26, 26, 4, 4, sleeveColor),
+        r(30, 26, 1, 4, OUTLINE),
+        r(29, 14, 3, 12, sleeveColor),
+        r(32, 14, 1, 12, OUTLINE),
+        r(28, 14, 1, 12, OUTLINE),
+        r(29, 8, 3, 6, skin.base),
+        r(29, 8, 2, 3, skin.highlight),
+        r(32, 8, 1, 6, OUTLINE),
+        r(28, 8, 1, 6, OUTLINE),
+        // Fist at top
+        r(28, 5, 5, 1, OUTLINE),
+        r(27, 6, 1, 2, OUTLINE),
+        r(28, 6, 5, 2, skin.base),
+        r(33, 6, 1, 2, OUTLINE),
+        r(28, 8, 5, 1, OUTLINE),
+      ];
+
+    case "macarena":
+      return [
+        // Left arm (extended forward, palm down)
+        r(2, 25, 4, 1, OUTLINE),
+        r(2, 26, 4, 4, sleeveColor),
+        r(1, 26, 1, 4, OUTLINE),
+        r(-6, 26, 8, 1, OUTLINE),
+        r(-6, 31, 8, 1, OUTLINE),
+        r(-7, 27, 1, 4, OUTLINE),
+        r(-6, 27, 8, 4, skin.base),
+        r(-4, 27, 4, 2, skin.highlight),
+        r(-6, 30, 8, 1, skin.shadow),
+        // Palm down
+        r(-9, 27, 2, 3, OUTLINE),
+        r(-8, 28, 2, 1, skin.base),
+        // Right arm (extended forward, palm down)
+        r(26, 25, 4, 1, OUTLINE),
+        r(26, 26, 4, 4, sleeveColor),
+        r(30, 26, 1, 4, OUTLINE),
+        r(30, 26, 8, 1, OUTLINE),
+        r(30, 31, 8, 1, OUTLINE),
+        r(38, 27, 1, 4, OUTLINE),
+        r(30, 27, 8, 4, skin.base),
+        r(32, 27, 4, 2, skin.highlight),
+        r(30, 30, 8, 1, skin.shadow),
+        r(39, 27, 2, 3, OUTLINE),
+        r(39, 28, 2, 1, skin.base),
+      ];
+
+    case "robot_dance":
+      return [
+        // Similar to robot but mirrored — left arm bends DOWN, right bends UP
+        // Left arm horizontal + forearm DOWN
+        r(2, 25, 4, 1, OUTLINE),
+        r(1, 26, 1, 6, OUTLINE),
+        r(2, 27, 4, 4, sleeveColor),
+        r(2, 31, 4, 1, OUTLINE),
+        r(-4, 26, 6, 1, OUTLINE),
+        r(-4, 31, 6, 1, OUTLINE),
+        r(-4, 27, 6, 4, skin.base),
+        r(-3, 30, 6, 1, skin.shadow),
+        // Forearm DOWN
+        r(-5, 32, 1, 7, OUTLINE),
+        r(0, 32, 1, 7, OUTLINE),
+        r(-4, 32, 4, 7, skin.base),
+        r(-3, 32, 2, 3, skin.highlight),
+        // Claw at bottom
+        r(-6, 39, 7, 1, OUTLINE),
+        r(-5, 37, 5, 2, skin.base),
+        r(-4, 37, 3, 1, skin.highlight),
+        // Right arm horizontal + forearm UP
+        r(26, 25, 4, 1, OUTLINE),
+        r(30, 26, 1, 6, OUTLINE),
+        r(26, 27, 4, 4, sleeveColor),
+        r(26, 31, 4, 1, OUTLINE),
+        r(30, 26, 6, 1, OUTLINE),
+        r(30, 31, 6, 1, OUTLINE),
+        r(30, 27, 6, 4, skin.base),
+        r(30, 30, 6, 1, skin.shadow),
+        r(36, 19, 1, 7, OUTLINE),
+        r(31, 19, 1, 7, OUTLINE),
+        r(32, 19, 4, 7, skin.base),
+        r(33, 19, 2, 3, skin.highlight),
+        // Claw at top
+        r(31, 17, 7, 1, OUTLINE),
+        r(32, 18, 5, 2, skin.base),
+        r(33, 18, 3, 1, skin.highlight),
+      ];
+
+    case "fire_dance":
+      return [
+        // Left arm (sweeping motion, arm extended to side with trailing fire)
+        r(2, 25, 4, 1, OUTLINE),
+        r(2, 26, 4, 4, sleeveColor),
+        r(-1, 26, 1, 4, OUTLINE),
+        r(-7, 24, 7, 1, OUTLINE),
+        r(-7, 29, 7, 1, OUTLINE),
+        r(-8, 25, 1, 4, OUTLINE),
+        r(-7, 25, 7, 4, skin.base),
+        r(-5, 25, 3, 2, skin.highlight),
+        // Fire trail from left hand
+        r(-10, 23, 2, 2, "#FF6B35"),
+        r(-9, 22, 1, 1, "#FFD700"),
+        r(-11, 24, 1, 1, "#FFEC8B"),
+        r(-8, 21, 1, 1, "#FF8C42"),
+        // Right arm (sweeping other direction)
+        r(26, 25, 4, 1, OUTLINE),
+        r(26, 26, 4, 4, sleeveColor),
+        r(30, 26, 1, 4, OUTLINE),
+        r(30, 24, 7, 1, OUTLINE),
+        r(30, 29, 7, 1, OUTLINE),
+        r(37, 25, 1, 4, OUTLINE),
+        r(30, 25, 7, 4, skin.base),
+        r(32, 25, 3, 2, skin.highlight),
+        // Fire trail from right hand
+        r(38, 23, 2, 2, "#FF6B35"),
+        r(39, 22, 1, 1, "#FFD700"),
+        r(40, 24, 1, 1, "#FFEC8B"),
+        r(38, 21, 1, 1, "#FF8C42"),
+      ];
+
     case "idle":
     default:
       return [

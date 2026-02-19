@@ -8,6 +8,7 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 import { Durations } from '../../constants/animations';
+import { CampfireColors } from '../../constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -65,7 +66,7 @@ export function ShootingStar({ delay }: ShootingStarProps) {
   const headStyle = useAnimatedStyle(() => ({
     width: 5,
     height: 5,
-    backgroundColor: '#FFFFF0',
+    backgroundColor: CampfireColors.STAR_WHITE, // DESIGN.md §19: Use theme tokens
     borderRadius: 2.5,
     opacity: visible.value * interpolate(
       progress.value,
@@ -76,7 +77,7 @@ export function ShootingStar({ delay }: ShootingStarProps) {
       { translateX: interpolate(progress.value, [0, 1], [0, 140 + length]) },
       { translateY: interpolate(progress.value, [0, 1], [0, 90 + length * 0.55]) },
     ],
-    shadowColor: '#FFF8E0',
+    shadowColor: CampfireColors.STAR_WARM, // DESIGN.md §19: Use theme tokens
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 10,
@@ -85,10 +86,11 @@ export function ShootingStar({ delay }: ShootingStarProps) {
   return (
     <View style={{ position: 'absolute', left: startX, top: startY }}>
       <Animated.View style={trailStyle}>
-        <View style={{ position: 'absolute', right: 0, width: '100%', height: 1, backgroundColor: 'rgba(255,255,255,0.15)' }} />
-        <View style={{ position: 'absolute', right: 0, width: '70%', height: 2, backgroundColor: 'rgba(255,240,200,0.35)' }} />
-        <View style={{ position: 'absolute', right: 0, width: '40%', height: 2, backgroundColor: 'rgba(255,255,240,0.7)' }} />
-        <View style={{ position: 'absolute', right: 0, width: '15%', height: 2, backgroundColor: '#FFFFF0' }} />
+        {/* DESIGN.md §19: Use theme tokens, not hardcoded colors */}
+        <View style={{ position: 'absolute', right: 0, width: '100%', height: 1, backgroundColor: CampfireColors.STAR_WHITE + '15' }} />
+        <View style={{ position: 'absolute', right: 0, width: '70%', height: 2, backgroundColor: CampfireColors.STAR_WARM + '35' }} />
+        <View style={{ position: 'absolute', right: 0, width: '40%', height: 2, backgroundColor: CampfireColors.STAR_WHITE + '70' }} />
+        <View style={{ position: 'absolute', right: 0, width: '15%', height: 2, backgroundColor: CampfireColors.STAR_WHITE }} />
       </Animated.View>
       <Animated.View style={headStyle} />
     </View>

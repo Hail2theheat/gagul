@@ -79,6 +79,58 @@ export const CampfireColors = {
   STONE_MID: '#6B6B73',
   STONE_DARK: '#5A5A62',
   STONE_DARKEST: '#4A4A52',
+
+  // Log / wood
+  LOG_DARK: '#4A3020',
+  LOG_MID: '#5C3D2E',
+  LOG_LIGHT: '#6B5030',
+  LOG_CROSS: '#4E3422',
+
+  // Extra fire shades (used in detailed campfire side flames)
+  FIRE_DEEP_RED: '#B81C00',
+  FIRE_MID_RED: '#E63600',
+  FIRE_DARK_RED: '#A31800',
+
+  // Smoke & Clouds
+  SMOKE_DARK: '#3A3A42',
+  SMOKE_LIGHT: '#4A4A52',
+  SMOKE: '#6B7280',  // DESIGN.md §15.1: Visible smoke particles (gray-500)
+  CLOUD: '#D1D5DB',  // DESIGN.md §15.3: Drifting clouds (gray-300)
+
+  // Scene colors (mountains, lake, sky)
+  SKY_TOP: '#040810',
+  SKY_MID: '#0A1428',
+  SKY_LOW: '#101E38',
+  MTN_FAR: '#0C1420',
+  MTN_MID: '#0E1824',
+  MTN_NEAR: '#0A1218',
+  LAKE_TOP: '#0A1828',
+  LAKE_MID: '#081420',
+  LAKE_BOT: '#060E18',
+
+  // Input placeholders (soft blue-gray for dark backgrounds)
+  PLACEHOLDER: '#6B8EC2',
+
+  // Medals & achievements (leaderboard, awards)
+  MEDAL_GOLD: '#FFD700',
+  MEDAL_SILVER: '#C0C0C0',
+  MEDAL_BRONZE: '#CD7F32',
+
+  // Accent colors for special prompts (Quiplash, Telephone, etc.)
+  // Purple for playful/creative modes
+  ACCENT_PURPLE: '#8B5CF6',
+  ACCENT_PURPLE_LIGHT: '#A78BFA',
+  // Cyan for photo/caption modes
+  ACCENT_CYAN: '#06B6D4',
+  ACCENT_CYAN_LIGHT: '#22D3EE',
+
+  // Rating face colors (prompt feedback)
+  RATING_HATE: '#8B0000',      // Dark red - terrible
+  RATING_DISLIKE: '#FF6B6B',   // Light red - dislike
+  RATING_NEUTRAL: '#9CA3AF',   // Gray - meh
+  RATING_LIKE: '#F59E0B',      // Amber - good
+  RATING_LOVE: '#FFD93D',      // Gold - love
+  RATING_LOVE_BG: '#DEB887',   // Tan background
 } as const;
 
 // ===== SPACING SCALE =====

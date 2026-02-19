@@ -1,7 +1,7 @@
 // components/pixel-character/renderer.tsx
+// DESIGN_SYSTEM.md compliant: View-based pixel blocks with hard edges (no SVG anti-aliasing)
 import React from "react";
 import { View } from "react-native";
-import Svg, { Rect } from "react-native-svg";
 import { PixelRect } from "./types";
 
 // Padding around the 32x48 character body to show arms/accessories that extend beyond
@@ -22,40 +22,27 @@ export function PixelRenderer({ pixels, width, height, size }: PixelRendererProp
 
   // Scale so the character body matches the requested size
   const scale = size / width; // e.g. 120/32 = 3.75
-  const renderedWidth = totalW * scale;   // full SVG width including padding
-  const renderedHeight = totalH * scale;  // full SVG height including padding
-
-  // Negative margins so the padding doesn't affect layout —
-  // the component takes up the same space as before (size x size*aspectRatio)
-  const marginX = -PAD_X * scale;
-  const marginY = -PAD_Y * scale;
 
   return (
     <View style={{
       width: size,
       height: size * (height / width),
-      overflow: "visible",
+      position: "relative",
     }}>
-      <Svg
-        width={renderedWidth}
-        height={renderedHeight}
-        viewBox={`${-PAD_X} ${-PAD_Y} ${totalW} ${totalH}`}
-        style={{
-          marginLeft: marginX,
-          marginTop: marginY,
-        }}
-      >
-        {pixels.map((p, i) => (
-          <Rect
-            key={i}
-            x={p.x}
-            y={p.y}
-            width={p.w}
-            height={p.h}
-            fill={p.color}
-          />
-        ))}
-      </Svg>
+      {pixels.map((p, i) => (
+        <View
+          key={i}
+          style={{
+            position: "absolute",
+            left: (p.x + PAD_X) * scale,
+            top: (p.y + PAD_Y) * scale,
+            width: p.w * scale,
+            height: p.h * scale,
+            backgroundColor: p.color,
+            // Hard edges - DESIGN_SYSTEM.md rule: borderRadius: 0 for pixel blocks
+          }}
+        />
+      ))}
     </View>
   );
 }

@@ -123,28 +123,89 @@ export const SHOE_COLORS: ColorPalette[] = [
 ];
 
 export const ACCESSORIES = [
+  // Free top half
   { id: "none", name: "None", unlocked: true },
+  { id: "headband", name: "Headband", unlocked: true },
+  { id: "earrings", name: "Earrings", unlocked: true },
+  { id: "bow_tie", name: "Bow Tie", unlocked: true },
+  { id: "sunglasses", name: "Sunglasses", unlocked: true },
+  { id: "hat_cap", name: "Cap", unlocked: true },
+  { id: "hat_beanie", name: "Beanie", unlocked: true },
+  { id: "necklace", name: "Necklace", unlocked: true },
+  { id: "scarf", name: "Scarf", unlocked: true },
   { id: "glasses", name: "Glasses", unlocked: true },
-  { id: "wings", name: "Wings", unlocked: true },
-  { id: "staff", name: "Staff", unlocked: true },
+  { id: "bandana", name: "Bandana", unlocked: true },
+  { id: "monocle", name: "Monocle", unlocked: true },
+  { id: "war_paint", name: "War Paint", unlocked: true },
   { id: "unicorn_horn", name: "Unicorn Horn", unlocked: true },
-  { id: "headband", name: "Headband", pointsRequired: 15 },
-  { id: "earrings", name: "Earrings", pointsRequired: 20 },
-  { id: "bow_tie", name: "Bow Tie", pointsRequired: 20 },
-  { id: "sunglasses", name: "Sunglasses", pointsRequired: 25 },
-  { id: "hat_cap", name: "Cap", pointsRequired: 30 },
-  { id: "hat_beanie", name: "Beanie", pointsRequired: 35 },
-  { id: "necklace", name: "Necklace", pointsRequired: 40 },
-  { id: "scarf", name: "Scarf", pointsRequired: 45 },
+  // Locked bottom half (50-500 pts)
   { id: "cape", name: "Cape", pointsRequired: 50 },
-  { id: "witch_hat", name: "Witch Hat", pointsRequired: 60 },
-  { id: "viking_helm", name: "Viking Helm", pointsRequired: 80 },
-  { id: "shield", name: "Shield", pointsRequired: 90 },
-  { id: "hat_cowboy", name: "Cowboy Hat", pointsRequired: 100 },
-  { id: "sword", name: "Sword", pointsRequired: 120 },
-  { id: "halo", name: "Halo", pointsRequired: 150 },
-  { id: "crown", name: "Crown", pointsRequired: 500 },
+  { id: "witch_hat", name: "Witch Hat", pointsRequired: 75 },
+  { id: "wings", name: "Wings", pointsRequired: 100 },
+  { id: "flame_aura", name: "Flame Aura", pointsRequired: 100 },
+  { id: "staff", name: "Staff", pointsRequired: 125 },
+  { id: "viking_helm", name: "Viking Helm", pointsRequired: 125 },
+  { id: "shield", name: "Shield", pointsRequired: 150 },
+  { id: "hat_cowboy", name: "Cowboy Hat", pointsRequired: 150 },
+  { id: "sword", name: "Sword", pointsRequired: 175 },
+  { id: "demon_horns", name: "Demon Horns", pointsRequired: 200 },
+  { id: "halo", name: "Halo", pointsRequired: 225 },
+  { id: "tiny_wings", name: "Tiny Wings", pointsRequired: 250 },
+  { id: "hiking_boots", name: "Hiking Boots", pointsRequired: 275 },
+  { id: "camping_backpack", name: "Backpack", pointsRequired: 300 },
+  { id: "marshmallow_stick", name: "Marshmallow", pointsRequired: 350 },
+  { id: "crown", name: "Crown", pointsRequired: 400 },
+  { id: "fire_crown", name: "Fire Crown", pointsRequired: 425 },
+  { id: "ranger_hat", name: "Ranger Hat", pointsRequired: 450 },
+  { id: "golden_cape", name: "Golden Cape", pointsRequired: 500 },
 ];
+
+export type Season = "winter" | "spring" | "summer" | "fall";
+
+export interface SeasonalAccessory {
+  id: string;
+  name: string;
+  season: Season;
+  threshold: number; // responses needed during season to unlock
+}
+
+export const SEASONAL_ACCESSORIES: SeasonalAccessory[] = [
+  // Winter (Dec-Feb)
+  { id: "winter_scarf", name: "Winter Scarf", season: "winter", threshold: 5 },
+  { id: "snow_goggles", name: "Snow Goggles", season: "winter", threshold: 15 },
+  { id: "earmuffs", name: "Earmuffs", season: "winter", threshold: 30 },
+  // Spring (Mar-May)
+  { id: "flower_crown", name: "Flower Crown", season: "spring", threshold: 5 },
+  { id: "butterfly_wings", name: "Butterfly Wings", season: "spring", threshold: 15 },
+  { id: "rain_boots", name: "Rain Boots", season: "spring", threshold: 30 },
+  // Summer (Jun-Aug)
+  { id: "lei", name: "Lei", season: "summer", threshold: 5 },
+  { id: "beach_hat", name: "Beach Hat", season: "summer", threshold: 15 },
+  { id: "surfboard", name: "Surfboard", season: "summer", threshold: 30 },
+  // Fall (Sep-Nov)
+  { id: "leaf_crown", name: "Leaf Crown", season: "fall", threshold: 5 },
+  { id: "pumpkin_hat", name: "Pumpkin Hat", season: "fall", threshold: 15 },
+  { id: "cozy_sweater", name: "Cozy Sweater", season: "fall", threshold: 30 },
+];
+
+export function getCurrentSeason(): Season {
+  const month = new Date().getMonth() + 1; // 1-12
+  if (month >= 12 || month <= 2) return "winter";
+  if (month >= 3 && month <= 5) return "spring";
+  if (month >= 6 && month <= 8) return "summer";
+  return "fall";
+}
+
+export function getSeasonEndDate(): Date {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  if (month >= 12) return new Date(year + 1, 1, 28); // Feb 28
+  if (month <= 2) return new Date(year, 1, 28);
+  if (month <= 5) return new Date(year, 4, 31); // May 31
+  if (month <= 8) return new Date(year, 7, 31); // Aug 31
+  return new Date(year, 10, 30); // Nov 30
+}
 
 export const POSES = [
   { id: "idle", name: "Idle", unlocked: true },
@@ -152,7 +213,7 @@ export const POSES = [
   { id: "raising_roof", name: "Raising the Roof", unlocked: true },
   { id: "robot", name: "Robot Arms", unlocked: true },
   { id: "tpose", name: "T-Pose", unlocked: true },
-  { id: "karate", name: "Karate", unlocked: true },
+  { id: "karate", name: "Karate", pointsRequired: 20 },
   { id: "hands_up", name: "Hands Up", pointsRequired: 25 },
   { id: "dab", name: "Dab", pointsRequired: 30 },
   { id: "thinking", name: "Thinking", pointsRequired: 35 },
@@ -164,6 +225,45 @@ export const POSES = [
   { id: "middle_fingers", name: "Middle Fingers", pointsRequired: 75 },
   { id: "victory", name: "Victory", pointsRequired: 55 },
   { id: "sitting", name: "Sitting", pointsRequired: 80 },
+  { id: "surfing", name: "Surfing", pointsRequired: 85 },
+  { id: "meditation", name: "Meditation", pointsRequired: 100 },
+  { id: "superhero", name: "Superhero", pointsRequired: 140 },
+  { id: "ninja", name: "Ninja", pointsRequired: 200 },
+  { id: "levitating", name: "Levitating", pointsRequired: 300 },
+  { id: "throne", name: "Throne", pointsRequired: 500 },
+];
+
+export const PETS = [
+  { id: "none", name: "None", unlocked: true },
+  { id: "puppy", name: "Puppy", pointsRequired: 50 },
+  { id: "kitten", name: "Kitten", pointsRequired: 75 },
+  { id: "frog", name: "Frog", pointsRequired: 100 },
+  { id: "owl", name: "Owl", pointsRequired: 150 },
+  { id: "fox", name: "Fox", pointsRequired: 225 },
+  { id: "baby_dragon", name: "Baby Dragon", pointsRequired: 350 },
+  { id: "phoenix", name: "Phoenix", pointsRequired: 500 },
+];
+
+export const WEAPONS = [
+  { id: "none", name: "None", unlocked: true },
+  { id: "wooden_sword", name: "Wooden Sword", pointsRequired: 50 },
+  { id: "dagger", name: "Dagger", pointsRequired: 75 },
+  { id: "bow", name: "Bow", pointsRequired: 100 },
+  { id: "battle_axe", name: "Battle Axe", pointsRequired: 175 },
+  { id: "trident", name: "Trident", pointsRequired: 275 },
+  { id: "flame_sword", name: "Flame Sword", pointsRequired: 400 },
+  { id: "celestial_staff", name: "Celestial Staff", pointsRequired: 500 },
+];
+
+export const DANCES = [
+  { id: "none", name: "None", unlocked: true },
+  { id: "disco", name: "Disco", pointsRequired: 50 },
+  { id: "floss", name: "Floss", pointsRequired: 75 },
+  { id: "moonwalk", name: "Moonwalk", pointsRequired: 125 },
+  { id: "breakdance", name: "Breakdance", pointsRequired: 200 },
+  { id: "macarena", name: "Macarena", pointsRequired: 300 },
+  { id: "robot_dance", name: "Robot Dance", pointsRequired: 400 },
+  { id: "fire_dance", name: "Fire Dance", pointsRequired: 500 },
 ];
 
 export const DEFAULT_CHARACTER: CharacterConfig = {
@@ -177,6 +277,8 @@ export const DEFAULT_CHARACTER: CharacterConfig = {
   shoeColor: "brown",
   accessory: "none",
   pose: "idle",
+  pet: "none",
+  weapon: "none",
 };
 
 export const OUTLINE = "#1a1a1a";

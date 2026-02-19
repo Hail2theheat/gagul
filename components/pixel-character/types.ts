@@ -29,4 +29,6 @@ export interface CharacterConfig {
   shoeColor: string;
   accessory: string;
   pose?: string;
+  pet?: string;
+  weapon?: string;
 }

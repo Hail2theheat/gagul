@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View } from 'react-native';
+import { View, Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -7,7 +7,9 @@ import Animated, {
   withSequence,
   withTiming,
   interpolate,
+  withSpring,
 } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { CampfireColors } from '../../constants/theme';
 import { Durations } from '../../constants/animations';
 
@@ -16,8 +18,9 @@ interface PixelMoonProps {
   bgColor?: string;
 }
 
-export function PixelMoon({ bgColor = '#080E1C' }: PixelMoonProps) {
+export function PixelMoon({ bgColor = CampfireColors.TAB_BG }: PixelMoonProps) {
   const glow = useSharedValue(0.5);
+  const tapGlow = useSharedValue(0);  // DESIGN.md §15.2: Easter egg - tap the moon
 
   useEffect(() => {
     glow.value = withRepeat(
@@ -37,27 +40,39 @@ export function PixelMoon({ bgColor = '#080E1C' }: PixelMoonProps) {
     height: 108,
     borderRadius: 54,
     backgroundColor: CampfireColors.MOON_GLOW,
-    opacity: interpolate(glow.value, [0.5, 0.7], [0.06, 0.12]),
+    // Normal pulse + tap glow boost (DESIGN.md §15.2 easter egg)
+    opacity: interpolate(glow.value, [0.5, 0.7], [0.06, 0.12]) + tapGlow.value * 0.3,
   }));
+
+  // DESIGN.md §15.2: Tap the moon easter egg - glow brighter + soft chime
+  const handleMoonTap = () => {
+    tapGlow.value = withSequence(
+      withTiming(1, { duration: 150 }),
+      withTiming(0, { duration: 800 }),
+    );
+    // Soft notification haptic (chime feeling)
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
 
   return (
     <View style={{ position: 'absolute', top: 50, right: 35 }}>
       {/* Outer haze */}
       <Animated.View style={hazeStyle} />
-      {/* Main moon body */}
-      <View
-        style={{
-          width: 60,
-          height: 60,
-          backgroundColor: CampfireColors.MOON,
-          borderRadius: 30,
-          overflow: 'hidden',
-          shadowColor: CampfireColors.MOON,
-          shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: 0.5,
-          shadowRadius: 25,
-        }}
-      >
+      {/* Main moon body - DESIGN.md §15.2: Tap the moon easter egg */}
+      <Pressable onPress={handleMoonTap} hitSlop={20}>
+        <View
+          style={{
+            width: 60,
+            height: 60,
+            backgroundColor: CampfireColors.MOON,
+            borderRadius: 30,
+            overflow: 'hidden',
+            shadowColor: CampfireColors.MOON,
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.5,
+            shadowRadius: 25,
+          }}
+        >
         {/* Shadow circle creates crescent */}
         <View
           style={{
@@ -71,11 +86,12 @@ export function PixelMoon({ bgColor = '#080E1C' }: PixelMoonProps) {
           }}
         />
         {/* Surface craters */}
-        <View style={{ position: 'absolute', top: 14, left: 6, width: 6, height: 6, backgroundColor: '#EEE8AA', borderRadius: 3, opacity: 0.4 }} />
-        <View style={{ position: 'absolute', top: 30, left: 12, width: 4, height: 4, backgroundColor: '#EEE8AA', borderRadius: 2, opacity: 0.3 }} />
-        <View style={{ position: 'absolute', top: 42, left: 5, width: 5, height: 5, backgroundColor: '#EEE8AA', borderRadius: 2.5, opacity: 0.2 }} />
-        <View style={{ position: 'absolute', top: 22, left: 3, width: 3, height: 3, backgroundColor: '#FFF5CD', borderRadius: 1.5, opacity: 0.5 }} />
-      </View>
+          <View style={{ position: 'absolute', top: 14, left: 6, width: 6, height: 6, backgroundColor: '#EEE8AA', borderRadius: 3, opacity: 0.4 }} />
+          <View style={{ position: 'absolute', top: 30, left: 12, width: 4, height: 4, backgroundColor: '#EEE8AA', borderRadius: 2, opacity: 0.3 }} />
+          <View style={{ position: 'absolute', top: 42, left: 5, width: 5, height: 5, backgroundColor: '#EEE8AA', borderRadius: 2.5, opacity: 0.2 }} />
+          <View style={{ position: 'absolute', top: 22, left: 3, width: 3, height: 3, backgroundColor: '#FFF5CD', borderRadius: 1.5, opacity: 0.5 }} />
+        </View>
+      </Pressable>
     </View>
   );
 }
