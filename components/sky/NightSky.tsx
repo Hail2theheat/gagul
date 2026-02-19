@@ -33,7 +33,7 @@ interface NightSkyProps {
   /** Show the sky gradient bands */
   showGradient?: boolean;
   /** Use seasonal sky colors (DESIGN.MD §15.3) */
-  useSeasonal?: boolean;
+  enableSeasonal?: boolean;
 }
 
 /** Seeded pseudo-random number generator for deterministic star placement */
@@ -54,15 +54,15 @@ export function NightSky({
   showFireflies = true,
   moonBgColor,
   showGradient = true,
-  useSeasonal = false,
+  enableSeasonal = false,
 }: NightSkyProps) {
   const config = SkyDensity[density];
 
   // DESIGN.md §15.3: Seasonal sky colors
   const { palette } = useSeasonal();
-  const skyTop = useSeasonal ? palette.skyTop : CampfireColors.BG_TOP;
-  const skyMid = useSeasonal ? palette.skyMid : CampfireColors.BG_MID;
-  const skyLow = useSeasonal ? palette.skyLow : CampfireColors.BG_LOW;
+  const skyTop = enableSeasonal ? palette.skyTop : CampfireColors.BG_TOP;
+  const skyMid = enableSeasonal ? palette.skyMid : CampfireColors.BG_MID;
+  const skyLow = enableSeasonal ? palette.skyLow : CampfireColors.BG_LOW;
 
   const stars = useMemo(() => {
     const result: { x: number; y: number; size: number; delay: number; color: string }[] = [];

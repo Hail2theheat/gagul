@@ -64,22 +64,22 @@ interface ForestGroundProps {
   /** Show the dense forest */
   showForest?: boolean;
   /** Use seasonal colors (DESIGN.md §15.3) */
-  useSeasonal?: boolean;
+  enableSeasonal?: boolean;
 }
 
 export function ForestGround({
   showMountains = true,
   showWildflowers = true,
   showForest = true,
-  useSeasonal = false,
+  enableSeasonal = false,
 }: ForestGroundProps) {
   // DESIGN.md §15.3: Seasonal color palette
   const { palette } = useSeasonal();
 
   // Choose colors based on seasonal mode
-  const groundDark = useSeasonal ? palette.groundDark : CampfireColors.GROUND_DARK;
-  const groundGrass = useSeasonal ? palette.groundGrass : CampfireColors.GROUND_GRASS;
-  const groundMoss = useSeasonal ? palette.groundMoss : CampfireColors.GROUND_MOSS;
+  const groundDark = enableSeasonal ? palette.groundDark : CampfireColors.GROUND_DARK;
+  const groundGrass = enableSeasonal ? palette.groundGrass : CampfireColors.GROUND_GRASS;
+  const groundMoss = enableSeasonal ? palette.groundMoss : CampfireColors.GROUND_MOSS;
 
   // DESIGN.md §15.2: Ghost camper easter egg (5% spawn chance)
   const ghostCamper = useMemo(() => {
