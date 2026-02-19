@@ -232,31 +232,31 @@ export function ForestGround({
         <>
           <Wildflowers
             x={30}
-            color1={useSeasonal ? palette.accent1 : '#E890B0'}
-            color2={useSeasonal ? palette.accent2 : '#FFD060'}
-            color3={useSeasonal ? palette.accent3 : '#B0C0FF'}
-            stemColor={useSeasonal ? palette.treeLight : '#2D5B2D'}
+            color1={enableSeasonal ? palette.accent1 : '#E890B0'}
+            color2={enableSeasonal ? palette.accent2 : '#FFD060'}
+            color3={enableSeasonal ? palette.accent3 : '#B0C0FF'}
+            stemColor={enableSeasonal ? palette.treeLight : '#2D5B2D'}
           />
           <Wildflowers
             x={SCREEN_WIDTH - 50}
-            color1={useSeasonal ? palette.accent2 : '#FFD060'}
-            color2={useSeasonal ? palette.accent3 : '#B0C0FF'}
-            color3={useSeasonal ? palette.accent1 : '#E890B0'}
-            stemColor={useSeasonal ? palette.treeLight : '#2D5B2D'}
+            color1={enableSeasonal ? palette.accent2 : '#FFD060'}
+            color2={enableSeasonal ? palette.accent3 : '#B0C0FF'}
+            color3={enableSeasonal ? palette.accent1 : '#E890B0'}
+            stemColor={enableSeasonal ? palette.treeLight : '#2D5B2D'}
           />
           <Wildflowers
             x={SCREEN_WIDTH / 2 - 80}
-            color1={useSeasonal ? palette.accent3 : '#B0C0FF'}
-            color2={useSeasonal ? palette.accent1 : '#E890B0'}
-            color3={useSeasonal ? palette.accent2 : '#FFD060'}
-            stemColor={useSeasonal ? palette.treeLight : '#2D5B2D'}
+            color1={enableSeasonal ? palette.accent3 : '#B0C0FF'}
+            color2={enableSeasonal ? palette.accent1 : '#E890B0'}
+            color3={enableSeasonal ? palette.accent2 : '#FFD060'}
+            stemColor={enableSeasonal ? palette.treeLight : '#2D5B2D'}
           />
           <Wildflowers
             x={SCREEN_WIDTH / 2 + 60}
-            color1={useSeasonal ? palette.accent1 : '#E890B0'}
-            color2={useSeasonal ? palette.accent3 : '#B0C0FF'}
-            color3={useSeasonal ? palette.accent2 : '#FFD060'}
-            stemColor={useSeasonal ? palette.treeLight : '#2D5B2D'}
+            color1={enableSeasonal ? palette.accent1 : '#E890B0'}
+            color2={enableSeasonal ? palette.accent3 : '#B0C0FF'}
+            color3={enableSeasonal ? palette.accent2 : '#FFD060'}
+            stemColor={enableSeasonal ? palette.treeLight : '#2D5B2D'}
           />
         </>
       )}
