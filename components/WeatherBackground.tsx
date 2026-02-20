@@ -325,86 +325,6 @@ function PineTree({ height, x, shade }: { height: number; x: number; shade: numb
   );
 }
 
-// Realistic grass with multiple layers - darker and fuller
-function GrassLayer() {
-  const blades = useMemo(() => {
-    const result = [];
-    // Back layer - darkest (wider blades, fewer count)
-    for (let i = 0; i < 40; i++) {
-      result.push({
-        x: (i / 40) * SCREEN_WIDTH + (Math.random() - 0.5) * 12,
-        height: 10 + Math.random() * 12,
-        width: 3 + Math.random() * 2,
-        color: "#0A1F0A",
-        delay: Math.random() * 2000,
-        layer: 0,
-      });
-    }
-    // Mid layer
-    for (let i = 0; i < 35; i++) {
-      result.push({
-        x: (i / 35) * SCREEN_WIDTH + (Math.random() - 0.5) * 10,
-        height: 16 + Math.random() * 16,
-        width: 3.5 + Math.random() * 2,
-        color: "#0D280D",
-        delay: Math.random() * 2000,
-        layer: 1,
-      });
-    }
-    // Front layer
-    for (let i = 0; i < 30; i++) {
-      result.push({
-        x: (i / 30) * SCREEN_WIDTH + (Math.random() - 0.5) * 8,
-        height: 20 + Math.random() * 18,
-        width: 4 + Math.random() * 2.5,
-        color: "#144014",
-        delay: Math.random() * 2000,
-        layer: 2,
-      });
-    }
-    return result.sort((a, b) => a.layer - b.layer);
-  }, []);
-
-  return (
-    <>
-      {blades.map((blade, i) => (
-        <GrassBlade key={i} {...blade} />
-      ))}
-    </>
-  );
-}
-
-function GrassBlade({ x, height, width, color, delay }: { x: number; height: number; width: number; color: string; delay: number }) {
-  const sway = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(sway, { toValue: 3, duration: 1800 + Math.random() * 600, useNativeDriver: true }),
-          Animated.timing(sway, { toValue: -3, duration: 1800 + Math.random() * 600, useNativeDriver: true }),
-        ])
-      ).start();
-    }, delay);
-    return () => clearTimeout(timer);
-  }, []);
-
-  return (
-    <Animated.View
-      style={{
-        position: "absolute",
-        left: x,
-        bottom: 0,
-        width: width,
-        height: height,
-        backgroundColor: color,
-        borderTopLeftRadius: width,
-        borderTopRightRadius: width,
-        transform: [{ translateX: sway }, { rotate: '-2deg' }],
-      }}
-    />
-  );
-}
 
 export function WeatherBackground({ children }: WeatherBackgroundProps) {
   // Generate random stars with variety - go all the way down to tree tops
@@ -472,20 +392,34 @@ export function WeatherBackground({ children }: WeatherBackgroundProps) {
       {/* Roosting owl */}
       <RoostingOwl treeX={owlTree.x} treeHeight={owlTree.height} />
 
-      {/* Ground base */}
+      {/* Ground layers - DESIGN.md inspired: Clean depth-based layers */}
       <View style={{
-        position: "absolute",
+        position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
         height: 30,
-        backgroundColor: "#0A1A0A",
+        backgroundColor: CampfireColors.GROUND_DARK,
         zIndex: 85,
-      }} />
-
-      {/* Grass */}
-      <View style={{ position: "absolute", bottom: 20, left: 0, right: 0, height: 55, zIndex: 86 }}>
-        <GrassLayer />
+      }}>
+        {/* Top grass layer - bright accent */}
+        <View style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 4,
+          backgroundColor: CampfireColors.GROUND_GRASS
+        }} />
+        {/* Moss/shadow layer - depth */}
+        <View style={{
+          position: 'absolute',
+          top: 4,
+          left: 0,
+          right: 0,
+          height: 2,
+          backgroundColor: CampfireColors.GROUND_MOSS
+        }} />
       </View>
 
       {/* Content */}
