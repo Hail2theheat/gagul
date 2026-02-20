@@ -1,13 +1,12 @@
 // components/MembersCircleModal.tsx
 // "Campfire Circle" modal — shows all group members arranged around a campfire
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Modal,
   View,
   Text,
   Pressable,
   Dimensions,
-  ScrollView,
 } from "react-native";
 import Animated, {
   FadeInDown,
@@ -20,14 +19,14 @@ import Animated, {
 } from "react-native-reanimated";
 import { PixelCharacter, DEFAULT_CHARACTER } from "./PixelCharacter";
 import type { CharacterConfig } from "./PixelCharacter";
+import { CampfireColors } from "../constants/theme";
+import { AnimatedLogo } from "./AnimatedLogo";
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 
-const BG = "#0B1026";
-const CARD = "rgba(20, 30, 50, 0.85)";
-const BORDER = "#2a3f5f";
-const TEXT_COLOR = "#FFF8DC";
-const MUTED = "#B8A88A";
+const CARD = CampfireColors.CARD_SOLID;
+const TEXT_COLOR = CampfireColors.TEXT_CREAM;
+const MUTED = CampfireColors.MUTED;
 
 const DANCE_POSES = [
   "waving",
@@ -47,7 +46,10 @@ interface MembersCircleModalProps {
     user_id: string;
     avatar_config: CharacterConfig | null;
     username: string | null;
+    weekly_crown_until?: string | null;
+    current_streak?: number;
   }>;
+  streakLeaderId?: string | null;
 }
 
 /** Single member slot that cycles dance poses */
@@ -56,21 +58,23 @@ function DancingMember({
   index,
   x,
   y,
+  isStreakLeader,
 }: {
   member: MembersCircleModalProps["members"][number];
   index: number;
   x: number;
   y: number;
+  isStreakLeader: boolean;
 }) {
   const [pose, setPose] = useState(
     () => DANCE_POSES[Math.floor(Math.random() * DANCE_POSES.length)]
   );
 
-  // Cycle poses
   useEffect(() => {
-    const offset = Math.random() * 800; // random offset so chars aren't in sync
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    const offset = Math.random() * 800;
     const timeout = setTimeout(() => {
-      const interval = setInterval(() => {
+      intervalId = setInterval(() => {
         setPose((prev) => {
           let next = prev;
           while (next === prev) {
@@ -79,12 +83,13 @@ function DancingMember({
           return next;
         });
       }, 1500);
-      return () => clearInterval(interval);
     }, offset);
-    return () => clearTimeout(timeout);
+    return () => {
+      clearTimeout(timeout);
+      if (intervalId) clearInterval(intervalId);
+    };
   }, []);
 
-  // Subtle bounce
   const scale = useSharedValue(1);
   useEffect(() => {
     scale.value = withRepeat(
@@ -107,19 +112,23 @@ function DancingMember({
 
   return (
     <Animated.View
-      entering={FadeInDown.delay(index * 100)
-        .springify()
-        .damping(14)}
+      entering={FadeInDown.delay(index * 100).springify().damping(14)}
       style={{
         position: "absolute",
         left: x - 35,
-        top: y - 30,
+        top: y - 45,
         width: 70,
         alignItems: "center",
       }}
     >
       <Animated.View style={bounceStyle}>
-        <PixelCharacter config={config} size={60} />
+        <PixelCharacter
+          config={config}
+          size={55}
+          showWeeklyCrown={!!member.weekly_crown_until && new Date(member.weekly_crown_until) > new Date()}
+          showTorch={isStreakLeader}
+          showStreakAura={(member.current_streak || 0) >= 20}
+        />
       </Animated.View>
       <Text
         numberOfLines={1}
@@ -138,129 +147,24 @@ function DancingMember({
   );
 }
 
-/** Pixel campfire for the center */
-function PixelCampfire() {
-  const glow = useSharedValue(0.6);
-  useEffect(() => {
-    glow.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 800, easing: Easing.inOut(Easing.quad) }),
-        withTiming(0.6, { duration: 800, easing: Easing.inOut(Easing.quad) })
-      ),
-      -1,
-      true
-    );
-  }, [glow]);
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: glow.value,
-  }));
-
-  return (
-    <View style={{ alignItems: "center", justifyContent: "center" }}>
-      {/* Glow */}
-      <Animated.View
-        style={[
-          {
-            position: "absolute",
-            width: 80,
-            height: 80,
-            borderRadius: 40,
-            backgroundColor: "#FF6B0022",
-          },
-          glowStyle,
-        ]}
-      />
-      <Animated.View
-        style={[
-          {
-            position: "absolute",
-            width: 50,
-            height: 50,
-            borderRadius: 25,
-            backgroundColor: "#FF8C0033",
-          },
-          glowStyle,
-        ]}
-      />
-      {/* Logs */}
-      <View style={{ flexDirection: "row", alignItems: "flex-end" }}>
-        <View
-          style={{
-            width: 22,
-            height: 6,
-            backgroundColor: "#6B3A1F",
-            borderRadius: 2,
-            transform: [{ rotate: "-25deg" }],
-            marginRight: -4,
-          }}
-        />
-        <View
-          style={{
-            width: 22,
-            height: 6,
-            backgroundColor: "#8B5E3C",
-            borderRadius: 2,
-            transform: [{ rotate: "25deg" }],
-            marginLeft: -4,
-          }}
-        />
-      </View>
-      {/* Flames */}
-      <View style={{ flexDirection: "row", marginBottom: -2 }}>
-        <View
-          style={{
-            width: 6,
-            height: 12,
-            backgroundColor: "#FF6B35",
-            borderRadius: 3,
-            marginHorizontal: 1,
-          }}
-        />
-        <View
-          style={{
-            width: 8,
-            height: 16,
-            backgroundColor: "#FFA500",
-            borderRadius: 4,
-            marginHorizontal: 1,
-            marginTop: -4,
-          }}
-        />
-        <View
-          style={{
-            width: 6,
-            height: 10,
-            backgroundColor: "#FFD700",
-            borderRadius: 3,
-            marginHorizontal: 1,
-          }}
-        />
-      </View>
-    </View>
-  );
-}
-
 export function MembersCircleModal({
   visible,
   onClose,
   members,
+  streakLeaderId,
 }: MembersCircleModalProps) {
   const count = members.length;
+  const circleRadius = count <= 4 ? 80 : count <= 8 ? 105 : 125;
 
-  // Circle layout
-  const circleRadius = count <= 4 ? 90 : count <= 8 ? 110 : 130;
-  const centerX = SCREEN_WIDTH / 2;
-  const centerY = SCREEN_HEIGHT * 0.42;
-
-  // For large groups, use a ScrollView
-  const needsScroll = count > 10;
+  // Center of the screen, shifted left 10%
+  const midX = SCREEN_W * 0.4;
+  const midY = SCREEN_H / 2;
 
   const positions = members.map((_, i) => {
-    const angle = (i * (2 * Math.PI)) / count - Math.PI / 2; // start from top
+    const angle = (i * (2 * Math.PI)) / count - Math.PI / 2;
     return {
-      x: centerX + Math.cos(angle) * circleRadius,
-      y: centerY + Math.sin(angle) * circleRadius,
+      x: midX + Math.cos(angle) * circleRadius,
+      y: midY + Math.sin(angle) * circleRadius,
     };
   });
 
@@ -271,13 +175,29 @@ export function MembersCircleModal({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: "rgba(0, 0, 0, 0.9)",
-        }}
-      >
-        {/* Header */}
+      <View style={{ flex: 1, backgroundColor: "rgba(0, 0, 0, 0.95)" }}>
+
+        {/* Full-screen layer: fire at exact center, characters around it */}
+        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
+          {/* Fire — nudged 5% right from circle center */}
+          <View style={{ position: "absolute", left: midX - 25 + SCREEN_W * 0.05, top: midY - 25 }}>
+            <AnimatedLogo size={50} />
+          </View>
+
+          {/* Characters in a perfect circle around the fire */}
+          {members.map((member, i) => (
+            <DancingMember
+              key={member.user_id}
+              member={member}
+              index={i}
+              x={positions[i].x}
+              y={positions[i].y}
+              isStreakLeader={member.user_id === streakLeaderId}
+            />
+          ))}
+        </View>
+
+        {/* Header — overlaid on top */}
         <View
           style={{
             flexDirection: "row",
@@ -286,32 +206,17 @@ export function MembersCircleModal({
             paddingHorizontal: 24,
             paddingTop: 60,
             paddingBottom: 12,
+            zIndex: 10,
           }}
         >
-          <Text
-            style={{
-              color: TEXT_COLOR,
-              fontSize: 22,
-              fontFamily: "Paaxel",
-            }}
-          >
+          <Text style={{ color: TEXT_COLOR, fontSize: 22, fontFamily: "Paaxel" }}>
             Your Circle
           </Text>
           <Pressable
             onPress={onClose}
-            style={{
-              padding: 8,
-              backgroundColor: CARD,
-              borderRadius: 8,
-            }}
+            style={{ padding: 8, backgroundColor: CARD, borderRadius: 8 }}
           >
-            <Text
-              style={{
-                color: TEXT_COLOR,
-                fontSize: 18,
-                fontFamily: "Paaxel",
-              }}
-            >
+            <Text style={{ color: TEXT_COLOR, fontSize: 18, fontFamily: "Paaxel" }}>
               X
             </Text>
           </Pressable>
@@ -324,64 +229,11 @@ export function MembersCircleModal({
             fontSize: 13,
             fontFamily: "Paaxel",
             textAlign: "center",
-            marginBottom: 8,
+            zIndex: 10,
           }}
         >
           {count} {count === 1 ? "member" : "members"}
         </Text>
-
-        {/* Circle area */}
-        {needsScroll ? (
-          <ScrollView
-            contentContainerStyle={{
-              width: SCREEN_WIDTH,
-              height: circleRadius * 2 + 200,
-              position: "relative",
-            }}
-          >
-            {/* Campfire center */}
-            <View
-              style={{
-                position: "absolute",
-                left: centerX - 20,
-                top: centerY - 15,
-              }}
-            >
-              <PixelCampfire />
-            </View>
-            {members.map((member, i) => (
-              <DancingMember
-                key={member.user_id}
-                member={member}
-                index={i}
-                x={positions[i].x}
-                y={positions[i].y - 60}
-              />
-            ))}
-          </ScrollView>
-        ) : (
-          <View style={{ flex: 1, position: "relative" }}>
-            {/* Campfire center */}
-            <View
-              style={{
-                position: "absolute",
-                left: centerX - 20,
-                top: centerY - 15,
-              }}
-            >
-              <PixelCampfire />
-            </View>
-            {members.map((member, i) => (
-              <DancingMember
-                key={member.user_id}
-                member={member}
-                index={i}
-                x={positions[i].x}
-                y={positions[i].y}
-              />
-            ))}
-          </View>
-        )}
       </View>
     </Modal>
   );

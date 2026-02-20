@@ -1,7 +1,7 @@
 // app/group/[id]/index.tsx
 import { useGlobalSearchParams, router } from "expo-router";
-import React, { useEffect, useState, useCallback, useRef } from "react";
-import { Alert, ScrollView, Text, View, Pressable, RefreshControl, Animated, Dimensions, Easing, Modal, Share, TextInput } from "react-native";
+import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { Alert, ScrollView, Text, View, Pressable, RefreshControl, Animated, Dimensions, Easing, Modal, Share, TextInput, Keyboard, InputAccessoryView, TouchableOpacity as RNTouchableOpacity, KeyboardAvoidingView, Platform } from "react-native";
 import * as Clipboard from "expo-clipboard";
 
 import { supabase } from "../../../lib/supabase";
@@ -97,6 +97,49 @@ function FireText({ children, style }: { children: React.ReactNode; style?: any 
   return (
     <View style={[{ position: "relative" }, style]}>
       <PixelTitle fontSize={22}>{String(children)}</PixelTitle>
+    </View>
+  );
+}
+
+// Personal streak wooden sign — only visible to the current user
+function StreakSign({ currentStreak, longestStreak }: { currentStreak: number; longestStreak: number }) {
+  if (currentStreak <= 0) return null;
+  const LOG_MID = "#5C3D2E";
+  const LOG_DARK = "#3E2518";
+  const LOG_LIGHT = "#7A5038";
+  return (
+    <View style={{ alignItems: "center", marginBottom: 12 }}>
+      {/* Sign plank */}
+      <View style={{
+        width: 200,
+        backgroundColor: CARD,
+        borderRadius: 8,
+        borderWidth: 2,
+        borderColor: LOG_MID,
+        paddingVertical: 8,
+        paddingHorizontal: 14,
+      }}>
+        {/* Row: YOUR STREAK + number */}
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+          <Text style={{ color: MUTED, fontSize: 10, fontFamily: "Paaxel", letterSpacing: 1 }}>
+            YOUR STREAK
+          </Text>
+          <Text style={{ color: "#FF8C42", fontSize: 18, fontFamily: "Paaxel" }}>
+            {currentStreak}
+          </Text>
+        </View>
+        {/* Row: ALL-TIME BEST + number */}
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <Text style={{ color: MUTED, fontSize: 10, fontFamily: "Paaxel", letterSpacing: 1 }}>
+            ALL-TIME BEST
+          </Text>
+          <Text style={{ color: "#FFD700", fontSize: 18, fontFamily: "Paaxel" }}>
+            {longestStreak}
+          </Text>
+        </View>
+      </View>
+      {/* Wooden post */}
+      <View style={{ width: 6, height: 10, backgroundColor: LOG_MID, borderLeftWidth: 1, borderLeftColor: LOG_LIGHT, borderRightWidth: 1, borderRightColor: LOG_DARK }} />
     </View>
   );
 }
@@ -980,6 +1023,7 @@ function RecommendModal({
 }) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <View style={{ flex: 1, backgroundColor: "rgba(0, 0, 0, 0.85)", justifyContent: "flex-end" }}>
         <View style={{
           backgroundColor: BG, borderTopLeftRadius: 24, borderTopRightRadius: 24,
@@ -1021,6 +1065,7 @@ function RecommendModal({
               <TextInput value={recPromptText} onChangeText={setRecPromptText}
                 placeholder={recType === 'quiplash' ? "e.g. The worst thing to say at a wedding..." : recType === 'multiple_choice' ? "e.g. What's the best pizza topping?" : recType === 'photo' ? "e.g. Show us your fridge right now" : "e.g. What's your hot take for the week?"}
                 placeholderTextColor="#555" multiline
+                inputAccessoryViewID="groupInputAccessory"
                 style={{ backgroundColor: CARD, borderColor: BORDER, borderWidth: 1, borderRadius: 12, padding: 14, color: TEXT, fontFamily: "Paaxel", fontSize: 15, minHeight: 60, textAlignVertical: "top" }}
               />
               {recType === 'multiple_choice' && (
@@ -1030,6 +1075,7 @@ function RecommendModal({
                     <View key={idx} style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
                       <TextInput value={opt} onChangeText={(t) => { const next = [...recOptions]; next[idx] = t; setRecOptions(next); }}
                         placeholder={`Answer ${idx + 1}`} placeholderTextColor="#555"
+                        inputAccessoryViewID="groupInputAccessory"
                         style={{ flex: 1, backgroundColor: CARD, borderColor: BORDER, borderWidth: 1, borderRadius: 10, padding: 12, color: TEXT, fontFamily: "Paaxel", fontSize: 14 }}
                       />
                       {recOptions.length > 2 && (
@@ -1057,6 +1103,7 @@ function RecommendModal({
           )}
         </View>
       </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -1317,8 +1364,9 @@ function GroupScreenInner() {
   const [fireLevel, setFireLevel] = useState<number>(2);
   const [memberCount, setMemberCount] = useState<number>(0);
   const [userStreak, setUserStreak] = useState<number>(0);
+  const [longestStreak, setLongestStreak] = useState<number>(0);
   const [myAvatar, setMyAvatar] = useState<CharacterConfig | null>(null);
-  const [allMembers, setAllMembers] = useState<Array<{ user_id: string; avatar_config: CharacterConfig | null; username: string | null; weekly_crown_until: string | null }>>([]);
+  const [allMembers, setAllMembers] = useState<Array<{ user_id: string; avatar_config: CharacterConfig | null; username: string | null; weekly_crown_until: string | null; current_streak: number }>>([]);
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [memberStatuses, setMemberStatuses] = useState<Record<string, 'not_seen' | 'seen' | 'responded'>>({});
   const [firesideProgress, setFiresideProgress] = useState<Record<string, 'completed' | 'partial' | 'not_started'>>({});
@@ -1330,10 +1378,28 @@ function GroupScreenInner() {
   const [sundayState, setSundayState] = useState<SundayState>(getSundayState());
   const [respondedPromptId, setRespondedPromptId] = useState<string | null>(null);
 
+  // Streak leader — member with the highest current_streak
+  const streakLeaderId = useMemo(() => {
+    if (!allMembers.length) return null;
+    const sorted = [...allMembers].sort((a, b) => b.current_streak - a.current_streak);
+    return sorted[0].current_streak > 0 ? sorted[0].user_id : null;
+  }, [allMembers]);
+
   // Presence state - other users on this screen
   const [otherUsers, setOtherUsers] = useState<UserPresence[]>([]);
   const channelRef = useRef<any>(null);
   const myPositionRef = useRef({ x: 20, facingRight: true });
+
+  // Keyboard scroll handling
+  const mainScrollRef = useRef<ScrollView>(null);
+  useEffect(() => {
+    const sub = Keyboard.addListener('keyboardWillShow', () => {
+      setTimeout(() => {
+        mainScrollRef.current?.scrollToEnd({ animated: true });
+      }, 150);
+    });
+    return () => sub.remove();
+  }, []);
 
   // Settings modal state
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -1553,11 +1619,12 @@ function GroupScreenInner() {
       if (userData?.user) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("current_streak")
+          .select("current_streak, longest_streak")
           .eq("id", userData.user.id)
           .single();
         if (profile) {
           setUserStreak(profile.current_streak || 0);
+          setLongestStreak((profile as any).longest_streak || 0);
         }
       }
 
@@ -1578,7 +1645,7 @@ function GroupScreenInner() {
         const userIds = members.map((m: any) => m.user_id);
         const { data: profiles, error: profilesError } = await supabase
           .from("profiles")
-          .select("id, avatar_config, username, weekly_crown_until")
+          .select("id, avatar_config, username, weekly_crown_until, current_streak")
           .in("id", userIds);
 
         if (profilesError) {
@@ -1593,6 +1660,7 @@ function GroupScreenInner() {
             avatar_config: profile?.avatar_config as CharacterConfig | null,
             username: (profile as any)?.username as string | null ?? null,
             weekly_crown_until: (profile as any)?.weekly_crown_until as string | null ?? null,
+            current_streak: (profile as any)?.current_streak as number || 0,
           };
         });
         setAllMembers(membersWithAvatars);
@@ -1836,8 +1904,11 @@ function GroupScreenInner() {
         <UserWalkingCharacter onPositionChange={handlePositionChange} />
 
         <ScrollView
+          ref={mainScrollRef}
           style={{ flex: 1 }}
           contentContainerStyle={{ padding: 18, paddingTop: 60, paddingBottom: 120 }}
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={MUTED} />
           }
@@ -1891,19 +1962,26 @@ function GroupScreenInner() {
                         config={member.avatar_config || DEFAULT_CHARACTER}
                         size={22}
                         showWeeklyCrown={!!member.weekly_crown_until && new Date(member.weekly_crown_until) > new Date()}
+                        showTorch={member.user_id === streakLeaderId}
+                        showStreakAura={member.current_streak >= 20}
                       />
                       {(hasPromptData || hasFiresideData) && (
                         <View style={{
                           position: 'absolute',
-                          bottom: -2,
-                          right: -2,
-                          width: 6,
-                          height: 6,
-                          borderRadius: 3,
-                          backgroundColor: dotColor,
-                          borderWidth: 1,
-                          borderColor: BG,
-                        }} />
+                          bottom: -16,
+                          left: 0,
+                          right: 0,
+                          alignItems: 'center',
+                        }}>
+                          <View style={{
+                            width: 6,
+                            height: 6,
+                            borderRadius: 3,
+                            backgroundColor: dotColor,
+                            borderWidth: 1,
+                            borderColor: BG,
+                          }} />
+                        </View>
                       )}
                     </View>
                   );
@@ -1929,6 +2007,9 @@ function GroupScreenInner() {
               <PixelGearIcon size={22} />
             </Pressable>
           </View>
+
+          {/* Personal Streak Sign */}
+          <StreakSign currentStreak={userStreak} longestStreak={longestStreak} />
 
           {/* Sunday States */}
           {sundayState === 'pre-fireside' && (
@@ -2214,6 +2295,7 @@ function GroupScreenInner() {
           visible={showMembersModal}
           onClose={() => setShowMembersModal(false)}
           members={allMembers}
+          streakLeaderId={streakLeaderId}
         />
 
         {/* Recommend Prompt Modal */}
@@ -2242,9 +2324,21 @@ function GroupScreenInner() {
       {/* Walking character */}
       <UserWalkingCharacter />
 
+      {/* Keyboard toolbar - docked above keyboard on iOS */}
+      <InputAccessoryView nativeID="groupInputAccessory">
+        <View style={{ flexDirection: "row", justifyContent: "flex-end", backgroundColor: "#1C2841", borderTopWidth: 1, borderTopColor: "#2D3F5E", paddingHorizontal: 16, paddingVertical: 8 }}>
+          <RNTouchableOpacity onPress={() => Keyboard.dismiss()}>
+            <Text style={{ color: "#4ADE80", fontSize: 16, fontWeight: "600" }}>Done</Text>
+          </RNTouchableOpacity>
+        </View>
+      </InputAccessoryView>
+
       <ScrollView
+        ref={mainScrollRef}
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 18, paddingTop: 60, paddingBottom: 120 }}
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={MUTED} />
         }
@@ -2278,6 +2372,8 @@ function GroupScreenInner() {
                     config={member.avatar_config || DEFAULT_CHARACTER}
                     size={22}
                     showWeeklyCrown={!!member.weekly_crown_until && new Date(member.weekly_crown_until) > new Date()}
+                    showTorch={member.user_id === streakLeaderId}
+                    showStreakAura={member.current_streak >= 20}
                   />
                 </View>
               ))}
@@ -2302,6 +2398,9 @@ function GroupScreenInner() {
             <PixelGearIcon size={22} />
           </Pressable>
         </View>
+
+        {/* Personal Streak Sign */}
+        <StreakSign currentStreak={userStreak} longestStreak={longestStreak} />
 
         {loading ? (
           <Card>
@@ -2570,6 +2669,7 @@ function GroupScreenInner() {
         visible={showMembersModal}
         onClose={() => setShowMembersModal(false)}
         members={allMembers}
+        streakLeaderId={streakLeaderId}
       />
 
       {/* Recommend Prompt Modal */}

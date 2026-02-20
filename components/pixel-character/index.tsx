@@ -54,6 +54,53 @@ function weeklyCrownPixels(): PixelRect[] {
   ];
 }
 
+// Streak leader torch — held to the right of the character
+function streakTorchPixels(): PixelRect[] {
+  const r = (x: number, y: number, w: number, h: number, color: string): PixelRect => ({ x, y, w, h, color });
+  return [
+    // Wooden handle
+    r(27, 19, 2, 8, "#6B3A1F"),
+    r(28, 19, 1, 8, "#8B5A30"),
+    // Handle cap
+    r(26, 26, 4, 1, "#5C2D0C"),
+    // Flame base (orange)
+    r(26, 15, 4, 4, "#FF6B35"),
+    r(27, 14, 2, 1, "#FF6B35"),
+    // Flame core (yellow)
+    r(27, 15, 2, 3, "#FFD700"),
+    r(27, 13, 2, 2, "#FFEC8B"),
+    // Flame tip
+    r(28, 12, 1, 1, "#FFEC8B"),
+    // Ember accents
+    r(25, 14, 1, 1, "#FF8C42"),
+    r(30, 16, 1, 1, "#FF8C42"),
+  ];
+}
+
+// Fire aura glow — rendered behind character for 20+ streaks
+function streakAuraPixels(): PixelRect[] {
+  const r = (x: number, y: number, w: number, h: number, color: string): PixelRect => ({ x, y, w, h, color });
+  return [
+    // Top glow (above head)
+    r(10, 4, 12, 1, "#FF6B35"),
+    r(8, 5, 2, 1, "#FF8C42"),
+    r(22, 5, 2, 1, "#FF8C42"),
+    // Side glows
+    r(6, 10, 1, 14, "#FF6B35"),
+    r(5, 14, 1, 8, "#FF8C42"),
+    r(25, 10, 1, 14, "#FF6B35"),
+    r(26, 14, 1, 8, "#FF8C42"),
+    // Torso glow
+    r(5, 28, 1, 8, "#FF6B35"),
+    r(26, 28, 1, 8, "#FF6B35"),
+    // Flicker accents
+    r(9, 2, 1, 1, "#FFEC8B"),
+    r(22, 3, 1, 1, "#FFEC8B"),
+    r(4, 18, 1, 1, "#FFD700"),
+    r(27, 20, 1, 1, "#FFD700"),
+  ];
+}
+
 // Grid dimensions
 const GRID_W = 32;
 const GRID_H = 48;
@@ -62,9 +109,11 @@ interface PixelCharacterProps {
   config: CharacterConfig;
   size?: number;
   showWeeklyCrown?: boolean;
+  showTorch?: boolean;
+  showStreakAura?: boolean;
 }
 
-function PixelCharacterInner({ config, size = 80, showWeeklyCrown = false }: PixelCharacterProps) {
+function PixelCharacterInner({ config, size = 80, showWeeklyCrown = false, showTorch = false, showStreakAura = false }: PixelCharacterProps) {
   const pose = config.pose || "idle";
 
   // Blink animation — random interval, quick close
@@ -95,6 +144,9 @@ function PixelCharacterInner({ config, size = 80, showWeeklyCrown = false }: Pix
     const shoes = SHOE_COLORS.find(s => s.id === config.shoeColor) || SHOE_COLORS[0];
 
     const layers: PixelRect[][] = [
+      // Streak aura (behind everything)
+      ...(showStreakAura ? [streakAuraPixels()] : []),
+
       // Back layers (rendered first, behind everything)
       hairBackPixels(config.hairStyle, hair),
       accessoryBackPixels(config.accessory, config.hairStyle, pose),
@@ -124,6 +176,9 @@ function PixelCharacterInner({ config, size = 80, showWeeklyCrown = false }: Pix
       // Weapons (rendered on top, near hand)
       ...(config.weapon && config.weapon !== "none" ? [weaponPixels(config.weapon, pose)] : []),
 
+      // Streak leader torch
+      ...(showTorch ? [streakTorchPixels()] : []),
+
       // Weekly crown overlay — rendered on top if winner and not already wearing crown
       ...(showWeeklyCrown && config.accessory !== "crown" ? [
         weeklyCrownPixels(),
@@ -136,7 +191,7 @@ function PixelCharacterInner({ config, size = 80, showWeeklyCrown = false }: Pix
     config.shirtStyle, config.shirtColor,
     config.pantsStyle, config.pantsColor,
     config.shoeColor, config.accessory, config.pet, config.weapon,
-    pose, blinking, showWeeklyCrown,
+    pose, blinking, showWeeklyCrown, showTorch, showStreakAura,
   ]);
 
   return (
