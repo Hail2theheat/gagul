@@ -23,6 +23,7 @@ import { PixelLake, LakeCreatures } from "../../components/PixelLake";
 import { NightSky, ForestGround } from "../../components/sky";
 import { PixelTitle } from "../../components/PixelTitle";
 import { CampfireColors, Spacing, Radii, Typography, Shadows } from "../../constants/theme";
+import { FireStreakBadge } from "../../components/FireStreakBadge";
 import { Stagger } from "../../constants/animations";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -200,106 +201,6 @@ function PixelShareIcon({ size = 20 }: { size?: number }) {
   );
 }
 
-// Pixel art fire streak badge with 6 size tiers
-function FireStreakBadge({ streak }: { streak: number }) {
-  if (streak === 0) return null;
-
-  // Determine tier based on streak count
-  // Tier 1: 1-5, Tier 2: 6-10, Tier 3: 11-20, Tier 4: 21-49, Tier 5: 50-99, Tier 6: 100+
-  const tier =
-    streak >= 100 ? 6 :
-    streak >= 50 ? 5 :
-    streak >= 21 ? 4 :
-    streak >= 11 ? 3 :
-    streak >= 6 ? 2 : 1;
-
-  // Base size scales with tier (each tier adds a ring/layer)
-  const baseWidth = 10 + (tier - 1) * 6;  // 10, 16, 22, 28, 34, 40
-  const baseHeight = 12 + (tier - 1) * 8; // 12, 20, 28, 36, 44, 52
-
-  // Pixel block helper - hard edges, grid-based
-  const Block = ({ w, h, color, x = 0, y = 0 }: { w: number; h: number; color: string; x?: number; y?: number }) => (
-    <View style={{
-      position: "absolute",
-      left: x,
-      top: y,
-      width: w,
-      height: h,
-      backgroundColor: color,
-    }} />
-  );
-
-  // Container size based on tier
-  const containerWidth = baseWidth + 20;
-  const containerHeight = baseHeight + 30;
-
-  return (
-    <View style={{ width: containerWidth, height: containerHeight, alignItems: "center", justifyContent: "flex-end" }}>
-      {/* Tier 1 - Core (white hot center) - smallest flame */}
-      <Block w={baseWidth} h={4} color={CampfireColors.FIRE_CORE} x={(containerWidth - baseWidth) / 2} y={containerHeight - 4} />
-      <Block w={baseWidth - 2} h={4} color={CampfireColors.FIRE_CORE} x={(containerWidth - baseWidth + 2) / 2} y={containerHeight - 8} />
-      <Block w={baseWidth - 4} h={4} color={CampfireColors.FIRE_CORE} x={(containerWidth - baseWidth + 4) / 2} y={containerHeight - 12} />
-
-      {/* Tier 2+ - Yellow tips layer */}
-      {tier >= 2 && (
-        <>
-          <Block w={baseWidth + 2} h={4} color={CampfireColors.FIRE_YELLOW} x={(containerWidth - baseWidth - 2) / 2} y={containerHeight - 16} />
-          <Block w={baseWidth} h={4} color={CampfireColors.FIRE_YELLOW} x={(containerWidth - baseWidth) / 2} y={containerHeight - 20} />
-          <Block w={baseWidth - 2} h={4} color={CampfireColors.FIRE_YELLOW} x={(containerWidth - baseWidth + 2) / 2} y={containerHeight - 24} />
-        </>
-      )}
-
-      {/* Tier 3+ - Orange mid layer */}
-      {tier >= 3 && (
-        <>
-          <Block w={baseWidth + 4} h={4} color={CampfireColors.FIRE_ORANGE} x={(containerWidth - baseWidth - 4) / 2} y={containerHeight - 28} />
-          <Block w={baseWidth + 2} h={4} color={CampfireColors.FIRE_ORANGE} x={(containerWidth - baseWidth - 2) / 2} y={containerHeight - 32} />
-          <Block w={baseWidth} h={4} color={CampfireColors.FIRE_ORANGE} x={(containerWidth - baseWidth) / 2} y={containerHeight - 36} />
-        </>
-      )}
-
-      {/* Tier 4+ - Red base layer */}
-      {tier >= 4 && (
-        <>
-          <Block w={baseWidth + 6} h={4} color={CampfireColors.FIRE_RED} x={(containerWidth - baseWidth - 6) / 2} y={containerHeight - 40} />
-          <Block w={baseWidth + 4} h={4} color={CampfireColors.FIRE_RED} x={(containerWidth - baseWidth - 4) / 2} y={containerHeight - 44} />
-          <Block w={baseWidth + 2} h={4} color={CampfireColors.FIRE_RED} x={(containerWidth - baseWidth - 2) / 2} y={containerHeight - 48} />
-        </>
-      )}
-
-      {/* Tier 5+ - Extended red base */}
-      {tier >= 5 && (
-        <>
-          <Block w={baseWidth + 8} h={4} color={CampfireColors.FIRE_RED} x={(containerWidth - baseWidth - 8) / 2} y={containerHeight - 52} />
-          <Block w={baseWidth + 6} h={4} color={CampfireColors.FIRE_RED} x={(containerWidth - baseWidth - 6) / 2} y={containerHeight - 56} />
-        </>
-      )}
-
-      {/* Tier 6+ - Massive extended base */}
-      {tier >= 6 && (
-        <>
-          <Block w={baseWidth + 10} h={4} color={CampfireColors.FIRE_RED} x={(containerWidth - baseWidth - 10) / 2} y={containerHeight - 60} />
-          <Block w={baseWidth + 8} h={4} color={CampfireColors.FIRE_RED} x={(containerWidth - baseWidth - 8) / 2} y={containerHeight - 64} />
-        </>
-      )}
-
-      {/* Streak number overlay */}
-      <Text style={{
-        position: "absolute",
-        color: "#2A0800",
-        ...Typography.heading1,
-        fontSize: tier >= 5 ? 18 : tier >= 3 ? 22 : tier >= 2 ? 26 : 30,
-        textAlign: "center",
-        top: containerHeight / 2 - 8,
-        textShadowColor: CampfireColors.FIRE_YELLOW,
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 6,
-      }}>
-        {streak}
-      </Text>
-    </View>
-  );
-}
 
 // Stump button component
 function PixelStump({ size = 50, label, onPress, icon }: { size?: number; label?: string; onPress?: () => void; icon?: React.ReactNode }) {
@@ -614,9 +515,9 @@ export default function HomeGroupsScreen() {
 
                         {/* Mini avatar row */}
                         {avatars.length > 0 && (
-                          <View style={{ flexDirection: "row", marginTop: 6, flexWrap: "wrap" }}>
+                          <View style={{ flexDirection: "row", marginTop: 6, flexWrap: "wrap", gap: 6 }}>
                             {avatars.map((avatar: any, i: number) => (
-                              <View key={i} style={{ marginLeft: i > 0 ? -6 : 0, zIndex: avatars.length - i }}>
+                              <View key={i}>
                                 <PixelCharacter config={avatar ?? DEFAULT_CHARACTER} size={16} />
                               </View>
                             ))}

@@ -23,6 +23,7 @@ import { DetailedPineTree, DetailedGrass } from "../../../components/PixelArt";
 import { AnimatedLogo } from "../../../components/AnimatedLogo";
 import { WeatherBackground } from "../../../components/WeatherBackground";
 import { PixelTitle } from "../../../components/PixelTitle";
+import { FireStreakBadge } from "../../../components/FireStreakBadge";
 import type { GroupStatus, GroupPrompt, MemeGameState } from "../../../lib/types/prompts";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -841,93 +842,6 @@ function StreakLogs({ streak }: { streak: number }) {
   return <>{logs}</>;
 }
 
-// Fire badge with number inside the flame
-function FireStreakBadge({ streak }: { streak: number }) {
-  if (streak === 0) return null;
-
-  return (
-    <View style={{
-      marginLeft: 10,
-      width: 28,
-      height: 32,
-      alignItems: 'center',
-      justifyContent: 'center',
-    }}>
-      {/* Fire shape - outer glow */}
-      <View style={{
-        position: 'absolute',
-        width: 26,
-        height: 30,
-        backgroundColor: 'rgba(255, 100, 50, 0.3)',
-        borderRadius: 13,
-        transform: [{ scaleY: 1.2 }],
-      }} />
-
-      {/* Main flame body */}
-      <View style={{
-        position: 'absolute',
-        bottom: 0,
-        width: 22,
-        height: 26,
-        backgroundColor: '#FF6B35',
-        borderTopLeftRadius: 11,
-        borderTopRightRadius: 11,
-        borderBottomLeftRadius: 8,
-        borderBottomRightRadius: 8,
-      }} />
-
-      {/* Flame tip (top) */}
-      <View style={{
-        position: 'absolute',
-        top: 0,
-        width: 12,
-        height: 14,
-        backgroundColor: '#FF4500',
-        borderRadius: 6,
-        transform: [{ scaleY: 1.3 }],
-      }} />
-
-      {/* Inner flame (yellow/orange) */}
-      <View style={{
-        position: 'absolute',
-        bottom: 2,
-        width: 14,
-        height: 16,
-        backgroundColor: '#FFD93D',
-        borderTopLeftRadius: 7,
-        borderTopRightRadius: 7,
-        borderBottomLeftRadius: 5,
-        borderBottomRightRadius: 5,
-      }} />
-
-      {/* Inner flame tip */}
-      <View style={{
-        position: 'absolute',
-        top: 6,
-        width: 8,
-        height: 10,
-        backgroundColor: '#FFF3B0',
-        borderRadius: 4,
-        transform: [{ scaleY: 1.2 }],
-      }} />
-
-      {/* Number - centered in flame */}
-      <Text style={{
-        position: 'absolute',
-        color: '#7C2D12',
-        fontWeight: '900',
-        fontSize: streak >= 100 ? 10 : streak >= 10 ? 12 : 14,
-        textAlign: 'center',
-        top: 10,
-        textShadowColor: 'rgba(255, 200, 100, 0.8)',
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 2,
-      }}>
-        {streak}
-      </Text>
-    </View>
-  );
-}
 
 // Wrapper that loads user profile and shows walking character
 function UserWalkingCharacter({ onPositionChange }: { onPositionChange?: (x: number, facingRight: boolean) => void }) {
