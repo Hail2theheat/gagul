@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useMemo, useState } from 'react';
 import { View, Animated, Dimensions } from 'react-native';
 import { CampfireColors } from '../constants/theme';
 import { SwayingTree } from './sky/SwayingTree';
+import { DetailedPineTree } from './PixelArt';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -461,9 +462,11 @@ export function WeatherBackground({ children }: WeatherBackgroundProps) {
 
       {/* Trees */}
       {trees.map((tree, i) => (
-        <SwayingTree key={i} height={tree.height} shade={tree.shade} stagger={i * 0.05}>
-          <PineTree x={tree.x} height={tree.height} shade={tree.shade} />
-        </SwayingTree>
+        <View key={i} style={{ position: 'absolute', left: tree.x, bottom: 0, zIndex: 10 }}>
+          <SwayingTree height={tree.height} shade={tree.shade} stagger={i * 0.05}>
+            <DetailedPineTree height={tree.height} shade={tree.shade} />
+          </SwayingTree>
+        </View>
       ))}
 
       {/* Roosting owl */}
