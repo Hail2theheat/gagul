@@ -2,10 +2,12 @@
 
 import React, { useEffect, useRef, useMemo, useState } from 'react';
 import { View, Animated, Dimensions } from 'react-native';
+import { CampfireColors } from '../constants/theme';
+import { SwayingTree } from './sky/SwayingTree';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-const BG = "#0B1026";
+const BG = CampfireColors.BG;
 
 interface WeatherBackgroundProps {
   children?: React.ReactNode;
@@ -459,7 +461,9 @@ export function WeatherBackground({ children }: WeatherBackgroundProps) {
 
       {/* Trees */}
       {trees.map((tree, i) => (
-        <PineTree key={i} x={tree.x} height={tree.height} shade={tree.shade} />
+        <SwayingTree key={i} height={tree.height} shade={tree.shade} stagger={i * 0.05}>
+          <PineTree x={tree.x} height={tree.height} shade={tree.shade} />
+        </SwayingTree>
       ))}
 
       {/* Roosting owl */}

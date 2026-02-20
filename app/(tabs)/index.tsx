@@ -17,7 +17,7 @@ import Animated, { FadeInDown, FadeIn, SlideInUp, SlideOutDown, useSharedValue, 
 import * as Clipboard from "expo-clipboard";
 
 import { useMyGroups, useCreateGroup, useJoinGroup, GroupRow } from "../../lib/hooks/useMyGroups";
-import { DetailedCampfire, SmallFireIcon } from "../../components/PixelArt";
+import { AnimatedLogo } from "../../components/AnimatedLogo";
 import { PixelCharacter, DEFAULT_CHARACTER } from "../../components/PixelCharacter";
 import { PixelLake, LakeCreatures } from "../../components/PixelLake";
 import { NightSky, ForestGround } from "../../components/sky";
@@ -62,7 +62,7 @@ function PixelCompassIcon({ size = 18 }: { size?: number }) {
   return (
     <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
       <View style={{ width: size * 0.8, height: size * 0.8, borderRadius: size * 0.4, borderWidth: 1.5, borderColor: TEXT_WARM, alignItems: "center", justifyContent: "center" }}>
-        <View style={{ width: 0, height: 0, borderLeftWidth: size * 0.12, borderRightWidth: size * 0.12, borderBottomWidth: size * 0.3, borderLeftColor: "transparent", borderRightColor: "transparent", borderBottomColor: "#FF6B35", transform: [{ rotate: "-30deg" }] }} />
+        <View style={{ width: 0, height: 0, borderLeftWidth: size * 0.12, borderRightWidth: size * 0.12, borderBottomWidth: size * 0.3, borderLeftColor: "transparent", borderRightColor: "transparent", borderBottomColor: CampfireColors.FIRE_ORANGE, transform: [{ rotate: "-30deg" }] }} />
         <View style={{ width: size * 0.08, height: size * 0.08, backgroundColor: TEXT_WARM, borderRadius: size * 0.04, position: "absolute" }} />
       </View>
     </View>
@@ -200,57 +200,100 @@ function PixelShareIcon({ size = 20 }: { size?: number }) {
   );
 }
 
-// Fire streak badge (3x size for prominent display)
+// Pixel art fire streak badge with 6 size tiers
 function FireStreakBadge({ streak }: { streak: number }) {
   if (streak === 0) return null;
 
+  // Determine tier based on streak count
+  // Tier 1: 1-5, Tier 2: 6-10, Tier 3: 11-20, Tier 4: 21-49, Tier 5: 50-99, Tier 6: 100+
+  const tier =
+    streak >= 100 ? 6 :
+    streak >= 50 ? 5 :
+    streak >= 21 ? 4 :
+    streak >= 11 ? 3 :
+    streak >= 6 ? 2 : 1;
+
+  // Base size scales with tier (each tier adds a ring/layer)
+  const baseWidth = 10 + (tier - 1) * 6;  // 10, 16, 22, 28, 34, 40
+  const baseHeight = 12 + (tier - 1) * 8; // 12, 20, 28, 36, 44, 52
+
+  // Pixel block helper - hard edges, grid-based
+  const Block = ({ w, h, color, x = 0, y = 0 }: { w: number; h: number; color: string; x?: number; y?: number }) => (
+    <View style={{
+      position: "absolute",
+      left: x,
+      top: y,
+      width: w,
+      height: h,
+      backgroundColor: color,
+    }} />
+  );
+
+  // Container size based on tier
+  const containerWidth = baseWidth + 20;
+  const containerHeight = baseHeight + 30;
+
   return (
-    <View style={{ width: 90, height: 102, alignItems: "center", justifyContent: "center" }}>
-      <View style={{
-        position: "absolute",
-        width: 84, height: 96,
-        backgroundColor: "rgba(255, 107, 53, 0.25)",
-        borderRadius: 42,
-        transform: [{ scaleY: 1.1 }],
-      }} />
-      <View style={{
-        position: "absolute", bottom: 0,
-        width: 66, height: 84,
-        backgroundColor: CampfireColors.FIRE_RED,
-        borderTopLeftRadius: 33, borderTopRightRadius: 33,
-        borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
-      }} />
-      <View style={{
-        position: "absolute", bottom: 3,
-        width: 54, height: 66,
-        backgroundColor: CampfireColors.FIRE_ORANGE,
-        borderTopLeftRadius: 27, borderTopRightRadius: 27,
-        borderBottomLeftRadius: 18, borderBottomRightRadius: 18,
-      }} />
-      <View style={{
-        position: "absolute", bottom: 6,
-        width: 42, height: 48,
-        backgroundColor: CampfireColors.FIRE_YELLOW,
-        borderTopLeftRadius: 21, borderTopRightRadius: 21,
-        borderBottomLeftRadius: 12, borderBottomRightRadius: 12,
-      }} />
-      <View style={{
-        position: "absolute", bottom: 12,
-        width: 24, height: 24,
-        backgroundColor: CampfireColors.FIRE_CORE,
-        borderTopLeftRadius: 12, borderTopRightRadius: 12,
-        borderBottomLeftRadius: 6, borderBottomRightRadius: 6,
-      }} />
+    <View style={{ width: containerWidth, height: containerHeight, alignItems: "center", justifyContent: "flex-end" }}>
+      {/* Tier 1 - Core (white hot center) - smallest flame */}
+      <Block w={baseWidth} h={4} color={CampfireColors.FIRE_CORE} x={(containerWidth - baseWidth) / 2} y={containerHeight - 4} />
+      <Block w={baseWidth - 2} h={4} color={CampfireColors.FIRE_CORE} x={(containerWidth - baseWidth + 2) / 2} y={containerHeight - 8} />
+      <Block w={baseWidth - 4} h={4} color={CampfireColors.FIRE_CORE} x={(containerWidth - baseWidth + 4) / 2} y={containerHeight - 12} />
+
+      {/* Tier 2+ - Yellow tips layer */}
+      {tier >= 2 && (
+        <>
+          <Block w={baseWidth + 2} h={4} color={CampfireColors.FIRE_YELLOW} x={(containerWidth - baseWidth - 2) / 2} y={containerHeight - 16} />
+          <Block w={baseWidth} h={4} color={CampfireColors.FIRE_YELLOW} x={(containerWidth - baseWidth) / 2} y={containerHeight - 20} />
+          <Block w={baseWidth - 2} h={4} color={CampfireColors.FIRE_YELLOW} x={(containerWidth - baseWidth + 2) / 2} y={containerHeight - 24} />
+        </>
+      )}
+
+      {/* Tier 3+ - Orange mid layer */}
+      {tier >= 3 && (
+        <>
+          <Block w={baseWidth + 4} h={4} color={CampfireColors.FIRE_ORANGE} x={(containerWidth - baseWidth - 4) / 2} y={containerHeight - 28} />
+          <Block w={baseWidth + 2} h={4} color={CampfireColors.FIRE_ORANGE} x={(containerWidth - baseWidth - 2) / 2} y={containerHeight - 32} />
+          <Block w={baseWidth} h={4} color={CampfireColors.FIRE_ORANGE} x={(containerWidth - baseWidth) / 2} y={containerHeight - 36} />
+        </>
+      )}
+
+      {/* Tier 4+ - Red base layer */}
+      {tier >= 4 && (
+        <>
+          <Block w={baseWidth + 6} h={4} color={CampfireColors.FIRE_RED} x={(containerWidth - baseWidth - 6) / 2} y={containerHeight - 40} />
+          <Block w={baseWidth + 4} h={4} color={CampfireColors.FIRE_RED} x={(containerWidth - baseWidth - 4) / 2} y={containerHeight - 44} />
+          <Block w={baseWidth + 2} h={4} color={CampfireColors.FIRE_RED} x={(containerWidth - baseWidth - 2) / 2} y={containerHeight - 48} />
+        </>
+      )}
+
+      {/* Tier 5+ - Extended red base */}
+      {tier >= 5 && (
+        <>
+          <Block w={baseWidth + 8} h={4} color={CampfireColors.FIRE_RED} x={(containerWidth - baseWidth - 8) / 2} y={containerHeight - 52} />
+          <Block w={baseWidth + 6} h={4} color={CampfireColors.FIRE_RED} x={(containerWidth - baseWidth - 6) / 2} y={containerHeight - 56} />
+        </>
+      )}
+
+      {/* Tier 6+ - Massive extended base */}
+      {tier >= 6 && (
+        <>
+          <Block w={baseWidth + 10} h={4} color={CampfireColors.FIRE_RED} x={(containerWidth - baseWidth - 10) / 2} y={containerHeight - 60} />
+          <Block w={baseWidth + 8} h={4} color={CampfireColors.FIRE_RED} x={(containerWidth - baseWidth - 8) / 2} y={containerHeight - 64} />
+        </>
+      )}
+
+      {/* Streak number overlay */}
       <Text style={{
         position: "absolute",
-        color: "#4A1508",
+        color: "#2A0800",
         ...Typography.heading1,
-        fontSize: streak >= 100 ? 22 : streak >= 10 ? 28 : 34,
+        fontSize: tier >= 5 ? 18 : tier >= 3 ? 22 : tier >= 2 ? 26 : 30,
         textAlign: "center",
-        top: 48,
-        textShadowColor: "rgba(255, 220, 120, 0.8)",
+        top: containerHeight / 2 - 8,
+        textShadowColor: CampfireColors.FIRE_YELLOW,
         textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 4,
+        textShadowRadius: 6,
       }}>
         {streak}
       </Text>
@@ -260,80 +303,108 @@ function FireStreakBadge({ streak }: { streak: number }) {
 
 // Stump button component
 function PixelStump({ size = 50, label, onPress, icon }: { size?: number; label?: string; onPress?: () => void; icon?: React.ReactNode }) {
-  const w = size * 1.55;
-  const topH = size * 0.46;
-  const barkH = size * 0.42;
+  const scale = size / 50;
   const pressScale = useSharedValue(1);
 
   const animatedPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pressScale.value }],
   }));
 
+  // Pixel block helper - hard edges, grid-based
+  const Block = ({ w, h, color, x = 0, y = 0 }: { w: number; h: number; color: string; x?: number; y?: number }) => (
+    <View style={{
+      position: "absolute",
+      left: x * scale,
+      top: y * scale,
+      width: w * scale,
+      height: h * scale,
+      backgroundColor: color,
+    }} />
+  );
+
   const content = (
-    <Animated.View style={[{ alignItems: "center", width: w + 10 }, onPress ? animatedPressStyle : undefined]}>
-      {/* Warm glow under stump */}
-      <View style={{
-        position: "absolute", bottom: -4, left: "50%", marginLeft: -(w * 0.6),
-        width: w * 1.2, height: size * 0.18,
-        borderRadius: w * 0.6,
-        backgroundColor: "#FF6B35",
-        opacity: 0.15,
-      }} />
-      <View style={{
-        width: w, height: topH,
-        borderRadius: w / 2,
-        backgroundColor: "#D4A040",
-        overflow: "hidden",
-        zIndex: 3,
-        alignItems: "center",
-        justifyContent: "center",
-      }}>
-        <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: topH * 0.5, backgroundColor: "#E8C060", borderTopLeftRadius: w / 2, borderTopRightRadius: w / 2 }} />
-        <View style={{ position: "absolute", width: w * 0.5, height: topH * 0.6, borderRadius: w * 0.25, backgroundColor: "#F0D070", opacity: 0.6 }} />
-        <View style={{ position: "absolute", width: w * 0.85, height: topH * 0.78, borderRadius: w * 0.42, borderWidth: 1.5, borderColor: "#B88830", backgroundColor: "transparent" }} />
-        <View style={{ position: "absolute", width: w * 0.65, height: topH * 0.58, borderRadius: w * 0.32, borderWidth: 1.3, borderColor: "#C09838", backgroundColor: "transparent" }} />
-        <View style={{ position: "absolute", width: w * 0.45, height: topH * 0.4, borderRadius: w * 0.22, borderWidth: 1, borderColor: "#C8A040", backgroundColor: "transparent" }} />
-        <View style={{ position: "absolute", width: w * 0.25, height: topH * 0.24, borderRadius: w * 0.12, borderWidth: 0.8, borderColor: "#D0A848", backgroundColor: "transparent" }} />
-        <View style={{ position: "absolute", width: w * 0.08, height: topH * 0.12, borderRadius: w * 0.04, backgroundColor: "#E8C060" }} />
-        <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: topH * 0.25, backgroundColor: "rgba(100, 60, 10, 0.2)", borderBottomLeftRadius: w / 2, borderBottomRightRadius: w / 2 }} />
+    <Animated.View style={[{ alignItems: "center", width: 80 * scale, position: "relative" }, onPress ? animatedPressStyle : undefined]}>
+      <View style={{ width: 72 * scale, height: 60 * scale, position: "relative" }}>
+        {/* Stump top (cut surface) - pixel octagon approximating circle */}
+
+        {/* Top surface base - very light wood */}
+        <Block w={40} h={4} color="#E8C888" x={16} y={0} />
+        <Block w={48} h={4} color="#E8C888" x={12} y={4} />
+        <Block w={56} h={4} color="#E8C888" x={8} y={8} />
+        <Block w={60} h={8} color="#E8C888" x={6} y={12} />
+        <Block w={60} h={4} color="#E8C888" x={6} y={20} />
+
+        {/* Tree rings - concentric pixel patterns */}
+        {/* Outer ring - medium */}
+        <Block w={36} h={2} color="#A87840" x={18} y={2} />
+        <Block w={44} h={2} color="#A87840" x={14} y={6} />
+        <Block w={52} h={2} color="#A87840" x={10} y={10} />
+        <Block w={56} h={2} color="#A87840" x={8} y={14} />
+        <Block w={52} h={2} color="#A87840" x={10} y={18} />
+
+        {/* Middle ring - darker */}
+        <Block w={28} h={2} color="#8B6030" x={22} y={8} />
+        <Block w={36} h={2} color="#8B6030" x={18} y={12} />
+        <Block w={36} h={2} color="#8B6030" x={18} y={16} />
+
+        {/* Center - dark core */}
+        <Block w={20} h={2} color="#5C4020" x={26} y={12} />
+        <Block w={16} h={2} color="#5C4020" x={28} y={14} />
+
+        {/* Bark sides - vertical strips */}
+        {/* Left bark */}
+        <Block w={8} h={36} color={CampfireColors.LOG_DARK} x={0} y={24} />
+        <Block w={4} h={36} color="#3A2010" x={8} y={24} />
+
+        {/* Front bark - main body */}
+        <Block w={56} h={36} color={CampfireColors.LOG_MID} x={12} y={24} />
+
+        {/* Right bark */}
+        <Block w={4} h={36} color={CampfireColors.LOG_LIGHT} x={60} y={24} />
+        <Block w={8} h={36} color="#2A1808" x={64} y={24} />
+
+        {/* Bark texture - vertical grain lines (2px wide blocks) */}
+        <Block w={2} h={32} color="#3A2010" x={14} y={26} />
+        <Block w={2} h={28} color="#3A2010" x={24} y={28} />
+        <Block w={2} h={30} color="#3A2010" x={34} y={27} />
+        <Block w={2} h={26} color="#3A2010" x={44} y={30} />
+        <Block w={2} h={32} color="#3A2010" x={54} y={26} />
+
+        {/* Bark knots - darker spots */}
+        <Block w={6} h={6} color="#2A1808" x={18} y={32} />
+        <Block w={4} h={4} color="#2A1808" x={48} y={38} />
+
+        {/* Shadow at base */}
+        <Block w={72} h={4} color="rgba(0,0,0,0.3)" x={0} y={56} />
+
+        {/* Label overlay */}
         {label && (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 4, zIndex: 10 }}>
-            {icon}
-            <Text style={{
-              color: "#3D1A00",
-              fontSize: size * 0.28,
-              fontFamily: "Paaxel",
-              textShadowColor: "rgba(255, 245, 220, 0.9)",
-              textShadowOffset: { width: 0, height: 0 },
-              textShadowRadius: 3,
-            }}>{label}</Text>
+          <View style={{
+            position: "absolute",
+            top: 4 * scale,
+            left: 0,
+            right: 0,
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 10
+          }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              {icon}
+              <Text style={{
+                color: "#2A1808",
+                fontSize: size * 0.28,
+                fontFamily: "Paaxel",
+                textShadowColor: "rgba(255, 245, 220, 0.9)",
+                textShadowOffset: { width: 0, height: 0 },
+                textShadowRadius: 3,
+              }}>{label}</Text>
+            </View>
           </View>
         )}
       </View>
-      <View style={{ width: w * 1.02, height: size * 0.06, borderRadius: w / 2, backgroundColor: "#4A2810", marginTop: -2, zIndex: 2 }} />
-      <View style={{
-        width: w * 0.98, height: barkH,
-        backgroundColor: "#5C3820",
-        borderBottomLeftRadius: size * 0.15,
-        borderBottomRightRadius: size * 0.15,
-        overflow: "hidden",
-        marginTop: -1,
-        zIndex: 1,
-      }}>
-        <View style={{ position: "absolute", top: 0, left: 0, width: w * 0.28, height: barkH, backgroundColor: "#7A5030", borderBottomLeftRadius: size * 0.15 }} />
-        <View style={{ position: "absolute", top: 0, right: 0, width: w * 0.22, height: barkH, backgroundColor: "#3A1C08", borderBottomRightRadius: size * 0.15 }} />
-        <View style={{ position: "absolute", left: w * 0.12, top: 0, width: 1.5, height: barkH * 0.9, backgroundColor: "#30180A" }} />
-        <View style={{ position: "absolute", left: w * 0.32, top: 3, width: 1, height: barkH * 0.6, backgroundColor: "#3A1C08" }} />
-        <View style={{ position: "absolute", left: w * 0.52, top: 1, width: 1.5, height: barkH * 0.8, backgroundColor: "#30180A" }} />
-        <View style={{ position: "absolute", left: w * 0.72, top: 2, width: 1, height: barkH * 0.65, backgroundColor: "#3A1C08" }} />
-        <View style={{ position: "absolute", left: w * 0.88, top: 0, width: 1, height: barkH * 0.5, backgroundColor: "#30180A" }} />
-        <View style={{ position: "absolute", top: barkH * 0.15, left: w * 0.18, width: w * 0.15, height: barkH * 0.3, backgroundColor: "#8B6838", borderRadius: size * 0.06 }} />
-        <View style={{ position: "absolute", top: barkH * 0.4, left: w * 0.55, width: w * 0.12, height: barkH * 0.25, backgroundColor: "#7A5830", borderRadius: size * 0.05 }} />
-        <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: barkH * 0.3, backgroundColor: "rgba(20, 10, 0, 0.25)", borderBottomLeftRadius: size * 0.15, borderBottomRightRadius: size * 0.15 }} />
-      </View>
-      <View style={{ width: w * 1.08, height: size * 0.08, borderRadius: w / 2, backgroundColor: "rgba(20, 10, 0, 0.4)", marginTop: -2, zIndex: 0 }} />
     </Animated.View>
   );
+
   if (onPress) return (
     <Pressable
       onPressIn={() => { pressScale.value = withTiming(0.95, { duration: 80 }); }}
@@ -475,7 +546,7 @@ export default function HomeGroupsScreen() {
 
       {/* Campfire */}
       <View style={{ position: "absolute", bottom: 8, left: "50%", marginLeft: -60, zIndex: 3 }}>
-        <DetailedCampfire size={120} />
+        <AnimatedLogo size={120} />
       </View>
 
       {/* ===== MAIN SCROLLVIEW ===== */}
@@ -485,12 +556,12 @@ export default function HomeGroupsScreen() {
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} tintColor={MUTED} />}
       >
         {/* Title with pixel fire */}
-        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
-          <SmallFireIcon size={24} />
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
+          <AnimatedLogo size={24} />
           <View style={{ width: 8 }} />
           <PixelTitle fontSize={22}>Your Circles</PixelTitle>
         </View>
-        <Text style={{ color: MUTED, marginBottom: 16, letterSpacing: 0.3, ...Typography.body, fontSize: 13 }}>
+        <Text style={{ color: MUTED, marginBottom: 16, letterSpacing: 0.3, ...Typography.body, fontSize: 13, textAlign: "center" }}>
           Gather 'round the fire with friends
         </Text>
 
@@ -543,26 +614,12 @@ export default function HomeGroupsScreen() {
 
                         {/* Mini avatar row */}
                         {avatars.length > 0 && (
-                          <View style={{ flexDirection: "row", marginTop: 6 }}>
-                            {avatars.slice(0, 4).map((avatar: any, i: number) => (
-                              <View key={i} style={{ marginLeft: i > 0 ? -6 : 0, zIndex: 4 - i }}>
+                          <View style={{ flexDirection: "row", marginTop: 6, flexWrap: "wrap" }}>
+                            {avatars.map((avatar: any, i: number) => (
+                              <View key={i} style={{ marginLeft: i > 0 ? -6 : 0, zIndex: avatars.length - i }}>
                                 <PixelCharacter config={avatar ?? DEFAULT_CHARACTER} size={16} />
                               </View>
                             ))}
-                            {memberCount > 4 && (
-                              <View style={{
-                                marginLeft: -4,
-                                width: 16, height: 16,
-                                borderRadius: 8,
-                                backgroundColor: "rgba(255, 255, 255, 0.1)",
-                                alignItems: "center",
-                                justifyContent: "center",
-                              }}>
-                                <Text style={{ color: MUTED, fontSize: 11, fontFamily: "Paaxel" }}>
-                                  +{memberCount - 4}
-                                </Text>
-                              </View>
-                            )}
                           </View>
                         )}
 

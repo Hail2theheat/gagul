@@ -10,15 +10,20 @@ import { recordPromptView, getMemberPromptStatuses } from "../../../lib/services
 import { getFiresideProgress } from "../../../lib/services/firesideService";
 import { QuiplashCard } from "../../../components/prompts/QuiplashCard";
 import { QuiplashVotingCard } from "../../../components/prompts/QuiplashVotingCard";
+import { CaptionVotingCard } from "../../../components/prompts/CaptionVotingCard";
+import { MemePhotoUploadCard } from "../../../components/prompts/MemePhotoUploadCard";
+import { MemeCaptionCard } from "../../../components/prompts/MemeCaptionCard";
 import { TelephoneCard } from "../../../components/prompts/TelephoneCard";
 import { getMyQuiplash, getQuiplashMatchups, QuiplashAssignment, QuiplashMatchup } from "../../../lib/services/quiplashService";
+import { getMemeGameStatus } from "../../../lib/services/memeGameService";
 import { getMyTelephone, TelephoneAssignment } from "../../../lib/services/telephoneService";
 import { PixelCharacter, CharacterConfig, DEFAULT_CHARACTER } from "../../../components/PixelCharacter";
 import { MembersCircleModal } from "../../../components/MembersCircleModal";
-import { DetailedCampfire, DetailedPineTree, DetailedGrass } from "../../../components/PixelArt";
+import { DetailedPineTree, DetailedGrass } from "../../../components/PixelArt";
+import { AnimatedLogo } from "../../../components/AnimatedLogo";
 import { WeatherBackground } from "../../../components/WeatherBackground";
 import { PixelTitle } from "../../../components/PixelTitle";
-import type { GroupStatus, GroupPrompt } from "../../../lib/types/prompts";
+import type { GroupStatus, GroupPrompt, MemeGameState } from "../../../lib/types/prompts";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -65,7 +70,7 @@ class GroupErrorBoundary extends React.Component<
           </Text>
           <Pressable
             onPress={() => this.setState({ hasError: false, error: '' })}
-            style={{ backgroundColor: "#1E4ED8", paddingVertical: 12, paddingHorizontal: 24, borderRadius: 12 }}
+            style={{ backgroundColor: "#FF6B35", paddingVertical: 12, paddingHorizontal: 24, borderRadius: 12 }}
           >
             <Text style={{ color: "#FFF8DC", fontFamily: "Paaxel", fontSize: 15 }}>Try Again</Text>
           </Pressable>
@@ -76,14 +81,16 @@ class GroupErrorBoundary extends React.Component<
   }
 }
 
-const BG = "#0B1026";
-const CARD = "rgba(20, 30, 50, 0.85)";
-const BORDER = "#2a3f5f";
-const TEXT = "#FFF8DC";
-const MUTED = "#B8A88A";
-const BTN = "#1E4ED8";
-const BTN_ORANGE = "#FF6B35";
-const DANGER = "#EF4444";
+import { CampfireColors } from "../../../constants/theme";
+
+const BG = CampfireColors.BG;
+const CARD = CampfireColors.CARD_SOLID;
+const BORDER = CampfireColors.BORDER;
+const TEXT = CampfireColors.TEXT_CREAM;
+const MUTED = CampfireColors.MUTED;
+const BTN = CampfireColors.BTN_PRIMARY;
+const BTN_ORANGE = CampfireColors.BTN_PRIMARY;
+const DANGER = CampfireColors.DANGER;
 
 // Soft glowing text component — now uses pixel two-tone font
 function FireText({ children, style }: { children: React.ReactNode; style?: any }) {
@@ -1086,6 +1093,7 @@ function getSundayState(): SundayState {
 
 // Check if fireside should be visible (Sunday 8 PM EST to Monday 3 AM EST)
 function isFiresideTime(): boolean {
+  if (__DEV__) return true; // DEV: always show fireside button for testing
   return getSundayState() === 'during-fireside';
 }
 
@@ -1170,7 +1178,7 @@ function FiresideEmber({ delay, index }: { delay: number; index: number }) {
 }
 
 // Big exciting fireside button with embers
-function BigFiresideButton({ onPress }: { onPress: () => void }) {
+function BigFiresideButton({ onPress, fireLevel = 2 }: { onPress: () => void; fireLevel?: number }) {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0)).current;
 
@@ -1239,8 +1247,8 @@ function BigFiresideButton({ onPress }: { onPress: () => void }) {
             shadowRadius: 20,
           }}
         >
-          {/* Big campfire */}
-          <DetailedCampfire size={100} showSmoke={false} />
+          {/* Big campfire — scales with group streak level */}
+          <AnimatedLogo size={100} />
 
           <Text
             style={{
@@ -1306,15 +1314,17 @@ function GroupScreenInner() {
   const [groupCode, setGroupCode] = useState<string | null>(null);
   const [groupCreatedAt, setGroupCreatedAt] = useState<string | null>(null);
   const [groupStreak, setGroupStreak] = useState<number>(0);
+  const [fireLevel, setFireLevel] = useState<number>(2);
   const [memberCount, setMemberCount] = useState<number>(0);
   const [userStreak, setUserStreak] = useState<number>(0);
   const [myAvatar, setMyAvatar] = useState<CharacterConfig | null>(null);
-  const [allMembers, setAllMembers] = useState<Array<{ user_id: string; avatar_config: CharacterConfig | null; username: string | null }>>([]);
+  const [allMembers, setAllMembers] = useState<Array<{ user_id: string; avatar_config: CharacterConfig | null; username: string | null; weekly_crown_until: string | null }>>([]);
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [memberStatuses, setMemberStatuses] = useState<Record<string, 'not_seen' | 'seen' | 'responded'>>({});
   const [firesideProgress, setFiresideProgress] = useState<Record<string, 'completed' | 'partial' | 'not_started'>>({});
   const [quiplashAssignment, setQuiplashAssignment] = useState<QuiplashAssignment | null>(null);
   const [pendingQuiplashVotes, setPendingQuiplashVotes] = useState<QuiplashMatchup[]>([]);
+  const [memeGameState, setMemeGameState] = useState<MemeGameState | null>(null);
   const [telephoneAssignment, setTelephoneAssignment] = useState<TelephoneAssignment | null>(null);
   const [showFireside, setShowFireside] = useState(isFiresideTime());
   const [sundayState, setSundayState] = useState<SundayState>(getSundayState());
@@ -1505,6 +1515,10 @@ function GroupScreenInner() {
       const votable = matchups.filter(m => m.can_vote && !m.has_voted && m.responses.length >= 2);
       setPendingQuiplashVotes(votable);
 
+      // Load meme game state (What do you Meme)
+      const memeState = await getMemeGameStatus(groupId);
+      setMemeGameState(memeState);
+
       // Load telephone assignment
       const telephone = await getMyTelephone(groupId);
       setTelephoneAssignment(telephone);
@@ -1523,7 +1537,7 @@ function GroupScreenInner() {
       // Load group details including streak
       const { data, error } = await supabase
         .from("groups")
-        .select("name, code, created_at, current_streak")
+        .select("name, code, created_at, current_streak, fire_level")
         .eq("id", groupId)
         .single();
       if (!error && data) {
@@ -1531,6 +1545,7 @@ function GroupScreenInner() {
         setGroupCode(data.code);
         setGroupCreatedAt(data.created_at);
         setGroupStreak(data.current_streak || 0);
+        setFireLevel((data as any).fire_level || 1);
       }
 
       // Load user's individual streak
@@ -1563,7 +1578,7 @@ function GroupScreenInner() {
         const userIds = members.map((m: any) => m.user_id);
         const { data: profiles, error: profilesError } = await supabase
           .from("profiles")
-          .select("id, avatar_config, username")
+          .select("id, avatar_config, username, weekly_crown_until")
           .in("id", userIds);
 
         if (profilesError) {
@@ -1577,6 +1592,7 @@ function GroupScreenInner() {
             user_id: m.user_id,
             avatar_config: profile?.avatar_config as CharacterConfig | null,
             username: (profile as any)?.username as string | null ?? null,
+            weekly_crown_until: (profile as any)?.weekly_crown_until as string | null ?? null,
           };
         });
         setAllMembers(membersWithAvatars);
@@ -1701,6 +1717,10 @@ function GroupScreenInner() {
     loadStatus();
   };
 
+  const handleRated = () => {
+    loadStatus();
+  };
+
   const openRecommendModal = () => {
     setRecStep('type');
     setRecType(null);
@@ -1754,7 +1774,7 @@ function GroupScreenInner() {
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: BG, alignItems: "center", justifyContent: "center" }}>
-        <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Paaxel" }}>Loading...</Text>
+        <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Paaxel" }}>Warming up...</Text>
       </View>
     );
   }
@@ -1794,7 +1814,13 @@ function GroupScreenInner() {
   const showRespondedState = hasResponded && isBeforeMidnight;
 
   // Show empty/responded view when there are no unanswered prompts AND no pending votes
-  const hasPendingVotes = pendingQuiplashVotes.length > 0;
+  // Check if meme game needs user action
+  const hasMemeAction = memeGameState != null && !memeGameState.has_submitted && (
+    (memeGameState.phase === 'photo_upload' && memeGameState.is_uploader) ||
+    (memeGameState.phase === 'captioning' && !memeGameState.is_uploader) ||
+    (memeGameState.phase === 'voting')
+  );
+  const hasPendingVotes = pendingQuiplashVotes.length > 0 || hasMemeAction;
   const shouldShowEmptyOrRespondedView = !loading && !hasUnansweredPrompt && !hasPendingVotes;
 
   if (shouldShowEmptyOrRespondedView) {
@@ -1837,9 +1863,9 @@ function GroupScreenInner() {
                 </FireText>
                 <FireStreakBadge streak={groupStreak} />
               </View>
-              <Pressable onPress={() => setShowMembersModal(true)} hitSlop={10} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 4 }}>
+              <Pressable onPress={() => setShowMembersModal(true)} hitSlop={10} style={{ flexDirection: "row", alignItems: "flex-start", gap: 8, paddingVertical: 4, marginRight: 'auto' }}>
                 {/* Show all member avatars with status dots */}
-                {allMembers.slice(0, 6).map((member, idx) => {
+                {allMembers.map((member, idx) => {
                   const isSunday = sundayState !== 'not-sunday';
                   const hasFiresideData = Object.keys(firesideProgress).length > 0;
                   const hasPromptData = Object.keys(memberStatuses).length > 0;
@@ -1860,19 +1886,21 @@ function GroupScreenInner() {
                   }
 
                   return (
-                    <View key={member.user_id} style={{ marginLeft: idx > 0 ? -6 : 0, zIndex: allMembers.length - idx, alignItems: 'center' }}>
+                    <View key={member.user_id} style={{ position: 'relative' }}>
                       <PixelCharacter
                         config={member.avatar_config || DEFAULT_CHARACTER}
                         size={22}
+                        showWeeklyCrown={!!member.weekly_crown_until && new Date(member.weekly_crown_until) > new Date()}
                       />
                       {(hasPromptData || hasFiresideData) && (
                         <View style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: 4,
+                          position: 'absolute',
+                          bottom: -2,
+                          right: -2,
+                          width: 6,
+                          height: 6,
+                          borderRadius: 3,
                           backgroundColor: dotColor,
-                          marginTop: 1,
-                          zIndex: 999,
                           borderWidth: 1,
                           borderColor: BG,
                         }} />
@@ -1880,11 +1908,6 @@ function GroupScreenInner() {
                     </View>
                   );
                 })}
-                {allMembers.length > 6 && (
-                  <Text style={{ color: MUTED, fontSize: 11, fontFamily: "Paaxel", marginLeft: 4 }}>
-                    +{allMembers.length - 6}
-                  </Text>
-                )}
                 <Text style={{ color: MUTED, fontSize: 12, fontFamily: "Paaxel", opacity: 0.6, marginLeft: 6 }}>
                   {memberCount} {memberCount === 1 ? "member" : "members"}
                 </Text>
@@ -1911,7 +1934,7 @@ function GroupScreenInner() {
           {sundayState === 'pre-fireside' && (
             <Card>
               <View style={{ alignItems: "center", paddingVertical: 30 }}>
-                <DetailedCampfire size={80} showSmoke={false} />
+                <AnimatedLogo size={80} />
                 <Text style={{ color: "#FFD93D", fontSize: 24, fontFamily: "Paaxel", marginTop: 16, textAlign: "center" }}>
                   Fireside is tonight!
                 </Text>
@@ -1926,7 +1949,7 @@ function GroupScreenInner() {
           )}
 
           {sundayState === 'during-fireside' && (
-            <BigFiresideButton onPress={() => router.push(`/group/${groupId}/lowdown`)} />
+            <BigFiresideButton onPress={() => router.push(`/group/${groupId}/lowdown`)} fireLevel={fireLevel} />
           )}
 
           {sundayState === 'post-fireside' && (
@@ -1954,7 +1977,7 @@ function GroupScreenInner() {
                   {showRespondedState ? (
                     <>
                       <View style={{ marginBottom: 8 }}>
-                        <DetailedCampfire size={70} showSmoke={false} />
+                        <AnimatedLogo size={70} />
                       </View>
                       <Text style={{ color: "#4ADE80", fontSize: 22, fontFamily: "Paaxel", marginTop: 8, textAlign: "center" }}>
                         Relax, you already submitted.
@@ -1963,12 +1986,13 @@ function GroupScreenInner() {
                         Go call your mom.
                       </Text>
                       {/* Rating for responded prompt */}
-                      {respondedPromptId && !hasRated && (
+                      {respondedPromptId && (
                         <View style={{ marginTop: 16, width: '100%' }}>
                           <PromptRating
                             promptId={respondedPromptId}
                             hasRated={hasRated}
                             initialRating={userRating}
+                            onRated={handleRated}
                           />
                         </View>
                       )}
@@ -1998,12 +2022,8 @@ function GroupScreenInner() {
                   )}
                 </View>
 
-                <View style={{ marginTop: 16 }}>
-                  <Button title="Refresh" variant="outline" onPress={loadStatus} disabled={loading} />
-                </View>
-
-                <Pressable onPress={openRecommendModal} style={{ marginTop: 12, alignItems: "center" }}>
-                  <Text style={{ color: MUTED, fontSize: 13, fontFamily: "Paaxel", textDecorationLine: "underline" }}>
+                <Pressable onPress={openRecommendModal} style={{ marginTop: 16, alignItems: "center", paddingVertical: 10 }}>
+                  <Text style={{ color: MUTED, fontSize: 15, fontFamily: "Paaxel", textDecorationLine: "underline" }}>
                     Recommend a custom prompt
                   </Text>
                 </Pressable>
@@ -2011,7 +2031,7 @@ function GroupScreenInner() {
 
               {/* Fireside Button - only show during fireside hours (fallback for non-sunday testing) */}
               {showFireside && (
-                <BigFiresideButton onPress={() => router.push(`/group/${groupId}/lowdown`)} />
+                <BigFiresideButton onPress={() => router.push(`/group/${groupId}/lowdown`)} fireLevel={fireLevel} />
               )}
             </>
           )}
@@ -2252,19 +2272,15 @@ function GroupScreenInner() {
             </View>
             <Pressable onPress={() => setShowMembersModal(true)} hitSlop={10} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 4 }}>
               {/* Show all member avatars */}
-              {allMembers.slice(0, 6).map((member, idx) => (
+              {allMembers.map((member, idx) => (
                 <View key={member.user_id} style={{ marginLeft: idx > 0 ? -6 : 0, zIndex: allMembers.length - idx }}>
                   <PixelCharacter
                     config={member.avatar_config || DEFAULT_CHARACTER}
                     size={22}
+                    showWeeklyCrown={!!member.weekly_crown_until && new Date(member.weekly_crown_until) > new Date()}
                   />
                 </View>
               ))}
-              {allMembers.length > 6 && (
-                <Text style={{ color: MUTED, fontSize: 11, marginLeft: 4 }}>
-                  +{allMembers.length - 6}
-                </Text>
-              )}
               <Text style={{ color: MUTED, fontSize: 12, opacity: 0.6, marginLeft: 6 }}>
                 {memberCount} {memberCount === 1 ? "member" : "members"}
               </Text>
@@ -2290,7 +2306,7 @@ function GroupScreenInner() {
         {loading ? (
           <Card>
             <Text style={{ color: TEXT, fontSize: 18, fontFamily: "Paaxel", textAlign: "center" }}>
-              Loading...
+              Warming up...
             </Text>
           </Card>
         ) : (
@@ -2305,6 +2321,7 @@ function GroupScreenInner() {
                 userRating={userRating}
                 onSubmitted={handleSubmitted}
                 onExpired={handleExpired}
+                onRated={handleRated}
               />
             )}
 
@@ -2324,6 +2341,36 @@ function GroupScreenInner() {
               </>
             )}
 
+            {/* What do you Meme — Day 1: Photo upload (uploader only) */}
+            {memeGameState?.phase === 'photo_upload' && memeGameState.is_uploader && !memeGameState.has_submitted && (
+              <>
+                {(hasRegularPrompt || hasUnansweredQuiplash || pendingQuiplashVotes.length > 0) && <View style={{ height: 16 }} />}
+                <MemePhotoUploadCard groupId={groupId} onSubmitted={handleSubmitted} />
+              </>
+            )}
+
+            {/* What do you Meme — Day 2: Caption input (non-uploaders only) */}
+            {memeGameState?.phase === 'captioning' && !memeGameState.is_uploader && !memeGameState.has_submitted && memeGameState.photo_url && memeGameState.caption_group_prompt_id && (
+              <>
+                {(hasRegularPrompt || hasUnansweredQuiplash || pendingQuiplashVotes.length > 0) && <View style={{ height: 16 }} />}
+                <MemeCaptionCard
+                  groupId={groupId}
+                  photoUrl={memeGameState.photo_url}
+                  captionGroupPromptId={memeGameState.caption_group_prompt_id}
+                  uploaderUsername={memeGameState.uploader_username}
+                  onSubmitted={handleSubmitted}
+                />
+              </>
+            )}
+
+            {/* What do you Meme — Day 3: Voting (everyone) */}
+            {memeGameState?.phase === 'voting' && !memeGameState.has_submitted && (
+              <>
+                {(hasRegularPrompt || hasUnansweredQuiplash || pendingQuiplashVotes.length > 0) && <View style={{ height: 16 }} />}
+                <CaptionVotingCard groupId={groupId} onVoted={handleSubmitted} onDismiss={() => setMemeGameState(null)} />
+              </>
+            )}
+
             {/* Telephone game drawing/writing */}
             {hasTelephoneAssignment && telephoneAssignment && (
               <>
@@ -2339,12 +2386,10 @@ function GroupScreenInner() {
         )}
 
         <View style={{ height: 12 }} />
-        <Button title="Refresh" variant="outline" onPress={loadStatus} disabled={loading} />
-
 
         {/* Fireside Button - only show during fireside hours */}
         {showFireside && (
-          <BigFiresideButton onPress={() => router.push(`/group/${groupId}/lowdown`)} />
+          <BigFiresideButton onPress={() => router.push(`/group/${groupId}/lowdown`)} fireLevel={fireLevel} />
         )}
       </ScrollView>
 
