@@ -16,16 +16,35 @@ export function bodyPixels(
     r(5, 26, 1, 8, OUTLINE),
     r(26, 26, 1, 8, OUTLINE),
 
-    // Shirt fill with shading
-    r(6, 26, 8, 2, shirt.highlight),
-    r(14, 26, 12, 2, shirt.base),
-    r(6, 28, 20, 3, shirt.base),
-    r(6, 31, 20, 2, shirt.midtone),
-    r(6, 33, 20, 1, shirt.shadow),
+    // Shirt fill with enhanced shading layers
+    r(6, 26, 8, 2, shirt.highlight),      // Left shoulder highlight
+    r(14, 26, 12, 2, shirt.base),         // Right shoulder
+    r(6, 28, 20, 3, shirt.base),          // Mid-torso
+    r(6, 31, 20, 2, shirt.midtone),       // Lower torso shadow
+    r(6, 33, 20, 1, shirt.shadow),        // Bottom shadow
 
-    // Shoulder shading
-    r(6, 26, 3, 2, shirt.midtone),
-    r(23, 26, 3, 2, shirt.midtone),
+    // Enhanced shoulder shading and depth
+    r(6, 26, 3, 2, shirt.midtone),        // Left shoulder curve
+    r(23, 26, 3, 2, shirt.midtone),       // Right shoulder curve
+    r(8, 27, 2, 1, shirt.base),           // Left shoulder transition
+    r(22, 27, 2, 1, shirt.base),          // Right shoulder transition
+
+    // Collar detail (V-neck or round neck)
+    r(14, 26, 4, 1, shirt.shadow),        // Collar opening top
+    r(14, 27, 1, 1, shirt.shadow),        // Left collar edge
+    r(17, 27, 1, 1, shirt.shadow),        // Right collar edge
+
+    // Center seam/stitching detail
+    r(15, 28, 2, 5, shirt.shadow),        // Vertical center line
+
+    // Fabric wrinkle details for realism
+    r(8, 29, 2, 1, shirt.shadow),         // Left side wrinkle
+    r(22, 29, 2, 1, shirt.shadow),        // Right side wrinkle
+    r(10, 31, 3, 1, shirt.midtone),       // Lower left fold
+    r(19, 31, 3, 1, shirt.midtone),       // Lower right fold
+
+    // Hem stitching at bottom
+    r(8, 33, 16, 1, shirt.midtone),       // Bottom hem line
   ];
 
   switch (shirtStyle) {
@@ -184,6 +203,18 @@ export function bodyPixels(
         r(23, 26, 1, 1, "#FFD700"),
         r(8, 33, 1, 1, "#FFD700"),
         r(23, 33, 1, 1, "#FFD700"),
+      );
+      break;
+    default:
+      // Default tee style - add buttons down center
+      pixels.push(
+        // Button details (3 buttons down center)
+        r(15, 28, 2, 1, "#E8E8E8"),       // Top button
+        r(16, 28, 1, 1, "#F8F8F8"),       // Button highlight
+        r(15, 30, 2, 1, "#E8E8E8"),       // Middle button
+        r(16, 30, 1, 1, "#F8F8F8"),       // Button highlight
+        r(15, 32, 2, 1, "#E8E8E8"),       // Bottom button
+        r(16, 32, 1, 1, "#F8F8F8"),       // Button highlight
       );
       break;
   }
