@@ -16,6 +16,7 @@ import {
 import { CameraView, CameraType, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
 import { Video, ResizeMode } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
+import { CampfireColors } from '../../constants/theme';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -23,14 +24,14 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CAMERA_HEIGHT = Math.min(SCREEN_HEIGHT * 0.45, 400);
 
 const COLORS = {
-  bg: '#0B1026',
-  card: 'rgba(20, 30, 50, 0.85)',
-  border: '#2a3f5f',
-  text: '#FFF8DC',
-  muted: '#B8A88A',
-  accent: '#FF6B35',
-  red: '#EF4444',
-  success: '#4ADE80',
+  bg: CampfireColors.BG,
+  card: CampfireColors.CARD_SOLID,
+  border: CampfireColors.BORDER,
+  text: CampfireColors.TEXT,
+  muted: CampfireColors.MUTED,
+  accent: CampfireColors.BTN_PRIMARY,
+  red: CampfireColors.DANGER,
+  success: CampfireColors.SUCCESS,
 };
 
 const MAX_DURATION = 30000; // 30 seconds max
@@ -134,7 +135,12 @@ export function VideoRecorder({
       }
     } catch (error) {
       console.error('Failed to start recording:', error);
+    } finally {
       setIsRecording(false);
+      if (durationInterval.current) {
+        clearInterval(durationInterval.current);
+        durationInterval.current = null;
+      }
     }
   };
 
@@ -178,7 +184,7 @@ export function VideoRecorder({
   if (!cameraPermission || !micPermission) {
     return (
       <View style={styles.permissionContainer}>
-        <Text style={styles.permissionText}>Loading...</Text>
+        <Text style={styles.permissionText}>Warming up...</Text>
       </View>
     );
   }

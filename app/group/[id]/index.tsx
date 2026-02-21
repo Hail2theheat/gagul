@@ -319,6 +319,8 @@ function WalkingCharacter({ config, onPositionChange }: { config: CharacterConfi
   const directionRef = useRef(true);
   const isSillyRef = useRef(false);
   const currentXRef = useRef(20);
+  const onPositionChangeRef = useRef(onPositionChange);
+  onPositionChangeRef.current = onPositionChange;
 
   // Track if avatar is on a log and adjust height accordingly
   const lastOnLogRef = useRef(false);
@@ -371,9 +373,9 @@ function WalkingCharacter({ config, onPositionChange }: { config: CharacterConfi
 
       // Broadcast position every 500ms to avoid spam
       const now = Date.now();
-      if (onPositionChange && now - lastBroadcastRef.current > 500) {
+      if (onPositionChangeRef.current && now - lastBroadcastRef.current > 500) {
         lastBroadcastRef.current = now;
-        onPositionChange(value, directionRef.current);
+        onPositionChangeRef.current(value, directionRef.current);
       }
     });
 

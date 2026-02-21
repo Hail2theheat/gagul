@@ -3,7 +3,7 @@
  * Shows reaction counts and allows users to react
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import {
   getResponseReactions,
@@ -16,14 +16,15 @@ import {
   DEFAULT_EMOJIS,
 } from '../../lib/services/reactionService';
 import { trackInteraction } from '../../lib/services/metricsService';
+import { CampfireColors } from '../../constants/theme';
 
 const COLORS = {
-  bg: '#0A0A0F',
-  card: '#1A1A2E',
-  border: '#2D2D44',
-  text: '#F5F5F5',
-  muted: '#9CA3AF',
-  accent: '#FF6B35',
+  bg: CampfireColors.BG,
+  card: CampfireColors.CARD_SOLID,
+  border: CampfireColors.BORDER,
+  text: CampfireColors.TEXT,
+  muted: CampfireColors.MUTED,
+  accent: CampfireColors.BTN_PRIMARY,
 };
 
 interface ReactionBarProps {
@@ -38,7 +39,7 @@ export function ReactionBar({ responseId, compact = false, onReact }: ReactionBa
   const [userReaction, setUserReaction] = useState<string | null>(null);
   const [showPicker, setShowPicker] = useState(false);
   const [loading, setLoading] = useState(false);
-  const scaleAnim = useState(new Animated.Value(1))[0];
+  const scaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     loadData();

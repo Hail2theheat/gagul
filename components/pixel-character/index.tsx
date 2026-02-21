@@ -119,12 +119,16 @@ function PixelCharacterInner({ config, size = 80, showWeeklyCrown = false, showT
   // Blink animation — random interval, quick close
   const [blinking, setBlinking] = useState(false);
   const blinkTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const blinkCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    let mounted = true;
     const scheduleBlink = () => {
       blinkTimer.current = setTimeout(() => {
+        if (!mounted) return;
         setBlinking(true);
-        setTimeout(() => {
+        blinkCloseTimer.current = setTimeout(() => {
+          if (!mounted) return;
           setBlinking(false);
           scheduleBlink();
         }, 120);
@@ -132,7 +136,9 @@ function PixelCharacterInner({ config, size = 80, showWeeklyCrown = false, showT
     };
     scheduleBlink();
     return () => {
+      mounted = false;
       if (blinkTimer.current) clearTimeout(blinkTimer.current);
+      if (blinkCloseTimer.current) clearTimeout(blinkCloseTimer.current);
     };
   }, []);
 

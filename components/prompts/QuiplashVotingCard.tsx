@@ -3,7 +3,7 @@
  * Shows matchups and allows users to vote
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import Animated, {
   FadeIn,
@@ -18,6 +18,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
 import { SPRING_SNAPPY } from '../../constants/animations';
+import { CampfireColors } from '../../constants/theme';
 import {
   getQuiplashMatchups,
   submitQuiplashVote,
@@ -25,27 +26,29 @@ import {
 } from '../../lib/services/quiplashService';
 
 const COLORS = {
-  bg: '#0B1026',
-  card: 'rgba(20, 30, 50, 0.85)',
-  border: '#2a3f5f',
-  text: '#FFF8DC',
-  muted: '#B8A88A',
-  accent: '#FF6B35',
+  bg: CampfireColors.BG,
+  card: CampfireColors.CARD_SOLID,
+  border: CampfireColors.BORDER,
+  text: CampfireColors.TEXT,
+  muted: CampfireColors.MUTED,
+  accent: CampfireColors.BTN_PRIMARY,
   purple: '#8B5CF6',
-  green: '#4ADE80',
+  green: CampfireColors.SUCCESS,
   gold: '#FFD700',
 };
 
 interface QuiplashVotingCardProps {
   groupId: string;
   onVoted?: () => void;
+  onDismiss?: () => void;
 }
 
-export function QuiplashVotingCard({ groupId, onVoted }: QuiplashVotingCardProps) {
+export function QuiplashVotingCard({ groupId, onVoted, onDismiss }: QuiplashVotingCardProps) {
   const [loading, setLoading] = useState(true);
   const [matchups, setMatchups] = useState<QuiplashMatchup[]>([]);
   const [currentMatchupIndex, setCurrentMatchupIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
   // All hooks must be called before any early returns
@@ -84,8 +87,9 @@ export function QuiplashVotingCard({ groupId, onVoted }: QuiplashVotingCardProps
 
   const handleVote = async (responseId: string) => {
     const matchup = matchups[currentMatchupIndex];
-    if (!matchup) return;
+    if (!matchup || submittingRef.current) return;
 
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       const result = await submitQuiplashVote(matchup.matchup_id, responseId);
@@ -104,6 +108,7 @@ export function QuiplashVotingCard({ groupId, onVoted }: QuiplashVotingCardProps
     } catch (e: any) {
       setError(e?.message || 'Failed to vote');
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
@@ -124,7 +129,7 @@ export function QuiplashVotingCard({ groupId, onVoted }: QuiplashVotingCardProps
   const currentMatchup = matchups[currentMatchupIndex];
 
   const swipeToVote = (index: number) => {
-    if (submitting || !currentMatchup?.responses[index]) return;
+    if (submittingRef.current || !currentMatchup?.responses[index]) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     handleVote(currentMatchup.responses[index].response_id);
   };
@@ -159,9 +164,21 @@ export function QuiplashVotingCard({ groupId, onVoted }: QuiplashVotingCardProps
         <View style={styles.badge}>
           <Text style={styles.badgeText}>⚔️ QUIPLASH VOTE</Text>
         </View>
-        <Text style={styles.progress}>
-          {currentMatchupIndex + 1} / {matchups.length}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Text style={styles.progress}>
+            {currentMatchupIndex + 1} / {matchups.length}
+          </Text>
+          <Pressable
+            onPress={() => {
+              setMatchups([]);
+              onDismiss?.();
+            }}
+            hitSlop={8}
+            style={styles.dismissButton}
+          >
+            <Text style={styles.dismissText}>✕</Text>
+          </Pressable>
+        </View>
       </Animated.View>
 
       {/* Prompt */}
@@ -260,7 +277,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   errorText: {
-    color: '#EF4444',
+    color: CampfireColors.DANGER,
     textAlign: 'center',
     marginBottom: 12,
     fontSize: 14,
@@ -298,6 +315,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     flex: 1,
     fontStyle: 'italic',
+  },
+  dismissButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dismissText: {
+    color: COLORS.muted,
+    fontSize: 14,
+    fontWeight: '700',
   },
   submittingOverlay: {
     position: 'absolute',

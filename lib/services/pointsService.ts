@@ -9,10 +9,11 @@ export const POINTS = {
   RESPONSE: 3,
   PHOTO_BONUS: 1,
   FIRST_RESPONDER: 1,
-  COMMENT: 1,
-  LIKE_RECEIVED: 1,
+  COMMENT: 2,
+  LIKE_RECEIVED: 2,
   RATING: 1,
   QUIPLASH_WIN: 5,
+  CAPTION_VOTE: 5,
   FIRESIDE: 5,
   PERFECT_WEEK: 10,
   STREAK_BONUS: 1,
@@ -26,6 +27,7 @@ export type PointEventType =
   | 'like_received'
   | 'rating'
   | 'quiplash_win'
+  | 'caption_vote'
   | 'fireside'
   | 'perfect_week'
   | 'streak_bonus';
@@ -46,13 +48,12 @@ export interface PointsSummary {
 
 // Event emitter for point animations
 type PointsListener = (points: number, eventType: PointEventType) => void;
-const listeners: PointsListener[] = [];
+const listeners = new Set<PointsListener>();
 
 export function onPointsAwarded(listener: PointsListener) {
-  listeners.push(listener);
+  listeners.add(listener);
   return () => {
-    const index = listeners.indexOf(listener);
-    if (index > -1) listeners.splice(index, 1);
+    listeners.delete(listener);
   };
 }
 
@@ -96,6 +97,9 @@ export async function awardPoints(
       break;
     case 'quiplash_win':
       points = POINTS.QUIPLASH_WIN;
+      break;
+    case 'caption_vote':
+      points = POINTS.CAPTION_VOTE;
       break;
     case 'fireside':
       points = POINTS.FIRESIDE;
