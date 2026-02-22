@@ -1,4 +1,5 @@
--- Exclude deactivated prompts from fireside data
+-- Fix: is_active != false filters out NULL rows (most prompts).
+-- Use IS DISTINCT FROM to treat NULL as active.
 CREATE OR REPLACE FUNCTION get_fireside_data(p_group_id UUID, p_week_of DATE DEFAULT NULL)
 RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
@@ -8,7 +9,6 @@ DECLARE
   v_winner JSONB;
   v_meme_data JSONB;
 BEGIN
-  -- If no week specified, find the most recent week that has prompts for this group
   IF p_week_of IS NOT NULL THEN
     v_week := p_week_of;
   ELSE
@@ -29,7 +29,6 @@ BEGIN
     END IF;
   END IF;
 
-  -- Get prompts with responses (exclude meme + photo_caption + deactivated from regular list)
   SELECT jsonb_agg(prompt_data ORDER BY scheduled_for) INTO v_prompts
   FROM (
     SELECT gp.scheduled_for, jsonb_build_object(
@@ -92,10 +91,8 @@ BEGIN
     ORDER BY gp.scheduled_for
   ) sub;
 
-  -- Get meme game data for this week
   v_meme_data := get_meme_results(p_group_id, v_week);
 
-  -- Get leaderboard (compute total_points since column doesn't exist)
   v_leaderboard := (SELECT jsonb_agg(lb) FROM (
     SELECT jsonb_build_object(
       'user_id', wp.user_id,
@@ -112,7 +109,6 @@ BEGIN
     ORDER BY (wp.points_answering + wp.points_voting + wp.points_quiplash_wins) DESC
   ) sub2);
 
-  -- Get winner
   v_winner := (
     SELECT jsonb_build_object(
       'user_id', ww.winner_user_id,
