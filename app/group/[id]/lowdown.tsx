@@ -23,7 +23,6 @@ import { Ionicons } from "@expo/vector-icons";
 
 import {
   getFiresideData,
-  isFiresideUnlocked,
   getComments,
   getCommentCounts,
   updateFiresideProgress,
@@ -32,6 +31,7 @@ import {
   getQuiplashVoters,
   finalizeWeek,
   winnerChoosePrompt,
+  addComment,
   FiresideData,
   FiresidePrompt,
   FiresideComment,
@@ -43,7 +43,7 @@ import { awardPoints } from "../../../lib/services/pointsService";
 import { supabase } from "../../../lib/supabase";
 import { MultipleChoiceResults } from "../../../components/prompts/MultipleChoiceResults";
 import { FiresideReactions } from "../../../components/prompts/FiresideReactions";
-import { CommentSheet } from "../../../components/prompts/CommentSheet";
+// CommentSheet removed — comments now float inline via FiresideReactions
 import { AudioPlayer } from "../../../components/prompts/AudioPlayer";
 import { VideoPlayer } from "../../../components/prompts/VideoPlayer";
 import { trackViewStart, trackViewEnd } from "../../../lib/services/metricsService";
@@ -355,7 +355,6 @@ export default function LowdownScreen() {
   const [comments, setComments] = useState<FiresideComment[]>([]);
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
   const [signedPhotoUrl, setSignedPhotoUrl] = useState<string | null>(null);
-  const [showCommentSheet, setShowCommentSheet] = useState(false);
   const [quiplashVoters, setQuiplashVoters] = useState<QuiplashVoter[]>([]);
   const [showCustomPrompt, setShowCustomPrompt] = useState(false);
   const [customPromptText, setCustomPromptText] = useState("");
@@ -537,8 +536,7 @@ export default function LowdownScreen() {
         setCurrentUserId(userData.user.id);
       }
 
-      // For testing, skip the unlock check
-      // In production: if (!isFiresideUnlocked()) { setScreenState("locked"); return; }
+      // Fireside is open to all group members — no response requirement
 
       // Finalize the week (idempotent - safe to call multiple times)
       await finalizeWeek(groupId);
@@ -700,6 +698,14 @@ export default function LowdownScreen() {
       return;
     }
 
+    // Text-only prompts: show all responses at once, skip per-response cycling
+    const hasMedia = responses.some(r => r.media_url);
+    const isTextOnly = !hasMedia && !isQuizOrMC && !isQuiplash && !isMemeGame;
+    if (isTextOnly && currentResponseIndex >= 0) {
+      goToNextPrompt();
+      return;
+    }
+
     // Showing responses - move to next or next prompt (never for quiplash/meme_game)
     if (!isQuiplash && !isMemeGame && currentResponseIndex < responses.length - 1) {
       setCurrentResponseIndex(currentResponseIndex + 1);
@@ -753,6 +759,14 @@ export default function LowdownScreen() {
         return;
       }
       // revealStep is 0, go to previous prompt (handled below)
+    }
+
+    // Text-only prompts: go straight back to prompt view (skip per-response)
+    const hasMedia = responses.some(r => r.media_url);
+    const isTextOnly = !hasMedia && !isQuizOrMC && !isQuiplash && !isMemeGame;
+    if (isTextOnly && currentResponseIndex >= 0) {
+      setCurrentResponseIndex(-1);
+      return;
     }
 
     // If showing responses (not for quiplash/meme_game), go to previous response or back to prompt
@@ -1371,6 +1385,8 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
   const isQuizOrMC = ["quiz", "multiple_choice"].includes(currentPrompt.type);
   const isQuiplash = currentPrompt.type === "quiplash";
   const isMemeGame = currentPrompt.type === "meme_game";
+  const hasMedia = responses.some(r => r.media_url);
+  const isTextOnly = !hasMedia && !isQuizOrMC && !isQuiplash && !isMemeGame;
 
   // Helper to determine media type
   const getMediaType = (promptType: string, mediaUrl?: string): 'photo' | 'video' | 'audio' | null => {
@@ -1846,8 +1862,29 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
               </View>
             )}
           </View>
+        ) : !isQuiplash && !isMemeGame && isTextOnly && currentResponseIndex >= 0 ? (
+          // Scrollable all-responses view for text-only prompts
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 200 }}>
+            <Text style={styles.promptTitle}>{currentPrompt.content || currentPrompt.title || ''}</Text>
+            <View style={{ marginTop: 20 }}>
+              {responses.map((response) => (
+                <View key={response.response_id} style={styles.allResponsesRow}>
+                  <View style={styles.allResponsesAvatar}>
+                    <PixelCharacter
+                      config={(response.avatar_config as unknown as CharacterConfig) || DEFAULT_CHARACTER}
+                      size={40}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.allResponsesUsername}>{response.username || 'Anonymous'}</Text>
+                    <Text style={styles.allResponsesText}>{response.content}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
         ) : !isQuiplash && !isMemeGame ? (
-          // Regular response view (never shown for quiplash or meme_game)
+          // Regular single-response view (photos, video, audio)
           <View style={styles.responseContainer}>
             {/* Photo author - top left, OUTSIDE the photo */}
             {mediaType === 'photo' && (
@@ -1936,31 +1973,6 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
               </View>
             )}
 
-            {/* Photo prompt: show fireside comments inline below the photo */}
-            {mediaType === 'photo' && comments.length > 0 && (
-              <View style={{ marginTop: 16, width: '100%', paddingHorizontal: 4 }}>
-                <Text style={{ color: COLORS.muted, fontSize: 12, fontWeight: '600', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
-                  Comments
-                </Text>
-                {comments.map((c) => (
-                  <View key={c.id} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8, gap: 8 }}>
-                    <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' }}>
-                      <Text style={{ fontSize: 10, color: COLORS.text, fontWeight: '700' }}>
-                        {(c.username || '?')[0].toUpperCase()}
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: COLORS.text, fontSize: 13 }}>
-                        <Text style={{ fontWeight: '700' }}>{c.username || 'Anon'}</Text>
-                        {'  '}
-                        <Text style={{ color: COLORS.muted }}>{c.content}</Text>
-                      </Text>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            )}
-
             <Text style={styles.responseCount}>
               {currentResponseIndex + 1} of {responses.length}
             </Text>
@@ -1968,47 +1980,17 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
         ) : null}
       </View>
 
-      {/* Floating emoji reactions - shown on all responses including quiplash */}
+      {/* Floating emoji reactions + inline comment input */}
       {commentResponseId && (
         <View style={styles.reactionsContainer}>
           <FiresideReactions
             responseId={commentResponseId}
             promptId={currentPrompt.prompt_id}
+            onCommentSubmit={async (content) => {
+              await addComment(commentResponseId, content);
+            }}
           />
         </View>
-      )}
-
-      {/* Comments button - TikTok/Reels style */}
-      {commentResponseId && (
-        <TouchableOpacity
-          style={styles.commentsButton}
-          onPress={() => setShowCommentSheet(true)}
-          activeOpacity={0.7}
-        >
-          <View style={styles.commentsButtonInner}>
-            <Ionicons name="chatbubble" size={22} color={COLORS.text} />
-            {(() => {
-              const count = comments.length > 0 ? comments.length : (commentCounts[commentResponseId] || 0);
-              return count > 0 ? (
-                <View style={styles.commentBadge}>
-                  <Text style={styles.commentBadgeText}>
-                    {count > 99 ? '99+' : count}
-                  </Text>
-                </View>
-              ) : null;
-            })()}
-          </View>
-          <Text style={styles.commentsButtonText}>Comments</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Comment sheet modal */}
-      {commentResponseId && (
-        <CommentSheet
-          visible={showCommentSheet}
-          responseId={commentResponseId}
-          onClose={() => setShowCommentSheet(false)}
-        />
       )}
     </View>
   );
@@ -2482,52 +2464,36 @@ const styles = StyleSheet.create({
   // Reactions container - fixed at bottom center
   reactionsContainer: {
     position: "absolute",
-    bottom: 100,
+    bottom: 60,
     left: 0,
     right: 0,
     zIndex: 50,
   },
-  // Comments button - positioned at bottom right
-  commentsButton: {
-    position: "absolute",
-    right: 16,
-    bottom: 70,
-    alignItems: "center",
-    zIndex: 100,
+  // All-responses view for text-only prompts
+  allResponsesRow: {
+    flexDirection: "row",
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
-  commentsButtonInner: {
+  allResponsesAvatar: {
     width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    height: 56,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
   },
-  commentBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: "#EF4444",
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 4,
-    zIndex: 10,
-  },
-  commentBadgeText: {
-    color: "#FFF",
-    fontSize: 11,
-    fontFamily: "Paaxel",
-  },
-  commentsButtonText: {
+  allResponsesUsername: {
     color: COLORS.text,
-    fontSize: 11,
-    marginTop: 4,
-    fontWeight: "500",
+    fontSize: 14,
+    fontFamily: "Paaxel",
+    marginBottom: 4,
+  },
+  allResponsesText: {
+    color: COLORS.text,
+    fontSize: 16,
+    lineHeight: 24,
   },
   // Leaderboard
   leaderboardContent: {

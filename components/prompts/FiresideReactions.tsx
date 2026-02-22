@@ -1,8 +1,9 @@
 /**
- * FiresideReactions - Floating emoji reactions for Fireside
+ * FiresideReactions - Floating emoji reactions + inline comment bubbles for Fireside
  * Emojis float up like TikTok live reactions when tapped.
- * Existing reactions from other users replay as a staggered burst on load.
- * Real-time reactions from others appear as they happen.
+ * Comments float up as semi-transparent bubbles over the content.
+ * Existing reactions/comments replay as a staggered burst on load.
+ * Real-time reactions/comments from others appear as they happen.
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -10,11 +11,13 @@ import {
   View,
   Text,
   TouchableOpacity,
+  TextInput,
   StyleSheet,
   Animated,
   Easing,
   Dimensions,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import {
   getUserEmojis,
   DEFAULT_EMOJIS,
@@ -24,6 +27,11 @@ import {
   subscribeToReactions,
   ReactionSummary,
 } from '../../lib/services/reactionService';
+import {
+  getComments,
+  subscribeToComments,
+  FiresideComment,
+} from '../../lib/services/firesideService';
 import { trackInteraction } from '../../lib/services/metricsService';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -44,17 +52,32 @@ interface FloatingEmoji {
   scale: number;
 }
 
+interface FloatingComment {
+  id: string;
+  text: string;
+  username: string;
+  startX: number;
+  anim: Animated.Value;
+  duration: number;
+}
+
 interface FiresideReactionsProps {
   responseId: string;
   promptId?: string;
+  onCommentSubmit?: (content: string) => Promise<void>;
 }
 
-export function FiresideReactions({ responseId, promptId }: FiresideReactionsProps) {
+export function FiresideReactions({ responseId, promptId, onCommentSubmit }: FiresideReactionsProps) {
   const [userEmojis, setUserEmojis] = useState<UserEmojis>(DEFAULT_EMOJIS);
   const [floatingEmojis, setFloatingEmojis] = useState<FloatingEmoji[]>([]);
+  const [floatingComments, setFloatingComments] = useState<FloatingComment[]>([]);
+  const [commentText, setCommentText] = useState('');
+  const commentIdCounter = useRef(0);
   const emojiIdCounter = useRef(0);
   const prevReactionsRef = useRef<ReactionSummary[]>([]);
   const hasLoadedRef = useRef(false);
+  const hasLoadedCommentsRef = useRef(false);
+  const loadedCommentIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     loadEmojis();
@@ -117,6 +140,46 @@ export function FiresideReactions({ responseId, promptId }: FiresideReactionsPro
     };
   }, [responseId]);
 
+  // Load existing comments and subscribe to real-time comments
+  useEffect(() => {
+    hasLoadedCommentsRef.current = false;
+    loadedCommentIdsRef.current = new Set();
+
+    const loadExistingComments = async () => {
+      const existingComments = await getComments(responseId);
+      hasLoadedCommentsRef.current = true;
+
+      // Track all existing comment IDs
+      for (const c of existingComments) {
+        loadedCommentIdsRef.current.add(c.id);
+      }
+
+      // Replay existing comments as staggered floating bubbles
+      const maxDelay = Math.min(existingComments.length * 300, 3000);
+      existingComments.forEach((comment, i) => {
+        const delay = (i / Math.max(existingComments.length - 1, 1)) * maxDelay;
+        setTimeout(() => {
+          spawnFloatingComment(comment.content, comment.username || 'Anon');
+        }, delay);
+      });
+    };
+
+    loadExistingComments();
+
+    // Subscribe to new real-time comments
+    const unsubscribe = subscribeToComments(responseId, (newComment) => {
+      if (!hasLoadedCommentsRef.current) return;
+      // Skip if we already spawned this comment (from our own submission or initial load)
+      if (loadedCommentIdsRef.current.has(newComment.id)) return;
+      loadedCommentIdsRef.current.add(newComment.id);
+      spawnFloatingComment(newComment.content, newComment.username || 'Anon');
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [responseId]);
+
   const loadEmojis = async () => {
     const emojis = await getUserEmojis();
     setUserEmojis(emojis);
@@ -157,6 +220,33 @@ export function FiresideReactions({ responseId, promptId }: FiresideReactionsPro
     });
   }, []);
 
+  const spawnFloatingComment = useCallback((text: string, username: string) => {
+    const id = `comment-${Date.now()}-${commentIdCounter.current++}`;
+    const anim = new Animated.Value(0);
+    const startX = SCREEN_WIDTH * 0.05 + Math.random() * SCREEN_WIDTH * 0.4;
+    const duration = 6000 + Math.min(text.length * 60, 8000);
+
+    const newComment: FloatingComment = {
+      id,
+      text,
+      username,
+      startX,
+      anim,
+      duration,
+    };
+
+    setFloatingComments(prev => [...prev, newComment]);
+
+    Animated.timing(anim, {
+      toValue: 1,
+      duration,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start(() => {
+      setFloatingComments(prev => prev.filter(c => c.id !== id));
+    });
+  }, []);
+
   const handleEmojiPress = (emoji: string, index: number) => {
     // Calculate button X position for the float origin
     const buttonWidth = 52;
@@ -185,6 +275,19 @@ export function FiresideReactions({ responseId, promptId }: FiresideReactionsPro
       responseId,
       metadata: { emoji, promptId },
     });
+  };
+
+  const handleCommentSubmit = async () => {
+    const trimmed = commentText.trim();
+    if (!trimmed || !onCommentSubmit) return;
+
+    setCommentText('');
+
+    // Spawn floating bubble immediately for responsiveness
+    spawnFloatingComment(trimmed, 'You');
+
+    // Persist
+    await onCommentSubmit(trimmed);
   };
 
   const emojiList = [
@@ -236,6 +339,34 @@ export function FiresideReactions({ responseId, promptId }: FiresideReactionsPro
             {fe.emoji}
           </Animated.Text>
         ))}
+
+        {/* Floating comments layer */}
+        {floatingComments.map(fc => (
+          <Animated.View
+            key={fc.id}
+            style={[
+              styles.floatingCommentBubble,
+              {
+                left: fc.startX,
+                opacity: fc.anim.interpolate({
+                  inputRange: [0, 0.1, 0.85, 1],
+                  outputRange: [0, 1, 1, 0],
+                }),
+                transform: [
+                  {
+                    translateY: fc.anim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, -SCREEN_HEIGHT * 0.6],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            <Text style={styles.floatingCommentUsername}>{fc.username}</Text>
+            <Text style={styles.floatingCommentText}>{fc.text}</Text>
+          </Animated.View>
+        ))}
       </View>
 
       {/* Emoji buttons */}
@@ -251,6 +382,30 @@ export function FiresideReactions({ responseId, promptId }: FiresideReactionsPro
           </TouchableOpacity>
         ))}
       </View>
+
+      {/* Comment input bar */}
+      {onCommentSubmit && (
+        <View style={styles.commentInputRow}>
+          <TextInput
+            style={styles.commentInput}
+            placeholder="Add a comment..."
+            placeholderTextColor="#666"
+            value={commentText}
+            onChangeText={setCommentText}
+            onSubmitEditing={handleCommentSubmit}
+            returnKeyType="send"
+            maxLength={200}
+          />
+          <TouchableOpacity
+            style={[styles.commentSendButton, !commentText.trim() && { opacity: 0.4 }]}
+            onPress={handleCommentSubmit}
+            disabled={!commentText.trim()}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="send" size={18} color="#FFF8DC" />
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -276,6 +431,26 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
   },
+  floatingCommentBubble: {
+    position: 'absolute',
+    bottom: 100,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    maxWidth: 200,
+  },
+  floatingCommentUsername: {
+    color: '#FFD93D',
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: 'Paaxel',
+    marginBottom: 2,
+  },
+  floatingCommentText: {
+    color: '#F5F5F5',
+    fontSize: 13,
+  },
   emojiRow: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -295,5 +470,31 @@ const styles = StyleSheet.create({
   },
   emojiText: {
     fontSize: 28,
+  },
+  commentInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 8,
+  },
+  commentInput: {
+    flex: 1,
+    height: 38,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 19,
+    paddingHorizontal: 14,
+    color: '#F5F5F5',
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  commentSendButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 107, 53, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
