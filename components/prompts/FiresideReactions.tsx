@@ -83,6 +83,12 @@ export function FiresideReactions({ responseId, promptId, onCommentSubmit }: Fir
     loadEmojis();
   }, []);
 
+  // Clear all floating elements when switching responses
+  useEffect(() => {
+    setFloatingEmojis([]);
+    setFloatingComments([]);
+  }, [responseId]);
+
   // Load existing reactions and subscribe to real-time changes
   useEffect(() => {
     hasLoadedRef.current = false;
