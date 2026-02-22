@@ -4,6 +4,7 @@
  */
 
 import { supabase } from "./supabase";
+import { getFiresideState } from "./schedule";
 
 /**
  * This version assumes your real schema:
@@ -149,33 +150,11 @@ export async function getPromptForGroup(groupId: string): Promise<{
 }
 
 /**
- * Lowdown unlock gate: Sunday 8pm ET.
+ * Lowdown unlock gate: Sunday 7pm ET to Monday 2am ET.
  * Client-only gate for now (later we can enforce server-side too).
  */
 export function isLowdownUnlockedNow(): boolean {
-  // Convert "now" into ET weekday/hour using Intl
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: TZ,
-    weekday: "short",
-    hour: "2-digit",
-    hour12: false,
-    minute: "2-digit",
-  })
-    .formatToParts(new Date())
-    .reduce((acc: any, p) => {
-      if (p.type !== "literal") acc[p.type] = p.value;
-      return acc;
-    }, {});
-
-  const weekday = parts.weekday as string; // "Sun", "Mon", ...
-  const hour = parseInt(parts.hour, 10);
-  const minute = parseInt(parts.minute, 10);
-
-  // Sunday 20:00 or later
-  if (weekday !== "Sun") return false;
-  if (hour > 20) return true;
-  if (hour < 20) return false;
-  return minute >= 0;
+  return getFiresideState() === 'UNLOCKED';
 }
 
 /**

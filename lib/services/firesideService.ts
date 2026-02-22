@@ -4,6 +4,7 @@
 
 import { supabase } from '../supabase';
 import { awardPoints, emitPointsAwarded } from './pointsService';
+import { getFiresideState } from '../schedule';
 
 // Types
 export interface FiresideResponse {
@@ -57,6 +58,15 @@ export interface QuiplashVoter {
   avatar_config: Record<string, unknown> | null;
 }
 
+export interface CaptionResultEntry {
+  response_id: string;
+  user_id: string;
+  username: string;
+  avatar_config: Record<string, unknown> | null;
+  content: string;
+  votes: number;
+}
+
 export interface FiresidePrompt {
   group_prompt_id: string;
   scheduled_for: string;
@@ -67,9 +77,11 @@ export interface FiresidePrompt {
   options?: string[];
   correct_answer?: string;
   is_most_likely?: boolean;
+  media_url?: string;
   responses: FiresideResponse[];
   quiplash_data?: QuiplashParticipant[];
-  mc_results?: MCResults; // Multiple choice results with vote counts
+  caption_data?: CaptionResultEntry[];
+  mc_results?: MCResults;
 }
 
 export interface LeaderboardEntry {
@@ -80,6 +92,8 @@ export interface LeaderboardEntry {
   points_voting: number;
   points_quiplash_wins: number;
   total_points: number;
+  weekly_crown_until?: string | null;
+  perfect_week?: boolean;
 }
 
 export interface WeeklyWinner {
@@ -97,11 +111,21 @@ export interface WeeklyWinner {
   }[];
 }
 
+export interface MemeFiresideData {
+  game_id: string;
+  phase: string;
+  photo_url: string;
+  photo_uploader_id: string;
+  winner_user_id: string | null;
+  captions: CaptionResultEntry[];
+}
+
 export interface FiresideData {
   week_of: string;
   prompts: FiresidePrompt[];
   leaderboard: LeaderboardEntry[];
   winner: WeeklyWinner | null;
+  meme_data?: MemeFiresideData | null;
 }
 
 export interface FiresideComment {
@@ -117,27 +141,11 @@ export interface FiresideComment {
 }
 
 /**
- * Check if Fireside is currently unlocked (Sunday 8pm ET to Monday 3am ET)
+ * Check if Fireside is currently unlocked (Sunday 7pm ET to Monday 2am ET)
  */
 export function isFiresideUnlocked(): boolean {
-  // DEV ONLY: bypass time gate for testing
   if (__DEV__) return true;
-
-  const now = new Date();
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    weekday: 'short',
-    hour: '2-digit',
-    hour12: false,
-  }).formatToParts(now);
-
-  const weekday = parts.find(p => p.type === 'weekday')?.value;
-  const hour = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10);
-
-  // Sunday 8pm ET (20:00) or later, OR Monday before 3am
-  if (weekday === 'Sun' && hour >= 20) return true;
-  if (weekday === 'Mon' && hour < 3) return true;
-  return false;
+  return getFiresideState() === 'UNLOCKED';
 }
 
 /**

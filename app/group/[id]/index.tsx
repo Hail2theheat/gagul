@@ -8,6 +8,7 @@ import { supabase } from "../../../lib/supabase";
 import { PromptCard, PromptRating } from "../../../components/prompts";
 import { recordPromptView, getMemberPromptStatuses } from "../../../lib/services/promptService";
 import { getFiresideProgress } from "../../../lib/services/firesideService";
+import { getFiresideState, getNowET, getFiresideLocalTime } from "../../../lib/schedule";
 import { QuiplashCard } from "../../../components/prompts/QuiplashCard";
 import { QuiplashVotingCard } from "../../../components/prompts/QuiplashVotingCard";
 import { CaptionVotingCard } from "../../../components/prompts/CaptionVotingCard";
@@ -1027,65 +1028,26 @@ function RecommendModal({
 // Sunday state types
 type SundayState = 'not-sunday' | 'pre-fireside' | 'during-fireside' | 'post-fireside';
 
-// Get Sunday state based on current time (Fireside only on Sundays 8PM-3AM EST)
+// Get Sunday state based on current time via centralized schedule
 function getSundayState(): SundayState {
-  // DEV ONLY: bypass time gate for testing
   if (__DEV__) return 'during-fireside';
 
-  const now = new Date();
-
-  // Get EST time
-  const estOffset = -5 * 60;
-  const localOffset = now.getTimezoneOffset();
-  const estTime = new Date(now.getTime() + (localOffset + estOffset) * 60 * 1000);
-
-  const day = estTime.getDay(); // 0 = Sunday, 1 = Monday
-  const hour = estTime.getHours();
-
-  // Sunday before 8 PM EST: pre-fireside
-  if (day === 0 && hour < 20) return 'pre-fireside';
-
-  // Sunday 8 PM onwards OR Monday before 3 AM: during-fireside
-  if (day === 0 && hour >= 20) return 'during-fireside';
-  if (day === 1 && hour < 3) return 'during-fireside';
-
-  // All other times (including Monday after 3am): not-sunday
-  // This will show "Dude, relax" before prompt time or "Nothing here" after
+  const state = getFiresideState();
+  if (state === 'UNLOCKED') return 'during-fireside';
+  if (state === 'VISIBLE_LOCKED') return 'pre-fireside';
   return 'not-sunday';
 }
 
-// Check if fireside should be visible (Sunday 8 PM EST to Monday 3 AM EST)
+// Check if fireside should be visible (Sunday 7 PM ET to Monday 2 AM ET)
 function isFiresideTime(): boolean {
-  if (__DEV__) return true; // DEV: always show fireside button for testing
+  if (__DEV__) return true;
   return getSundayState() === 'during-fireside';
 }
 
-// Check if it's before the daily prompt time (3pm EST = 15:00 EST = 20:00 UTC)
+// Check if it's before the daily prompt start time (2 AM ET)
 function isBeforePromptTime(): boolean {
-  const now = new Date();
-  const estOffset = -5 * 60;
-  const localOffset = now.getTimezoneOffset();
-  const estTime = new Date(now.getTime() + (localOffset + estOffset) * 60 * 1000);
-  const hour = estTime.getHours();
-  return hour < 15; // Before 3pm EST
-}
-
-// Get fireside time in user's local timezone
-function getFiresideLocalTime(): string {
-  // Fireside is 8 PM EST - convert to local time
-  const now = new Date();
-  const estOffset = -5 * 60; // EST is UTC-5 in minutes
-
-  // Create a date for 8 PM EST today (or next Sunday)
-  const estEight = new Date();
-  estEight.setUTCHours(20 + 5, 0, 0, 0); // 8 PM EST = 1 AM UTC next day
-
-  // Format in user's local time
-  return estEight.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  });
+  const { hour } = getNowET();
+  return hour < 2;
 }
 
 // Floating ember particle for fireside button
