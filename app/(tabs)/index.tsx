@@ -25,6 +25,7 @@ import { PixelTitle } from "../../components/PixelTitle";
 import { CampfireColors, Spacing, Radii, Typography, Shadows } from "../../constants/theme";
 import { FireStreakBadge } from "../../components/FireStreakBadge";
 import { Stagger } from "../../constants/animations";
+import { FeedbackModal } from "../../components/FeedbackModal";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -339,6 +340,7 @@ export default function HomeGroupsScreen() {
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   const canCreate = useMemo(() => newName.trim().length > 0, [newName]);
   const canJoin = useMemo(() => joinId.trim().length > 0, [joinId]);
@@ -556,6 +558,19 @@ export default function HomeGroupsScreen() {
             </Card>
           </Animated.View>
         )}
+
+        {/* Anonymous feedback button */}
+        <Pressable onPress={() => setShowFeedbackModal(true)} style={{ alignItems: "center", marginTop: Spacing.lg }}>
+          <Text style={{ color: MUTED, ...Typography.body, fontSize: 13, opacity: 0.8 }}>
+            Leave Anonymous Feedback
+          </Text>
+        </Pressable>
+
+        <FeedbackModal
+          visible={showFeedbackModal}
+          onClose={() => setShowFeedbackModal(false)}
+          source="general"
+        />
 
         <View style={{ height: 80 }} />
       </ScrollView>

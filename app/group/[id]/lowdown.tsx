@@ -62,6 +62,7 @@ import {
   getFiresideMilestone,
   getFiresideCelebrationType,
 } from "../../../lib/services/firesideCounter";
+import { FeedbackModal } from "../../../components/FeedbackModal";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -369,6 +370,8 @@ export default function LowdownScreen() {
   // DESIGN.md §15.2: Fireside milestone celebration state
   const [celebrationMessage, setCelebrationMessage] = useState<string | null>(null);
   const [celebrationType, setCelebrationType] = useState<'fireworks' | 'confetti' | null>(null);
+
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -1341,6 +1344,30 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
             </View>
           );
         })()}
+
+        {/* Anonymous Feedback */}
+        <View style={{ marginTop: 30, padding: 20, backgroundColor: COLORS.card, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border, alignItems: "center" }}>
+          <Text style={{ color: COLORS.muted, fontSize: 14, fontFamily: "Paaxel", marginBottom: 4 }}>
+            Before you go...
+          </Text>
+          <Text style={{ color: COLORS.muted, fontSize: 12, textAlign: "center", marginBottom: 14 }}>
+            Be brutally honest — what did you like? What didn't you like?
+          </Text>
+          <TouchableOpacity
+            onPress={() => setShowFeedbackModal(true)}
+            style={{ backgroundColor: COLORS.accent, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 }}
+          >
+            <Text style={{ color: COLORS.text, fontSize: 14, fontFamily: "Paaxel" }}>Leave Feedback</Text>
+          </TouchableOpacity>
+        </View>
+
+        <FeedbackModal
+          visible={showFeedbackModal}
+          onClose={() => setShowFeedbackModal(false)}
+          groupId={groupId}
+          weekOf={firesideData?.week_of}
+          source="fireside"
+        />
 
         <TouchableOpacity style={styles.doneButton} onPress={() => router.back()}>
           <Text style={styles.doneButtonText}>Done</Text>
