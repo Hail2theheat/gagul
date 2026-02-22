@@ -457,6 +457,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     paddingVertical: 12,
+    zIndex: 1001,
   },
   emojiButton: {
     width: 52,
@@ -477,6 +478,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 8,
     gap: 8,
+    zIndex: 1001,
   },
   commentInput: {
     flex: 1,
