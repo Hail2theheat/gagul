@@ -19,7 +19,6 @@ import Animated, {
 import { PixelCharacter, CharacterConfig, DEFAULT_CHARACTER } from "./PixelCharacter";
 import { PixelTitle } from "./PixelTitle";
 import { AnimatedLogo } from "./AnimatedLogo";
-import { SilhouetteTree } from "./campfire/SilhouetteTree";
 import { DetailedPineTree } from "./PixelArt";
 import { SwayingTree } from "./sky/SwayingTree";
 import { CampfireColors } from "../constants/theme";
@@ -692,14 +691,22 @@ export function FiresideIntro({ members, promptCount, onComplete }: FiresideIntr
       {/* ── Trees: back row ── */}
       <View style={{ position: "absolute", top: lakeTop + lakeHeight - 55, left: 0, right: 0, height: 120, zIndex: 2 }} pointerEvents="none">
         {backTrees.map((t, i) => (
-          <SilhouetteTree key={`bt${i}`} x={t.x} height={t.height} shade={t.shade} />
+          <View key={`bt${i}`} style={{ position: "absolute", bottom: 0, left: t.x }}>
+            <SwayingTree height={t.height} shade={Math.min(t.shade, 3)} stagger={i * 0.09}>
+              <DetailedPineTree height={t.height} shade={Math.min(t.shade, 3)} />
+            </SwayingTree>
+          </View>
         ))}
       </View>
 
       {/* ── Trees: front row ── */}
       <View style={{ position: "absolute", top: lakeTop + lakeHeight - 80, left: 0, right: 0, height: 160, zIndex: 3 }} pointerEvents="none">
         {frontTrees.map((t, i) => (
-          <SilhouetteTree key={`ft${i}`} x={t.x} height={t.height} shade={t.shade} />
+          <View key={`ft${i}`} style={{ position: "absolute", bottom: 0, left: t.x }}>
+            <SwayingTree height={t.height} shade={Math.min(t.shade, 3)} stagger={i * 0.08}>
+              <DetailedPineTree height={t.height} shade={Math.min(t.shade, 3)} />
+            </SwayingTree>
+          </View>
         ))}
       </View>
 
