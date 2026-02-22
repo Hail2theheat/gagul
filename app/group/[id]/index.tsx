@@ -2217,6 +2217,7 @@ function GroupScreenInner() {
         contentContainerStyle={{ padding: 18, paddingTop: 60, paddingBottom: 120 }}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={MUTED} />
         }

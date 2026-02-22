@@ -7,14 +7,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { Audio } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
+import { CampfireColors } from '../../constants/theme';
 
 const COLORS = {
-  bg: '#0B1026',
-  card: 'rgba(20, 30, 50, 0.85)',
-  border: '#2a3f5f',
-  text: '#FFF8DC',
-  muted: '#B8A88A',
-  accent: '#FF6B35',
+  bg: CampfireColors.BG,
+  card: CampfireColors.CARD_SOLID,
+  border: CampfireColors.BORDER,
+  text: CampfireColors.TEXT,
+  muted: CampfireColors.MUTED,
+  accent: CampfireColors.BTN_PRIMARY,
 };
 
 interface AudioPlayerProps {

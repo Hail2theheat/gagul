@@ -3,7 +3,7 @@
  * Handles both draw and write steps
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,26 +11,25 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Image,
 } from 'react-native';
-import { DrawingCanvas } from './DrawingCanvas';
+import { DrawingCanvas, PathData, CANVAS_SIZE } from './DrawingCanvas';
+import { DrawingPreview, DrawingData } from './DrawingPreview';
 import {
   TelephoneAssignment,
-  uploadDrawing,
   submitTelephoneStep,
-  getDrawingUrl,
 } from '../../lib/services/telephoneService';
 import { awardResponsePoints } from '../../lib/services/pointsService';
+import { CampfireColors } from '../../constants/theme';
 
 const COLORS = {
-  bg: '#0D1426',
-  card: '#1A1A2E',
-  border: '#27406B',
-  text: '#E6F0FF',
-  muted: '#9CA3AF',
-  accent: '#FF6B35',
+  bg: CampfireColors.BG,
+  card: CampfireColors.CARD_SOLID,
+  border: CampfireColors.BORDER,
+  text: CampfireColors.TEXT,
+  muted: CampfireColors.MUTED,
+  accent: CampfireColors.BTN_PRIMARY,
   purple: '#8B5CF6',
-  success: '#4ADE80',
+  success: CampfireColors.SUCCESS,
 };
 
 interface TelephoneCardProps {
@@ -40,7 +39,6 @@ interface TelephoneCardProps {
 }
 
 export function TelephoneCard({ assignment, groupId, onSubmitted }: TelephoneCardProps) {
-  const [previousDrawingUrl, setPreviousDrawingUrl] = useState<string | null>(null);
   const [writeContent, setWriteContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -49,56 +47,39 @@ export function TelephoneCard({ assignment, groupId, onSubmitted }: TelephoneCar
   const isDrawStep = assignment.step_type === 'draw';
   const stepNumber = assignment.step_number || 1;
 
-  // Load previous drawing URL if this is a write step
-  useEffect(() => {
-    const loadPreviousDrawing = async () => {
-      if (!isDrawStep && assignment.previous_drawing_url) {
-        const url = await getDrawingUrl(assignment.previous_drawing_url);
-        setPreviousDrawingUrl(url);
-      }
-    };
-    loadPreviousDrawing();
-  }, [assignment.previous_drawing_url, isDrawStep]);
-
   // Get the prompt/content to show the user
   const getPromptContent = () => {
     if (stepNumber === 1) {
-      // First step shows initial prompt
       return assignment.initial_prompt || 'Draw something!';
     } else if (isDrawStep) {
-      // Drawing step shows previous person's written description
       return assignment.previous_content || 'Draw what you see!';
     } else {
-      // Writing step shows previous drawing
       return 'Describe this drawing:';
     }
   };
 
-  const handleDrawingSave = async (imageUri: string) => {
+  const handleDrawingSave = async (pathData: PathData[]) => {
     if (submitting || !assignment.step_id) return;
 
     setError(null);
     setSubmitting(true);
 
     try {
-      // Upload the drawing
-      const uploadResult = await uploadDrawing(groupId, assignment.step_id, imageUri);
-      if (uploadResult.error) {
-        setError(uploadResult.error);
-        setSubmitting(false);
-        return;
-      }
+      // Serialize drawing as JSON for storage in drawing_url
+      const drawingJson = JSON.stringify({
+        viewBox: { width: CANVAS_SIZE, height: CANVAS_SIZE },
+        paths: pathData,
+      } as DrawingData);
 
-      // Submit the step
+      // Submit the step with JSON in drawing_url
       const result = await submitTelephoneStep(
         assignment.step_id,
         undefined,
-        uploadResult.url || undefined
+        drawingJson
       );
 
       if (result.success) {
         setSubmitted(true);
-        // Award points for response (treat as photo since it's a drawing)
         await awardResponsePoints(groupId, assignment.step_id, true);
         onSubmitted?.();
       } else {
@@ -126,7 +107,6 @@ export function TelephoneCard({ assignment, groupId, onSubmitted }: TelephoneCar
 
       if (result.success) {
         setSubmitted(true);
-        // Award points for response
         await awardResponsePoints(groupId, assignment.step_id, false);
         onSubmitted?.();
       } else {
@@ -190,19 +170,11 @@ export function TelephoneCard({ assignment, groupId, onSubmitted }: TelephoneCar
         </Text>
 
         {/* Show previous drawing for write steps */}
-        {!isDrawStep && stepNumber > 1 && (
-          previousDrawingUrl ? (
-            <Image
-              source={{ uri: previousDrawingUrl }}
-              style={styles.previousDrawing}
-              resizeMode="contain"
-            />
-          ) : (
-            <View style={styles.loadingDrawing}>
-              <ActivityIndicator size="small" color={COLORS.accent} />
-              <Text style={styles.loadingText}>Loading drawing...</Text>
-            </View>
-          )
+        {!isDrawStep && stepNumber > 1 && assignment.previous_drawing_url && (
+          <DrawingPreview
+            drawingJson={assignment.previous_drawing_url}
+            size="100%"
+          />
         )}
 
         {/* Show text prompt for draw steps */}
@@ -216,6 +188,7 @@ export function TelephoneCard({ assignment, groupId, onSubmitted }: TelephoneCar
         <DrawingCanvas
           onSave={handleDrawingSave}
           disabled={submitting}
+          prompt={getPromptContent()}
         />
       ) : (
         <View style={styles.writeSection}>
@@ -327,25 +300,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 12,
   },
-  previousDrawing: {
-    width: '100%',
-    aspectRatio: 1,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-  },
-  loadingDrawing: {
-    width: '100%',
-    aspectRatio: 1,
-    borderRadius: 12,
-    backgroundColor: COLORS.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  loadingText: {
-    color: COLORS.muted,
-    fontSize: 12,
-  },
   writeSection: {
     gap: 12,
   },
@@ -401,7 +355,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   errorText: {
-    color: '#FF4444',
+    color: CampfireColors.DANGER,
     fontSize: 14,
     textAlign: 'center',
   },

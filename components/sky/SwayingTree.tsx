@@ -64,15 +64,15 @@ export function SwayingTree({
       withSequence(
         withTiming(startDirection * swayAmount, {
           duration: duration / 2,
-          easing: Easing.inOut(Easing.sine),
+          easing: Easing.inOut(Easing.sin),
         }),
         withTiming(-startDirection * swayAmount, {
           duration: duration,
-          easing: Easing.inOut(Easing.sine),
+          easing: Easing.inOut(Easing.sin),
         }),
         withTiming(startDirection * swayAmount, {
           duration: duration / 2,
-          easing: Easing.inOut(Easing.sine),
+          easing: Easing.inOut(Easing.sin),
         })
       ),
       -1,

@@ -14,14 +14,15 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
+import { CampfireColors } from '../../constants/theme';
 
 // Theme colors
 const COLORS = {
-  bg: '#0D1426',
-  border: '#27406B',
-  text: '#E6F0FF',
-  muted: '#9EC5FF',
-  btn: '#1E4ED8',
+  bg: CampfireColors.BG,
+  border: CampfireColors.BORDER,
+  text: CampfireColors.TEXT,
+  muted: CampfireColors.MUTED,
+  btn: CampfireColors.BTN_PRIMARY,
 };
 
 interface PhotoPickerProps {
@@ -89,7 +90,7 @@ export function PhotoPicker({ value, onChange, caption = '', onCaptionChange, di
       <View style={styles.container}>
         <View style={styles.loadingBox}>
           <ActivityIndicator size="large" color={COLORS.btn} />
-          <Text style={styles.loadingText}>Loading...</Text>
+          <Text style={styles.loadingText}>Warming up...</Text>
         </View>
       </View>
     );
@@ -102,7 +103,7 @@ export function PhotoPicker({ value, onChange, caption = '', onCaptionChange, di
           <Image source={{ uri: value }} style={styles.preview} />
           {!disabled && (
             <TouchableOpacity style={styles.clearButton} onPress={clearImage}>
-              <Ionicons name="close-circle" size={28} color="#FF4444" />
+              <Ionicons name="close-circle" size={28} color={CampfireColors.DANGER} />
             </TouchableOpacity>
           )}
         </View>
@@ -218,7 +219,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -8,
     right: -8,
-    backgroundColor: '#070B14',
+    backgroundColor: CampfireColors.BG,
     borderRadius: 14,
   },
   changeRow: {

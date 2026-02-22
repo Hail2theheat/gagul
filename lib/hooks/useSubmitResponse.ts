@@ -13,6 +13,8 @@ export function useSubmitResponse() {
       submitResponseWithValidation(type, submission),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['groupStatus'] });
+      queryClient.invalidateQueries({ queryKey: ['firesideData'] });
+      queryClient.invalidateQueries({ queryKey: ['myGroups'] });
     },
   });
 }
@@ -25,6 +27,9 @@ export function useSubmitQuiplashVote() {
       submitQuiplashVote(matchupId, responseId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['groupStatus'] });
+      queryClient.invalidateQueries({ queryKey: ['firesideData'] });
+      queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
+      queryClient.invalidateQueries({ queryKey: ['pointsSummary'] });
     },
   });
 }
@@ -37,6 +42,7 @@ export function useSubmitTelephoneStep() {
       submitTelephoneStep(stepId, content, drawingUrl),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['groupStatus'] });
+      queryClient.invalidateQueries({ queryKey: ['firesideData'] });
     },
   });
 }

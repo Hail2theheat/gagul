@@ -20,6 +20,8 @@ import { PixelCharacter, CharacterConfig, DEFAULT_CHARACTER } from "./PixelChara
 import { PixelTitle } from "./PixelTitle";
 import { AnimatedLogo } from "./AnimatedLogo";
 import { SilhouetteTree } from "./campfire/SilhouetteTree";
+import { DetailedPineTree } from "./PixelArt";
+import { SwayingTree } from "./sky/SwayingTree";
 import { CampfireColors } from "../constants/theme";
 
 const { width: W, height: H } = Dimensions.get("window");
@@ -239,79 +241,29 @@ function JumpingFish({ x, baseY, delay, eaten }: { x: number; baseY: number; del
 }
 
 // ──────────────────────────────────────────
-// Sea monster (Nessie) that eats a fish
+// Fire ember / spark that rises from campfire
 // ──────────────────────────────────────────
-function SeaMonster({ x, baseY, delay }: { x: number; baseY: number; delay: number }) {
+function FireEmber({ x, delay, speed }: { x: number; delay: number; speed: number }) {
   const progress = useSharedValue(0);
   useEffect(() => {
-    // Rise, chomp, descend — single dramatic appearance
-    progress.value = withDelay(delay, withTiming(1, { duration: 2400, easing: Easing.linear }));
+    const fire = () => { progress.value = 0; progress.value = withTiming(1, { duration: speed, easing: Easing.out(Easing.quad) }); };
+    const t = setTimeout(fire, delay);
+    const interval = setInterval(fire, speed + 500 + Math.random() * 2000);
+    return () => { clearTimeout(t); clearInterval(interval); };
   }, []);
-
-  // Neck + head style
-  const monsterStyle = useAnimatedStyle(() => {
-    // Rise from 0→0.35, hold 0.35→0.6 (chomp), descend 0.6→1.0
-    const riseHeight = 42;
-    let yOffset: number;
-    if (progress.value < 0.35) {
-      yOffset = interpolate(progress.value, [0, 0.35], [0, -riseHeight]);
-    } else if (progress.value < 0.6) {
-      yOffset = -riseHeight;
-    } else {
-      yOffset = interpolate(progress.value, [0.6, 1], [-riseHeight, 0]);
-    }
-    // Jaw opens then closes
-    const jawOpen = progress.value < 0.3
-      ? interpolate(progress.value, [0, 0.3], [0, 8])
-      : progress.value < 0.55
-      ? 8
-      : interpolate(progress.value, [0.55, 0.65], [8, 0]);
-
-    return {
-      position: "absolute" as const,
-      left: x,
-      top: baseY + yOffset,
-      opacity: interpolate(progress.value, [0, 0.05, 0.92, 1], [0, 1, 1, 0]),
-    };
-  });
-
-  const jawStyle = useAnimatedStyle(() => {
-    const jawOpen = progress.value < 0.3
-      ? interpolate(progress.value, [0, 0.3], [0, 6])
-      : progress.value < 0.55
-      ? 6
-      : interpolate(progress.value, [0.55, 0.65], [6, 0]);
-    return { transform: [{ translateY: jawOpen }] };
-  });
-
-  return (
-    <Animated.View style={monsterStyle}>
-      <View style={{ width: 24, height: 50 }}>
-        {/* Neck */}
-        <View style={{ position: "absolute", bottom: 0, left: 8, width: 8, height: 30, backgroundColor: "#2D6B4A", borderRadius: 4 }} />
-        {/* Neck spots */}
-        <View style={{ position: "absolute", bottom: 8, left: 10, width: 3, height: 3, backgroundColor: "#1E5038", borderRadius: 1.5 }} />
-        <View style={{ position: "absolute", bottom: 16, left: 11, width: 2.5, height: 2.5, backgroundColor: "#1E5038", borderRadius: 1.5 }} />
-        {/* Head (upper jaw) */}
-        <View style={{ position: "absolute", top: 0, left: 2, width: 20, height: 12, backgroundColor: "#358B5C", borderTopLeftRadius: 6, borderTopRightRadius: 8, borderBottomRightRadius: 4 }} />
-        {/* Eye */}
-        <View style={{ position: "absolute", top: 3, left: 5, width: 4, height: 4, backgroundColor: "#FFD93D", borderRadius: 2 }} />
-        <View style={{ position: "absolute", top: 4, left: 6, width: 2, height: 2, backgroundColor: "#111", borderRadius: 1 }} />
-        {/* Nostrils */}
-        <View style={{ position: "absolute", top: 4, left: 18, width: 2, height: 1.5, backgroundColor: "#1E5038", borderRadius: 1 }} />
-        {/* Horn bumps on head */}
-        <View style={{ position: "absolute", top: -2, left: 8, width: 3, height: 3, backgroundColor: "#358B5C", borderRadius: 1.5 }} />
-        <View style={{ position: "absolute", top: -3, left: 13, width: 3, height: 4, backgroundColor: "#358B5C", borderRadius: 1.5 }} />
-        {/* Lower jaw (animated) */}
-        <Animated.View style={[{ position: "absolute", top: 10, left: 4, width: 18, height: 6 }, jawStyle]}>
-          <View style={{ width: 18, height: 6, backgroundColor: "#2D7B50", borderBottomLeftRadius: 4, borderBottomRightRadius: 6 }} />
-          {/* Teeth on upper jaw edge */}
-          <View style={{ position: "absolute", top: -2, left: 10, width: 2, height: 2, backgroundColor: "#F0F0E0" }} />
-          <View style={{ position: "absolute", top: -2, left: 14, width: 2, height: 2, backgroundColor: "#F0F0E0" }} />
-        </Animated.View>
-      </View>
-    </Animated.View>
-  );
+  const drift = (Math.random() - 0.5) * 40;
+  const size = 2 + Math.random() * 3;
+  const style = useAnimatedStyle(() => ({
+    position: "absolute" as const,
+    left: x + interpolate(progress.value, [0, 1], [0, drift]),
+    top: interpolate(progress.value, [0, 1], [0, -80 - Math.random() * 40]),
+    width: size,
+    height: size,
+    borderRadius: size / 2,
+    backgroundColor: interpolate(progress.value, [0, 0.5, 1], [0, 1, 1]) > 0.5 ? "#FF6B35" : "#FFD700",
+    opacity: interpolate(progress.value, [0, 0.1, 0.6, 1], [0, 1, 0.6, 0]),
+  }));
+  return <Animated.View style={style} />;
 }
 
 // ──────────────────────────────────────────
@@ -612,13 +564,13 @@ export function FiresideIntro({ members, promptCount, onComplete }: FiresideIntr
 
     const positions: { endX: number; y: number; startX: number; fromLeft: boolean }[] = [];
     const fireCenter = W / 2;
-    const radius = 70; // semicircle radius from fire center
+    const radius = 105; // semicircle radius from fire center
 
     for (let i = 0; i < count; i++) {
       // Distribute along a semicircle below the fire (angles from ~150deg to ~30deg)
-      const angle = Math.PI * (0.2 + (0.6 * i) / Math.max(count - 1, 1));
+      const angle = Math.PI * (0.15 + (0.7 * i) / Math.max(count - 1, 1));
       const endX = fireCenter + Math.cos(angle) * radius - 17; // center avatar (35px / 2)
-      const y = campfireY + 55 + Math.sin(angle) * 30; // below fire
+      const y = campfireY + 55 + Math.sin(angle) * 35; // below fire
 
       // Alternate sides: even indices from left, odd from right
       const fromLeft = i % 2 === 0;
@@ -651,9 +603,12 @@ export function FiresideIntro({ members, promptCount, onComplete }: FiresideIntr
         ))}
 
         {/* Shooting stars */}
-        <SplashShootingStar delay={1500} />
-        <SplashShootingStar delay={4500} />
-        <SplashShootingStar delay={8000} />
+        <SplashShootingStar delay={800} />
+        <SplashShootingStar delay={2200} />
+        <SplashShootingStar delay={3800} />
+        <SplashShootingStar delay={5500} />
+        <SplashShootingStar delay={7200} />
+        <SplashShootingStar delay={9000} />
 
         {/* Full moon (not crescent) */}
         <View style={{ position: "absolute", top: 40, right: W * 0.15 }}>
@@ -703,13 +658,35 @@ export function FiresideIntro({ members, promptCount, onComplete }: FiresideIntr
           />
         ))}
 
+        {/* Moon reflection */}
+        <View style={{
+          position: "absolute",
+          top: lakeHeight * 0.1,
+          right: W * 0.15 - 4,
+          width: 36,
+          height: 50,
+          alignItems: "center",
+          opacity: 0.2,
+        }}>
+          <View style={{
+            width: 28,
+            height: 28,
+            borderRadius: 14,
+            backgroundColor: CampfireColors.MOON,
+          }} />
+          {/* Rippled reflection streaks */}
+          <View style={{ width: 20, height: 2, backgroundColor: CampfireColors.MOON, opacity: 0.4, marginTop: 4, borderRadius: 1 }} />
+          <View style={{ width: 14, height: 1.5, backgroundColor: CampfireColors.MOON, opacity: 0.3, marginTop: 3, borderRadius: 1 }} />
+          <View style={{ width: 10, height: 1, backgroundColor: CampfireColors.MOON, opacity: 0.2, marginTop: 3, borderRadius: 1 }} />
+        </View>
+
         {/* Jumping fish */}
-        <JumpingFish x={W * 0.25} baseY={lakeHeight * 0.35} delay={800} />
-        <JumpingFish x={W * 0.7} baseY={lakeHeight * 0.5} delay={2200} />
-        {/* The doomed fish — eaten by the sea monster */}
-        <JumpingFish x={W * 0.48} baseY={lakeHeight * 0.3} delay={1600} eaten />
-        {/* Sea monster rises to eat the fish */}
-        <SeaMonster x={W * 0.45} baseY={lakeHeight * 0.25} delay={1600} />
+        <JumpingFish x={W * 0.12} baseY={lakeHeight * 0.3} delay={600} />
+        <JumpingFish x={W * 0.25} baseY={lakeHeight * 0.45} delay={1400} />
+        <JumpingFish x={W * 0.42} baseY={lakeHeight * 0.35} delay={2800} />
+        <JumpingFish x={W * 0.58} baseY={lakeHeight * 0.5} delay={1800} />
+        <JumpingFish x={W * 0.72} baseY={lakeHeight * 0.4} delay={3200} />
+        <JumpingFish x={W * 0.85} baseY={lakeHeight * 0.55} delay={800} />
       </View>
 
       {/* ── Trees: back row ── */}
@@ -726,17 +703,25 @@ export function FiresideIntro({ members, promptCount, onComplete }: FiresideIntr
         ))}
       </View>
 
-      {/* ── Ground trees ── */}
+      {/* ── Ground trees (DetailedPineTree like main screen) ── */}
       <View style={{ position: "absolute", top: groundTop - 30, left: 0, right: 0, height: groundHeight + 30, zIndex: 5 }} pointerEvents="none">
         {groundTrees.map((t, i) => (
-          <SilhouetteTree key={`grt${i}`} x={t.x} height={t.height} shade={t.shade} />
+          <View key={`grt${i}`} style={{ position: "absolute", bottom: 0, left: t.x }}>
+            <SwayingTree height={t.height} shade={Math.min(t.shade, 3)} stagger={i * 0.07}>
+              <DetailedPineTree height={t.height} shade={Math.min(t.shade, 3)} />
+            </SwayingTree>
+          </View>
         ))}
       </View>
 
-      {/* ── Extra foreground bottom trees (darkest, in front of clearing) ── */}
+      {/* ── Extra foreground bottom trees (DetailedPineTree, in front of clearing) ── */}
       <View style={{ position: "absolute", top: groundTop - 10, left: 0, right: 0, height: groundHeight + 10, zIndex: 7 }} pointerEvents="none">
         {bottomTrees.map((t, i) => (
-          <SilhouetteTree key={`btt${i}`} x={t.x} height={t.height} shade={t.shade} />
+          <View key={`btt${i}`} style={{ position: "absolute", bottom: 0, left: t.x }}>
+            <SwayingTree height={t.height} shade={Math.min(t.shade, 3)} stagger={i * 0.05}>
+              <DetailedPineTree height={t.height} shade={Math.min(t.shade, 3)} />
+            </SwayingTree>
+          </View>
         ))}
         {/* Bear peeking from behind a left-side tree */}
         <PeekingBear x={95} bottom={45} />
@@ -775,6 +760,20 @@ export function FiresideIntro({ members, promptCount, onComplete }: FiresideIntr
         {/* Campfire */}
         <View style={{ position: "absolute", top: campfireY, left: campfireCenterX }}>
           <AnimatedLogo size={110} />
+        </View>
+
+        {/* Extra sparks and embers rising from the fire */}
+        <View style={{ position: "absolute", top: campfireY - 10, left: campfireCenterX + 30, width: 50, height: 100 }} pointerEvents="none">
+          <FireEmber x={5} delay={200} speed={1800} />
+          <FireEmber x={15} delay={600} speed={2200} />
+          <FireEmber x={25} delay={1000} speed={1600} />
+          <FireEmber x={35} delay={1400} speed={2000} />
+          <FireEmber x={10} delay={1800} speed={2400} />
+          <FireEmber x={30} delay={400} speed={1900} />
+          <FireEmber x={20} delay={2200} speed={1700} />
+          <FireEmber x={40} delay={800} speed={2100} />
+          <FireEmber x={0} delay={1600} speed={2300} />
+          <FireEmber x={45} delay={1200} speed={1500} />
         </View>
 
         {/* Walking avatars */}

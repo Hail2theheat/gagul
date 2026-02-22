@@ -3,8 +3,6 @@
  */
 
 import { supabase } from '../supabase';
-import * as FileSystem from 'expo-file-system';
-import { decode } from 'base64-arraybuffer';
 
 export interface TelephoneAssignment {
   has_assignment: boolean;
@@ -52,48 +50,6 @@ export async function getMyTelephone(groupId: string): Promise<TelephoneAssignme
 }
 
 /**
- * Upload a drawing to Supabase Storage
- */
-export async function uploadDrawing(
-  groupId: string,
-  stepId: string,
-  imageUri: string
-): Promise<{ url: string | null; error?: string }> {
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData?.user) {
-    return { url: null, error: 'Not authenticated' };
-  }
-
-  try {
-    // Read file as base64
-    const base64 = await FileSystem.readAsStringAsync(imageUri, {
-      encoding: 'base64',
-    });
-
-    const fileName = `telephone/${groupId}/${stepId}_${Date.now()}.png`;
-
-    // Convert and upload
-    const arrayBuffer = decode(base64);
-    const { error: uploadError } = await supabase.storage
-      .from('uploads')
-      .upload(fileName, arrayBuffer, {
-        contentType: 'image/png',
-        upsert: false,
-      });
-
-    if (uploadError) {
-      console.error('[uploadDrawing] Upload error:', uploadError);
-      return { url: null, error: uploadError.message };
-    }
-
-    return { url: fileName };
-  } catch (err: any) {
-    console.error('[uploadDrawing] Exception:', err);
-    return { url: null, error: 'Failed to upload drawing' };
-  }
-}
-
-/**
  * Submit a telephone step (draw or write)
  */
 export async function submitTelephoneStep(
@@ -117,29 +73,6 @@ export async function submitTelephoneStep(
   }
 
   return { success: true };
-}
-
-/**
- * Get signed URL for a drawing
- */
-export async function getDrawingUrl(storagePath: string): Promise<string | null> {
-  if (!storagePath) return null;
-
-  try {
-    const { data, error } = await supabase.storage
-      .from('uploads')
-      .createSignedUrl(storagePath, 60 * 60); // 1 hour
-
-    if (error) {
-      console.error('Error getting drawing URL:', error);
-      return null;
-    }
-
-    return data.signedUrl;
-  } catch (err) {
-    console.error('Exception getting drawing URL:', err);
-    return null;
-  }
 }
 
 /**

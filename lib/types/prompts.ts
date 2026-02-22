@@ -2,20 +2,25 @@
  * Unified types for the prompts system
  */
 
-// The 6 prompt types supported
+// Prompt types supported
 export type PromptType =
   | 'short_text'
   | 'long_text'
   | 'photo'
   | 'multiple_choice'
   | 'quiz'
-  | 'quiplash';
+  | 'quiplash'
+  | 'photo_caption'
+  | 'meme_upload'
+  | 'meme_caption';
 
 // Word limits for text prompts
 export const WORD_LIMITS = {
   short_text: { min: 1, max: 50 },
   long_text: { min: 40, max: 200 },
   quiplash: { min: 1, max: 50 },
+  photo_caption: { min: 1, max: 50 },
+  meme_caption: { min: 1, max: 50 },
 } as const;
 
 // Group member info for "Most Likely To..." prompts
@@ -38,6 +43,7 @@ export interface Prompt {
   is_user_generated: boolean;
   is_most_likely?: boolean; // Uses group members as options
   is_majority_guess?: boolean; // Users guess what majority will answer
+  media_url?: string; // For photo_caption prompts
   created_by?: string;
   thumbs_up: number;
   thumbs_down: number;
@@ -159,6 +165,72 @@ export interface MajorityGuessingResults {
   correct_guessers: number;
 }
 
+// Photo caption voting data (from get_caption_voting_data RPC)
+export interface CaptionVotingPrompt {
+  group_prompt_id: string;
+  prompt_content: string;
+  prompt_title: string;
+  prompt_media_url: string;
+  responses: {
+    response_id: string;
+    content: string;
+    user_id: string;
+  }[];
+  has_responded: boolean;
+  has_voted: boolean;
+  voted_for?: string;
+}
+
+// Photo caption result (from get_caption_results RPC)
+export interface CaptionResult {
+  response_id: string;
+  user_id: string;
+  username: string;
+  avatar_config: Record<string, unknown> | null;
+  content: string;
+  votes: number;
+}
+
+// Meme game state (from get_meme_game_status RPC)
+export interface MemeGameState {
+  id: string;
+  group_id: string;
+  week_of: string;
+  phase: 'photo_upload' | 'captioning' | 'voting' | 'complete';
+  photo_uploader_id: string;
+  uploader_username: string | null;
+  uploader_avatar: Record<string, unknown> | null;
+  photo_url: string | null;
+  photo_group_prompt_id: string | null;
+  caption_group_prompt_id: string | null;
+  has_submitted: boolean;
+  is_uploader: boolean;
+}
+
+// Meme voting data (from get_meme_voting_data RPC)
+export interface MemeVotingData {
+  game_id: string;
+  photo_url: string;
+  caption_group_prompt_id: string;
+  responses: {
+    response_id: string;
+    content: string;
+    user_id: string;
+  }[];
+  has_voted: boolean;
+  voted_for: string | null;
+}
+
+// Meme results for fireside (from get_meme_results RPC)
+export interface MemeResults {
+  game_id: string;
+  phase: string;
+  photo_url: string;
+  photo_uploader_id: string;
+  winner_user_id: string | null;
+  captions: CaptionResult[];
+}
+
 // Validation result
 export interface ValidationResult {
   valid: boolean;
@@ -243,6 +315,36 @@ export function validateResponse(
       return { valid: true };
     }
 
+    case 'meme_caption': {
+      if (!content?.trim()) {
+        return { valid: false, error: 'Please write a caption' };
+      }
+      const memeWords = countWords(content);
+      const memeLimits = WORD_LIMITS.meme_caption;
+      if (memeWords < memeLimits.min) {
+        return { valid: false, error: `Please enter at least ${memeLimits.min} word` };
+      }
+      if (memeWords > memeLimits.max) {
+        return { valid: false, error: `Please keep it under ${memeLimits.max} words (currently ${memeWords})` };
+      }
+      return { valid: true };
+    }
+
+    case 'photo_caption': {
+      if (!content?.trim()) {
+        return { valid: false, error: 'Please write a caption' };
+      }
+      const captionWords = countWords(content);
+      const captionLimits = WORD_LIMITS.photo_caption;
+      if (captionWords < captionLimits.min) {
+        return { valid: false, error: `Please enter at least ${captionLimits.min} word` };
+      }
+      if (captionWords > captionLimits.max) {
+        return { valid: false, error: `Please keep it under ${captionLimits.max} words (currently ${captionWords})` };
+      }
+      return { valid: true };
+    }
+
     default:
       return { valid: false, error: 'Unknown prompt type' };
   }
@@ -259,6 +361,9 @@ export function getPromptTypeLabel(type: PromptType): string {
     multiple_choice: 'Multiple Choice',
     quiz: 'Quiz',
     quiplash: 'Quiplash',
+    photo_caption: 'Photo Caption',
+    meme_upload: 'What do you Meme',
+    meme_caption: 'What do you Meme',
   };
   return labels[type] || type;
 }

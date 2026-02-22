@@ -32,15 +32,60 @@ interface PushToken {
   token: string
 }
 
-Deno.serve(async (_req) => {
+Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Get prompts that need reminders (5+ hours old, still active, no reminder sent)
-    const { data: prompts, error: promptError } = await supabase
-      .rpc('get_prompts_needing_reminder')
+    // Check for custom message in request body
+    let customTitle: string | null = null
+    let customBody: string | null = null
+    let forceAll = false
+    try {
+      const body = await req.json()
+      customTitle = body.title || null
+      customBody = body.body || null
+      forceAll = body.force_all || false
+    } catch {
+      // No body or invalid JSON, use defaults
+    }
+
+    let prompts: PromptToRemind[] | null = null
+    let promptError: any = null
+
+    if (forceAll) {
+      // Get ALL currently active prompts (ignore reminder timing/flags)
+      // Active = started today (within last 24h)
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+      const result = await supabase
+        .from('prompt_instances')
+        .select(`
+          id,
+          group_id,
+          groups!inner(name),
+          prompts!inner(title, type)
+        `)
+        .gte('starts_at', yesterday)
+        .lte('starts_at', new Date().toISOString())
+
+      if (result.error) {
+        promptError = result.error
+      } else {
+        prompts = (result.data || []).map((p: any) => ({
+          group_prompt_id: p.id,
+          group_id: p.group_id,
+          group_name: p.groups?.name || 'Your group',
+          prompt_title: p.prompts?.title || '',
+          prompt_type: p.prompts?.type || '',
+        }))
+      }
+    } else {
+      // Standard: get prompts needing reminders (5+ hours old, not yet reminded)
+      const result = await supabase.rpc('get_prompts_needing_reminder')
+      prompts = result.data
+      promptError = result.error
+    }
 
     if (promptError) {
       console.error('Error fetching prompts for reminder:', promptError)
@@ -92,8 +137,8 @@ Deno.serve(async (_req) => {
         for (const { token } of pushTokens) {
           notifications.push({
             to: token,
-            title: `⏰ ${prompt.group_name}`,
-            body: "Don't be that guy. Answer the prompt bro",
+            title: customTitle || `⏰ ${prompt.group_name}`,
+            body: customBody || "Don't be that guy. Answer the prompt bro",
             sound: 'default',
             data: { type: 'reminder' },
           })

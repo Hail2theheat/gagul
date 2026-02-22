@@ -12,6 +12,8 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Keyboard,
+  InputAccessoryView,
 } from "react-native";
 import { CampfireColors } from "../../../constants/theme";
 import { SilhouetteTree } from "../../../components/campfire/SilhouetteTree";
@@ -51,6 +53,9 @@ import { PixelTitle } from "../../../components/PixelTitle";
 import { NightSky } from "../../../components/sky";
 import { FiresideIntro } from "../../../components/FiresideIntro";
 import { FireworkShow } from "../../../components/effects/FireworkShow";
+import AIJudgeReveal from "../../../components/fireside/AIJudgeReveal";
+import { MOCK_JUDGE_ENTRIES, MOCK_NON_SUBMITTERS, MOCK_CHALLENGE_TITLE, AIJudgeEntry, NonSubmitter } from "../../../components/fireside/mockJudgeData";
+import { WIRTHLIN_JUDGE_ENTRIES, WIRTHLIN_NON_SUBMITTERS, WIRTHLIN_CHALLENGE_TITLE } from "../../../components/fireside/wirthlinJudgeData";
 import {
   getFiresideCount,
   incrementFiresideCount,
@@ -358,6 +363,9 @@ export default function LowdownScreen() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const viewStartTime = useRef<number | null>(null);
   const hasAwardedFiresidePoints = useRef(false);
+  const leaderboardScrollRef = useRef<ScrollView>(null);
+  const [aiJudgeActive, setAiJudgeActive] = useState(false);
+  const [aiJudgePhotoUrls, setAiJudgePhotoUrls] = useState<Record<string, string>>({});
 
   // DESIGN.md §15.2: Fireside milestone celebration state
   const [celebrationMessage, setCelebrationMessage] = useState<string | null>(null);
@@ -370,6 +378,38 @@ export default function LowdownScreen() {
   useEffect(() => {
     loadData();
   }, [groupId]);
+
+  // Detect AI Judge prompt (The Tribunal) — supports multiple groups/prompts
+  const AI_JUDGE_CONFIGS: Record<string, { entries: AIJudgeEntry[]; nonSubmitters: NonSubmitter[]; title: string }> = {
+    'de17f81c-58c6-4b8d-86a6-247ac774380c': { entries: MOCK_JUDGE_ENTRIES, nonSubmitters: MOCK_NON_SUBMITTERS, title: MOCK_CHALLENGE_TITLE },
+    '6e6b26af-5a53-4347-8654-8c48daaa4e6b': { entries: WIRTHLIN_JUDGE_ENTRIES, nonSubmitters: WIRTHLIN_NON_SUBMITTERS, title: WIRTHLIN_CHALLENGE_TITLE },
+  };
+  const [activeJudgeConfig, setActiveJudgeConfig] = useState<{ entries: AIJudgeEntry[]; nonSubmitters: NonSubmitter[]; title: string } | null>(null);
+
+  useEffect(() => {
+    const prompt = firesideData?.prompts[currentPromptIndex];
+    const gpId = prompt?.group_prompt_id;
+    const config = gpId ? AI_JUDGE_CONFIGS[gpId] : undefined;
+    if (config && screenState === 'prompts') {
+      // Fetch signed URLs for all judge entries, then activate
+      (async () => {
+        const urls: Record<string, string> = {};
+        await Promise.all(
+          config.entries.map(async (entry) => {
+            try {
+              const signedUrl = await getSignedImageUrl(entry.photo_path);
+              if (signedUrl) urls[entry.user_id] = signedUrl;
+            } catch (e) {
+              console.error('[AIJudge] Failed to get signed URL for', entry.username, e);
+            }
+          })
+        );
+        setAiJudgePhotoUrls(urls);
+        setActiveJudgeConfig(config);
+        setAiJudgeActive(true);
+      })();
+    }
+  }, [currentPromptIndex, screenState, firesideData]);
 
   // Fetch signed URL when showing a photo response or meme game prompt
   useEffect(() => {
@@ -1058,7 +1098,16 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
           backgroundColor: "#1a2f1a",
         }} />
 
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.leaderboardContent}>
+        {/* Keyboard toolbar */}
+        <InputAccessoryView nativeID="customPromptKeyboard">
+          <View style={{ flexDirection: "row", justifyContent: "flex-end", backgroundColor: "#1C2841", borderTopWidth: 1, borderTopColor: "#2D3F5E", paddingHorizontal: 16, paddingVertical: 8 }}>
+            <TouchableOpacity onPress={() => Keyboard.dismiss()}>
+              <Text style={{ color: "#4ADE80", fontSize: 16, fontWeight: "600" }}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </InputAccessoryView>
+
+        <ScrollView ref={leaderboardScrollRef} style={{ flex: 1 }} contentContainerStyle={[styles.leaderboardContent, { paddingBottom: 120 }]} keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 30 }}>
             <PixelTrophy size={36} />
             <Text style={[styles.leaderboardTitle, { marginLeft: 12, marginBottom: 0 }]}>Weekly Champions</Text>
@@ -1195,6 +1244,12 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
                       onChangeText={setCustomPromptText}
                       multiline
                       maxLength={200}
+                      inputAccessoryViewID="customPromptKeyboard"
+                      onFocus={() => {
+                        setTimeout(() => {
+                          leaderboardScrollRef.current?.scrollToEnd({ animated: true });
+                        }, 400);
+                      }}
                     />
                     <TouchableOpacity
                       style={[
@@ -1202,6 +1257,7 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
                         (!customPromptText.trim() || choosingPrompt) && { opacity: 0.5 },
                       ]}
                       onPress={async () => {
+                        Keyboard.dismiss();
                         if (!customPromptText.trim() || choosingPrompt) return;
                         setChoosingPrompt(true);
                         try {
@@ -1277,6 +1333,23 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
         </TouchableOpacity>
         </ScrollView>
       </View>
+    );
+  }
+
+  // AI Judge full-screen takeover
+  if (aiJudgeActive && activeJudgeConfig && screenState === 'prompts') {
+    return (
+      <AIJudgeReveal
+        entries={activeJudgeConfig.entries}
+        nonSubmitters={activeJudgeConfig.nonSubmitters}
+        photoUrls={aiJudgePhotoUrls}
+        challengeTitle={activeJudgeConfig.title}
+        onComplete={() => {
+          setAiJudgeActive(false);
+          setActiveJudgeConfig(null);
+          goToNextPrompt();
+        }}
+      />
     );
   }
 
@@ -1480,35 +1553,9 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
       </TouchableOpacity>
 
       <View style={[styles.promptContainer, isMemeGame && { paddingTop: 8, paddingBottom: 20 }]}>
-        {/* Prompt type badge - show for Quiplash and Photo Caption */}
-        {showingPrompt && isQuiplash && (
-          <View style={[styles.typeBadge, styles.quiplashBadge]}>
-            <Text style={styles.typeBadgeText}>Mano e Mano</Text>
-          </View>
-        )}
-        {/* No badge for meme game */}
-
         {showingPrompt ? (
           // Show the prompt
           <View style={[styles.promptContent, isMemeGame && { paddingTop: 0, paddingBottom: 0 }]}>
-            {/* Navigation hint at top — hidden for meme game */}
-            {!isMemeGame && (
-              <Text style={styles.swipeHintTop}>
-                {isQuizOrMC && revealStep < 3
-                  ? "→ reveal"
-                  : isQuiplash
-                  ? revealStep === 0
-                    ? "→ see answers"
-                    : revealStep === 1
-                    ? "→ reveal votes"
-                    : revealStep === 2
-                    ? "→ see who wrote them"
-                    : "→ next"
-                  : responses.length > 0 && !isQuizOrMC
-                  ? "→ see responses"
-                  : "→ next"}
-              </Text>
-            )}
             {!isMemeGame && (
               <AutoShrinkText style={styles.promptTitle} text={currentPrompt.content || currentPrompt.title || ''} />
             )}
@@ -1579,14 +1626,25 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
               </View>
             )}
 
-            {isQuiplash && currentPrompt.quiplash_data && revealStep >= 1 && (
-              <View style={styles.quiplashResults}>
-                {currentPrompt.quiplash_data.map((participant, i) => {
-                  const maxVotes = Math.max(...(currentPrompt.quiplash_data?.map(p => p.votes) || [0]));
-                  const isWinner = participant.votes === maxVotes && maxVotes > 0;
-                  const isTie = currentPrompt.quiplash_data?.filter(p => p.votes === maxVotes).length === 2;
+            {isQuiplash && currentPrompt.quiplash_data && revealStep >= 1 && (() => {
+              const participants = currentPrompt.quiplash_data || [];
+              const count = participants.length;
+              const respondents = participants.filter(p => p.response?.content);
+              const isAutoWin = respondents.length === 1 && count > 1;
+              const maxVotes = Math.max(...participants.map(p => p.votes), 0);
 
-                  // Get voters for this participant's response
+              return (
+              <View style={[
+                styles.quiplashResults,
+                count >= 3 && { gap: 6 },
+              ]}>
+                {participants.map((participant, i) => {
+                  const didRespond = !!participant.response?.content;
+                  const isWinner = isAutoWin
+                    ? didRespond
+                    : participant.votes === maxVotes && maxVotes > 0;
+                  const isTie = !isAutoWin && participants.filter(p => p.votes === maxVotes).length >= 2 && maxVotes > 0;
+
                   const votersForThis = quiplashVoters.filter(
                     v => v.voted_for_response_id === participant.response?.id
                   );
@@ -1596,19 +1654,26 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
                       key={i}
                       style={[
                         styles.quiplashEntry,
+                        count >= 3 && { minWidth: "30%" as any, maxWidth: "31%" as any, padding: 8 },
                         revealStep >= 2 && isWinner && !isTie && styles.quiplashWinner,
+                        !didRespond && { opacity: 0.5 },
                       ]}
                     >
-                      {/* Answer content */}
-                      <Text style={styles.quiplashAnswer}>
-                        "{participant.response?.content || "(no answer)"}"
+                      <Text style={[
+                        styles.quiplashAnswer,
+                        count >= 3 && { fontSize: 11, lineHeight: 15 },
+                      ]}>
+                        "{participant.response?.content?.trim() || "(no answer)"}"
                       </Text>
 
-                      {/* Step 2+: Votes + voter avatars */}
                       {revealStep >= 2 && (
-                        <View style={styles.quiplashMeta}>
-                          <Text style={[styles.quiplashVotes, isWinner && !isTie && styles.quiplashVotesWinner]}>
-                            {isWinner && !isTie ? "WINNER " : ""}{participant.votes} vote{participant.votes !== 1 ? 's' : ''}
+                        <View style={[styles.quiplashMeta, count >= 3 && { marginTop: 6, gap: 3 }]}>
+                          <Text style={[
+                            styles.quiplashVotes,
+                            isWinner && !isTie && styles.quiplashVotesWinner,
+                            count >= 3 && { fontSize: 11 },
+                          ]}>
+                            {isAutoWin && didRespond ? "AUTO-WIN" : isWinner && !isTie ? "WINNER" : ""}{!isAutoWin || !didRespond ? ` ${participant.votes} vote${participant.votes !== 1 ? 's' : ''}` : ''}
                           </Text>
                           {votersForThis.length > 0 && (
                             <View style={styles.quiplashVoterRow}>
@@ -1622,7 +1687,7 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
                                 >
                                   <PixelCharacter
                                     config={(voter.avatar_config as unknown as CharacterConfig) || DEFAULT_CHARACTER}
-                                    size={18}
+                                    size={count >= 3 ? 14 : 18}
                                   />
                                 </View>
                               ))}
@@ -1631,18 +1696,17 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
                         </View>
                       )}
 
-                      {/* Step 3: Author reveal */}
                       {revealStep >= 3 && (
-                        <View style={styles.quiplashAuthorReveal}>
-                          <Text style={styles.quiplashWrittenBy}>written by</Text>
+                        <View style={[styles.quiplashAuthorReveal, count >= 3 && { marginTop: 4 }]}>
+                          <Text style={[styles.quiplashWrittenBy, count >= 3 && { fontSize: 9 }]}>written by</Text>
                           <View style={styles.quiplashAuthorRow}>
                             <View style={styles.quiplashAuthorAvatar}>
                               <PixelCharacter
                                 config={(participant.avatar_config as unknown as CharacterConfig) || DEFAULT_CHARACTER}
-                                size={20}
+                                size={count >= 3 ? 14 : 20}
                               />
                             </View>
-                            <Text style={styles.quiplashName}>
+                            <Text style={[styles.quiplashName, count >= 3 && { fontSize: 10 }]}>
                               {participant.username || 'Anonymous'}
                             </Text>
                           </View>
@@ -1652,25 +1716,26 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
                   );
                 })}
 
-                {/* Points banner - step 3 */}
                 {revealStep >= 3 && (() => {
-                  const maxVotes = Math.max(...(currentPrompt.quiplash_data?.map(p => p.votes) || [0]));
-                  const winners = currentPrompt.quiplash_data?.filter(p => p.votes === maxVotes && maxVotes > 0) || [];
+                  const winners = isAutoWin
+                    ? respondents
+                    : participants.filter(p => p.votes === maxVotes && maxVotes > 0);
+                  const isTie = !isAutoWin && winners.length >= 2;
                   if (winners.length === 1) {
                     return (
                       <View style={styles.quiplashPointsBanner}>
                         <Text style={styles.quiplashPointsText}>
-                          {winners[0].username || 'Anonymous'} earns 5 points!
+                          {winners[0].username || 'Anonymous'} earns 5 points!{isAutoWin ? ' (by default)' : ''}
                         </Text>
                       </View>
                     );
                   }
-                  if (winners.length === 2) {
+                  if (isTie) {
                     return (
                       <View style={styles.quiplashPointsBanner}>
                         <Text style={styles.quiplashTie}>It's a tie!</Text>
                         <Text style={styles.quiplashPointsText}>
-                          {winners[0].username || 'Anonymous'} & {winners[1].username || 'Anonymous'} each earn 2.5 points
+                          {winners.map(w => w.username || 'Anonymous').join(' & ')} each earn 2.5 points
                         </Text>
                       </View>
                     );
@@ -1678,7 +1743,8 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
                   return null;
                 })()}
               </View>
-            )}
+              );
+            })()}
 
             {/* Meme Game — Title + Photo + compact captions */}
             {isMemeGame && (
@@ -1867,6 +1933,31 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
                 <Text style={styles.responseAuthorName}>
                   {currentResponse?.username || 'Anonymous'}
                 </Text>
+              </View>
+            )}
+
+            {/* Photo prompt: show fireside comments inline below the photo */}
+            {mediaType === 'photo' && comments.length > 0 && (
+              <View style={{ marginTop: 16, width: '100%', paddingHorizontal: 4 }}>
+                <Text style={{ color: COLORS.muted, fontSize: 12, fontWeight: '600', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
+                  Comments
+                </Text>
+                {comments.map((c) => (
+                  <View key={c.id} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8, gap: 8 }}>
+                    <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ fontSize: 10, color: COLORS.text, fontWeight: '700' }}>
+                        {(c.username || '?')[0].toUpperCase()}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: COLORS.text, fontSize: 13 }}>
+                        <Text style={{ fontWeight: '700' }}>{c.username || 'Anon'}</Text>
+                        {'  '}
+                        <Text style={{ color: COLORS.muted }}>{c.content}</Text>
+                      </Text>
+                    </View>
+                  </View>
+                ))}
               </View>
             )}
 

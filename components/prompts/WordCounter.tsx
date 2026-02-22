@@ -5,14 +5,15 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { countWords } from '../../lib/types/prompts';
+import { CampfireColors } from '../../constants/theme';
 
 // Theme colors
 const COLORS = {
-  text: '#E6F0FF',
-  muted: '#9EC5FF',
-  success: '#4ADE80',
+  text: CampfireColors.TEXT,
+  muted: CampfireColors.MUTED,
+  success: CampfireColors.SUCCESS,
   warning: '#FFA500',
-  error: '#FF4444',
+  error: CampfireColors.DANGER,
 };
 
 interface WordCounterProps {
@@ -148,7 +149,7 @@ const styles = StyleSheet.create({
   },
   progressTrack: {
     height: 4,
-    backgroundColor: '#1E3A5F',
+    backgroundColor: CampfireColors.BORDER,
     borderRadius: 2,
     overflow: 'hidden',
     position: 'relative',
@@ -162,7 +163,7 @@ const styles = StyleSheet.create({
     top: -2,
     width: 2,
     height: 8,
-    backgroundColor: '#9EC5FF',
+    backgroundColor: CampfireColors.MUTED,
     opacity: 0.5,
   },
 });

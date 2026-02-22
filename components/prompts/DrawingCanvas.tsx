@@ -3,7 +3,7 @@
  * Fixes: multiple strokes, color per stroke, scroll interference
  */
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -16,18 +16,18 @@ import {
   GestureResponderEvent,
 } from 'react-native';
 import Svg, { Path, G } from 'react-native-svg';
-import ViewShot from 'react-native-view-shot';
+import { CampfireColors } from '../../constants/theme';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const CANVAS_SIZE = Math.min(SCREEN_WIDTH - 40, SCREEN_HEIGHT * 0.5);
+export const CANVAS_SIZE = Math.min(SCREEN_WIDTH - 40, SCREEN_HEIGHT * 0.5);
 
 const COLORS = {
-  bg: '#0D1426',
-  card: '#1A1A2E',
-  border: '#27406B',
-  text: '#E6F0FF',
-  muted: '#9CA3AF',
-  accent: '#FF6B35',
+  bg: CampfireColors.BG,
+  card: CampfireColors.CARD_SOLID,
+  border: CampfireColors.BORDER,
+  text: CampfireColors.TEXT,
+  muted: CampfireColors.MUTED,
+  accent: CampfireColors.BTN_PRIMARY,
   canvas: '#FFFFFF',
 };
 
@@ -42,14 +42,14 @@ const STROKE_SIZES = [
   { label: 'L', size: 16 },
 ];
 
-interface PathData {
+export interface PathData {
   d: string;
   color: string;
   strokeWidth: number;
 }
 
 interface DrawingCanvasProps {
-  onSave: (imageUri: string) => void;
+  onSave: (pathData: PathData[]) => void;
   disabled?: boolean;
   prompt?: string;
 }
@@ -62,9 +62,6 @@ export function DrawingCanvas({ onSave, disabled, prompt }: DrawingCanvasProps) 
   const [strokeSize, setStrokeSize] = useState(8);
   const [undoStack, setUndoStack] = useState<PathData[][]>([]);
   const [redoStack, setRedoStack] = useState<PathData[][]>([]);
-  const [saving, setSaving] = useState(false);
-
-  const viewShotRef = useRef<ViewShot>(null);
 
   // Use refs to avoid stale closure issues
   const pathsRef = useRef<PathData[]>([]);
@@ -145,19 +142,10 @@ export function DrawingCanvas({ onSave, disabled, prompt }: DrawingCanvasProps) 
     }
   };
 
-  const handleSave = async () => {
-    if (saving || !viewShotRef.current || paths.length === 0) return;
-
-    setSaving(true);
-    try {
-      const uri = await viewShotRef.current.capture();
-      setShowStudio(false);
-      onSave(uri);
-    } catch (error) {
-      console.error('Error saving drawing:', error);
-    } finally {
-      setSaving(false);
-    }
+  const handleSave = () => {
+    if (paths.length === 0) return;
+    setShowStudio(false);
+    onSave([...paths]);
   };
 
   const handleClose = () => {
@@ -225,10 +213,10 @@ export function DrawingCanvas({ onSave, disabled, prompt }: DrawingCanvasProps) 
             <TouchableOpacity
               onPress={handleSave}
               style={[styles.headerButton, styles.saveHeaderButton, paths.length === 0 && styles.headerButtonDisabled]}
-              disabled={paths.length === 0 || saving}
+              disabled={paths.length === 0}
             >
               <Text style={[styles.headerButtonText, styles.saveHeaderText]}>
-                {saving ? 'Saving...' : 'Done ✓'}
+                Done ✓
               </Text>
             </TouchableOpacity>
           </View>
@@ -243,39 +231,33 @@ export function DrawingCanvas({ onSave, disabled, prompt }: DrawingCanvasProps) 
 
           {/* Canvas */}
           <View style={styles.canvasWrapper}>
-            <ViewShot
-              ref={viewShotRef}
-              options={{ format: 'png', quality: 0.9 }}
-              style={styles.viewShot}
-            >
-              <View style={styles.canvas} {...panResponder.panHandlers}>
-                <Svg width={CANVAS_SIZE} height={CANVAS_SIZE}>
-                  <G>
-                    {paths.map((path, index) => (
-                      <Path
-                        key={index}
-                        d={path.d}
-                        stroke={path.color}
-                        strokeWidth={path.strokeWidth}
-                        fill="none"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    ))}
-                    {currentPath && (
-                      <Path
-                        d={currentPath}
-                        stroke={selectedColor}
-                        strokeWidth={strokeSize}
-                        fill="none"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    )}
-                  </G>
-                </Svg>
-              </View>
-            </ViewShot>
+            <View style={styles.canvas} {...panResponder.panHandlers}>
+              <Svg width={CANVAS_SIZE} height={CANVAS_SIZE}>
+                <G>
+                  {paths.map((path, index) => (
+                    <Path
+                      key={index}
+                      d={path.d}
+                      stroke={path.color}
+                      strokeWidth={path.strokeWidth}
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  ))}
+                  {currentPath && (
+                    <Path
+                      d={currentPath}
+                      stroke={selectedColor}
+                      strokeWidth={strokeSize}
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  )}
+                </G>
+              </Svg>
+            </View>
           </View>
 
           {/* Tools */}
@@ -466,10 +448,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-  },
-  viewShot: {
-    borderRadius: 12,
-    overflow: 'hidden',
   },
   canvas: {
     width: CANVAS_SIZE,

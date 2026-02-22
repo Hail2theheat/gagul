@@ -248,7 +248,7 @@ export function CampfireSimple({ size = 110, showGlow = true, showCooking = fals
       400,
       withRepeat(
         withSequence(
-          withTiming(-8, { duration: 4000, easing: Easing.inOut(Easing.sine) }),
+          withTiming(-8, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
           withTiming(0, { duration: 0 })
         ),
         -1,
@@ -285,7 +285,7 @@ export function CampfireSimple({ size = 110, showGlow = true, showCooking = fals
       2400,
       withRepeat(
         withSequence(
-          withTiming(10, { duration: 3800, easing: Easing.inOut(Easing.sine) }),
+          withTiming(10, { duration: 3800, easing: Easing.inOut(Easing.sin) }),
           withTiming(0, { duration: 0 })
         ),
         -1,

@@ -12,7 +12,7 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
-import Animated, { FadeIn, FadeOut, SlideInDown, SlideInLeft } from "react-native-reanimated";
+import Animated, { FadeIn, FadeOut, SlideInLeft } from "react-native-reanimated";
 import { supabase } from "../lib/supabase";
 import { PixelCharacter, DEFAULT_CHARACTER, CharacterConfig } from "../components/PixelCharacter";
 import { AnimatedLogo } from "../components/AnimatedLogo";
@@ -220,7 +220,7 @@ export default function LoginScreen() {
           {mode === "login" ? "Welcome back, friend" : "Join the circle"}
         </Animated.Text>
 
-        <Animated.View entering={SlideInDown.springify().damping(18)} style={{
+        <View style={{
           backgroundColor: CARD,
           borderColor: BORDER,
           borderWidth: 1,
@@ -301,7 +301,7 @@ export default function LoginScreen() {
               </Text>
             </Text>
           </Pressable>
-        </Animated.View>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );

@@ -27,10 +27,12 @@ import Animated, {
 
 const { width: W, height: H } = Dimensions.get("window");
 
-const FIRE_RED = "#CC2200";
-const FIRE_ORANGE = "#FF6B35";
-const FIRE_YELLOW = "#FFD93D";
-const EMBER_COLOR = "#FF9F1C";
+import { CampfireColors } from "../constants/theme";
+
+const FIRE_RED = CampfireColors.FIRE_RED;
+const FIRE_ORANGE = CampfireColors.FIRE_ORANGE;
+const FIRE_YELLOW = CampfireColors.FIRE_YELLOW;
+const EMBER_COLOR = CampfireColors.EMBER;
 
 const FLAME_COUNT = 10;
 const ENGULF_DURATION = 700; // faster for navigation (vs 1400 for splash)

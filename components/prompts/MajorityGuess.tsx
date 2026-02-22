@@ -9,17 +9,18 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { CampfireColors } from '../../constants/theme';
 
 // Theme colors
 const COLORS = {
-  bg: '#0D1426',
-  card: '#1A2744',
-  border: '#27406B',
-  borderSelected: '#1E4ED8',
-  text: '#E6F0FF',
-  muted: '#9EC5FF',
-  accent: '#1E4ED8',
-  success: '#4ADE80',
+  bg: CampfireColors.BG,
+  card: CampfireColors.CARD_SOLID,
+  border: CampfireColors.BORDER,
+  borderSelected: CampfireColors.BTN_PRIMARY,
+  text: CampfireColors.TEXT,
+  muted: CampfireColors.MUTED,
+  accent: CampfireColors.BTN_PRIMARY,
+  success: CampfireColors.SUCCESS,
   warning: '#FBBF24',
 };
 

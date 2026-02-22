@@ -9,6 +9,7 @@ import { PixelCharacter, CharacterConfig, DEFAULT_CHARACTER } from "../../compon
 import { NightSky } from "../../components/sky";
 import { PixelTitle } from "../../components/PixelTitle";
 import { CampfireColors, Spacing, Radii, Typography, Shadows } from "../../constants/theme";
+import { isAppAdmin } from "../../lib/services/adminService";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -94,6 +95,7 @@ export default function Settings() {
   const { data: profile, refetch: refetchProfile } = useProfile();
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [sessionLoaded, setSessionLoaded] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [editingUsername, setEditingUsername] = useState(false);
@@ -127,6 +129,7 @@ export default function Settings() {
       const { data } = await supabase.auth.getSession();
       setSessionEmail(data.session?.user?.email ?? null);
       setUserId(data.session?.user?.id ?? null);
+      setSessionLoaded(true);
       const emojis = await getUserEmojis();
       setUserEmojis(emojis);
     };
@@ -189,16 +192,15 @@ export default function Settings() {
   };
 
   useEffect(() => {
-    if (!sessionEmail && !userId) {
-      const timer = setTimeout(() => { router.replace("/login"); }, 100);
-      return () => clearTimeout(timer);
+    if (sessionLoaded && !sessionEmail && !userId) {
+      router.replace("/login");
     }
-  }, [sessionEmail, userId]);
+  }, [sessionLoaded, sessionEmail, userId]);
 
   const renderLoggedOutView = () => (
     <View style={{ alignItems: "center", marginBottom: 30, marginTop: 20 }}>
       <Text style={{ color: TEXT, ...Typography.heading3, fontSize: 20, marginBottom: 8 }}>
-        Loading...
+        Warming up...
       </Text>
     </View>
   );
@@ -207,53 +209,62 @@ export default function Settings() {
     <>
       {/* Profile Card */}
       <View style={{ backgroundColor: CARD, borderColor: BORDER, borderWidth: 1, borderRadius: Radii.lg, padding: Spacing.lg, marginBottom: 14 }}>
-        <Text style={{ color: TEXT, ...Typography.heading3, marginBottom: Spacing.lg }}>My Profile</Text>
 
-        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: Spacing.lg }}>
-          <View style={{ marginRight: Spacing.lg }}>
-            <PixelCharacter config={profile?.avatar_config || DEFAULT_CHARACTER} size={70} />
+        {/* Avatar — centered with body-centering transform */}
+        <Pressable
+          onPress={() => router.push("/create-character")}
+          style={{ alignSelf: "center", width: 130, height: 155, alignItems: "center", justifyContent: "center", marginBottom: 12 }}
+          accessibilityRole="button"
+          accessibilityLabel="Edit Avatar"
+        >
+          <View style={{ transform: [{ translateX: -60 }] }}>
+            <PixelCharacter config={profile?.avatar_config || DEFAULT_CHARACTER} size={80} />
           </View>
+        </Pressable>
 
-          <View style={{ flex: 1 }}>
-            {editingUsername ? (
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <TextInput
-                  value={newUsername}
-                  onChangeText={setNewUsername}
-                  placeholder="Username"
-                  placeholderTextColor={"#6B5B4F"}
-                  accessibilityLabel="Edit username"
-                  style={{ flex: 1, backgroundColor: INPUT_BG, borderColor: BORDER, borderWidth: 1, borderRadius: Radii.sm, padding: 10, color: TEXT, marginRight: 8 }}
-                  maxLength={20}
-                />
-                <Pressable
-                  onPress={saveUsername}
-                  disabled={saving}
-                  style={{ backgroundColor: SUCCESS, paddingHorizontal: 12, paddingVertical: 8, borderRadius: Radii.sm, minWidth: 44, minHeight: 44, justifyContent: "center" }}
-                  accessibilityRole="button"
-                  accessibilityLabel="Save username"
-                >
-                  <Text style={{ color: "#000", fontFamily: "Paaxel", fontSize: 12 }}>{saving ? "..." : "Save"}</Text>
-                </Pressable>
-              </View>
-            ) : (
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Text style={{ color: TEXT, ...Typography.heading3, fontSize: 18 }}>{profile?.username || "No username"}</Text>
-                <Pressable onPress={() => setEditingUsername(true)} style={{ marginLeft: 8, padding: 4, minWidth: 44, minHeight: 44, justifyContent: "center", alignItems: "center" }} accessibilityRole="button" accessibilityLabel="Edit username">
-                  <PixelPencilIcon size={14} />
-                </Pressable>
-              </View>
-            )}
-
-            <Text style={{ color: MUTED, fontSize: 13, marginTop: 4 }}>{sessionEmail}</Text>
-
-            <View style={{ flexDirection: "row", alignItems: "center", marginTop: 6 }}>
-              <View style={{ width: 8, height: 8, backgroundColor: CampfireColors.WARNING, borderRadius: 4, marginRight: 6 }} />
-              <Text style={{ color: CampfireColors.WARNING, fontSize: 13, fontFamily: "Paaxel" }}>{profile?.total_points || 0} points</Text>
+        {/* Username */}
+        <View style={{ alignItems: "center", marginBottom: 4 }}>
+          {editingUsername ? (
+            <View style={{ flexDirection: "row", alignItems: "center", width: "100%" }}>
+              <TextInput
+                value={newUsername}
+                onChangeText={setNewUsername}
+                placeholder="Username"
+                placeholderTextColor={"#6B5B4F"}
+                accessibilityLabel="Edit username"
+                style={{ flex: 1, backgroundColor: INPUT_BG, borderColor: BORDER, borderWidth: 1, borderRadius: Radii.sm, padding: 10, color: TEXT, marginRight: 8 }}
+                maxLength={20}
+              />
+              <Pressable
+                onPress={saveUsername}
+                disabled={saving}
+                style={{ backgroundColor: SUCCESS, paddingHorizontal: 12, paddingVertical: 8, borderRadius: Radii.sm, minWidth: 44, minHeight: 44, justifyContent: "center" }}
+                accessibilityRole="button"
+                accessibilityLabel="Save username"
+              >
+                <Text style={{ color: "#000", fontFamily: "Paaxel", fontSize: 12 }}>{saving ? "..." : "Save"}</Text>
+              </Pressable>
             </View>
-          </View>
+          ) : (
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Text style={{ color: TEXT, ...Typography.heading3, fontSize: 20 }}>{profile?.username || "No username"}</Text>
+              <Pressable onPress={() => setEditingUsername(true)} style={{ marginLeft: 8, padding: 4, minWidth: 44, minHeight: 44, justifyContent: "center", alignItems: "center" }} accessibilityRole="button" accessibilityLabel="Edit username">
+                <PixelPencilIcon size={14} />
+              </Pressable>
+            </View>
+          )}
         </View>
 
+        {/* Email */}
+        <Text style={{ color: MUTED, fontSize: 13, textAlign: "center", marginBottom: 4 }}>{sessionEmail}</Text>
+
+        {/* Points */}
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "flex-end", marginBottom: 16, paddingRight: 4 }}>
+          <View style={{ width: 8, height: 8, backgroundColor: CampfireColors.WARNING, borderRadius: 4, marginRight: 6 }} />
+          <Text style={{ color: CampfireColors.WARNING, fontSize: 14, fontFamily: "Paaxel" }}>{profile?.total_points || 0} points</Text>
+        </View>
+
+        {/* Edit Avatar button */}
         <Pressable
           onPress={() => router.push("/create-character")}
           style={{ borderColor: BORDER, borderWidth: 1, borderRadius: Radii.md, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", minHeight: 44 }}
@@ -362,6 +373,30 @@ export default function Settings() {
         </Pressable>
       </Modal>
 
+      {/* Admin Dashboard — only visible for app admin */}
+      {isAppAdmin(userId) && (
+        <Pressable
+          onPress={() => router.push("/admin")}
+          style={{
+            backgroundColor: CARD,
+            borderColor: CampfireColors.WARNING,
+            borderWidth: 1,
+            borderRadius: Radii.lg,
+            paddingVertical: 14,
+            alignItems: "center",
+            flexDirection: "row",
+            justifyContent: "center",
+            marginBottom: 14,
+            minHeight: 44,
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Admin Dashboard"
+        >
+          <PixelGearIcon size={18} />
+          <Text style={{ color: CampfireColors.WARNING, ...Typography.heading3, marginLeft: 10 }}>Admin Dashboard</Text>
+        </Pressable>
+      )}
+
       {/* Sign Out */}
       <Pressable
         onPress={signOut}
@@ -394,7 +429,7 @@ export default function Settings() {
       {/* Ground */}
       <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 20, backgroundColor: CampfireColors.GROUND_DEEP, zIndex: 2 }} />
 
-      <ScrollView style={{ flex: 1, zIndex: 10 }} contentContainerStyle={{ padding: Spacing.xl, paddingBottom: 160 }}>
+      <ScrollView style={{ flex: 1, zIndex: 10 }} contentContainerStyle={{ padding: Spacing.xl, paddingBottom: 160 }} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         {/* Title */}
         <View style={{ flexDirection: "row", alignItems: "center", marginBottom: Spacing.sm, marginTop: 30 }}>
           <PixelGearIcon size={28} />

@@ -68,7 +68,7 @@ function ConfettiParticle({ delay, color, startX }: { delay: number; color: stri
       delay,
       withRepeat(
         withSequence(
-          withTiming((Math.random() - 0.5) * 40, { duration: 3000, easing: Easing.inOut(Easing.sine) }),
+          withTiming((Math.random() - 0.5) * 40, { duration: 3000, easing: Easing.inOut(Easing.sin) }),
           withTiming(0, { duration: 0 })
         ),
         -1,

@@ -16,17 +16,18 @@ import { submitResponse } from '../../lib/services/promptService';
 import { CountdownTimer } from './CountdownTimer';
 import { WordCounter } from './WordCounter';
 import { WORD_LIMITS, validateResponse } from '../../lib/types/prompts';
+import { CampfireColors } from '../../constants/theme';
 
 const COLORS = {
-  bg: '#070B14',
-  card: '#0D1426',
-  border: '#27406B',
-  text: '#E6F0FF',
-  muted: '#9EC5FF',
+  bg: CampfireColors.BG,
+  card: CampfireColors.BG,
+  border: CampfireColors.BORDER,
+  text: CampfireColors.TEXT,
+  muted: CampfireColors.MUTED,
   accent: '#8B5CF6',
   btn: '#8B5CF6',
   btnText: '#fff',
-  success: '#4ADE80',
+  success: CampfireColors.SUCCESS,
 };
 
 interface QuiplashCardProps {
@@ -216,7 +217,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   errorText: {
-    color: '#FF4444',
+    color: CampfireColors.DANGER,
     fontSize: 14,
     textAlign: 'center',
   },

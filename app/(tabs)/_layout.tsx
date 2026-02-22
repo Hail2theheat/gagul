@@ -9,6 +9,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { HapticTab } from "../../components/haptic-tab";
 import { SPRING_BOUNCY } from "../../constants/animations";
+import { CampfireColors } from "../../constants/theme";
 
 // Animated tab icon wrapper - scales up when active
 function AnimatedTabIcon({ children, focused }: { children: React.ReactNode; focused: boolean }) {
@@ -59,7 +60,7 @@ function PixelHomeIcon({ color, size }: { color: string; size: number }) {
           marginLeft: -size * 0.12,
           width: size * 0.24,
           height: size * 0.25,
-          backgroundColor: "#0B1026",
+          backgroundColor: CampfireColors.BG,
           borderTopLeftRadius: size * 0.05,
           borderTopRightRadius: size * 0.05,
         }} />
@@ -89,7 +90,7 @@ function PixelGearIcon({ color, size }: { color: string; size: number }) {
       <View style={{
         width: size * 0.18,
         height: size * 0.18,
-        backgroundColor: "#0B1026",
+        backgroundColor: CampfireColors.BG,
         borderRadius: size * 0.09,
         position: "absolute",
       }} />
@@ -104,15 +105,15 @@ export default function TabLayout() {
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarStyle: {
-          backgroundColor: "#080E1C",
-          borderTopColor: "rgba(80, 100, 140, 0.2)",
+          backgroundColor: CampfireColors.TAB_BG,
+          borderTopColor: CampfireColors.TAB_BORDER,
           borderTopWidth: 1,
           height: 85,
           paddingBottom: 25,
           paddingTop: 10,
         },
-        tabBarActiveTintColor: "#FF8555",
-        tabBarInactiveTintColor: "#6B6058",
+        tabBarActiveTintColor: CampfireColors.TAB_ACTIVE,
+        tabBarInactiveTintColor: CampfireColors.TAB_INACTIVE,
         tabBarLabelStyle: {
           fontSize: 12,
           fontFamily: "Paaxel",

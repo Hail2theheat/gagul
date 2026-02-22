@@ -16,10 +16,10 @@ import { PixelCharacter, CharacterConfig, DEFAULT_CHARACTER } from './PixelChara
 import { CampfireColors, Typography, Spacing, Radii } from '../constants/theme';
 import { Stagger } from '../constants/animations';
 
-const { TEXT_WARM, MUTED, CARD_SOLID: CARD, BORDER } = CampfireColors;
+const { TEXT_WARM, MUTED, CARD_SOLID: CARD, BORDER, MEDAL_GOLD, MEDAL_SILVER, MEDAL_BRONZE } = CampfireColors;
 
-// Medal colors for top 3
-const MEDAL_COLORS = ['#FFD700', '#C0C0C0', '#CD7F32']; // Gold, Silver, Bronze
+// Medal colors for top 3 (DESIGN.md §5: use tokens, not hardcoded values)
+const MEDAL_COLORS = [MEDAL_GOLD, MEDAL_SILVER, MEDAL_BRONZE]; // Gold, Silver, Bronze
 const MEDAL_LABELS = ['1st', '2nd', '3rd'];
 
 function PointsBar({ points, maxPoints, delay }: { points: number; maxPoints: number; delay: number }) {

@@ -50,12 +50,11 @@ async function fetchMyGroups(): Promise<GroupRow[]> {
         .eq('group_id', group.id);
       group.member_count = count ?? 0;
 
-      // Get first 4 member avatar configs
+      // Get all member avatar configs
       const { data: members } = await supabase
         .from('group_members')
         .select('user_id')
-        .eq('group_id', group.id)
-        .limit(4);
+        .eq('group_id', group.id);
 
       if (members && members.length > 0) {
         const userIds = members.map((m: any) => m.user_id);

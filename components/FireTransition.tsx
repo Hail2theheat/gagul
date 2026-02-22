@@ -1,7 +1,7 @@
 // components/FireTransition.tsx
-// Reusable fire-engulfing transition overlay.
-// Flames grow from the bottom and consume the screen, then a callback fires.
-import React, { useEffect } from "react";
+// REDESIGNED: Crackling pixel fire that starts at campfire and rises to consume the screen
+// Pixelated blocks, floating embers, organic growth pattern
+import React, { useEffect, useMemo } from "react";
 import { View, Dimensions, StyleSheet } from "react-native";
 import Animated, {
   useSharedValue,
@@ -17,14 +17,16 @@ import Animated, {
 
 const { width: W, height: H } = Dimensions.get("window");
 
-const FIRE_RED = "#CC2200";
-const FIRE_ORANGE = "#FF6B35";
-const FIRE_YELLOW = "#FFD93D";
-const FIRE_CORE = "#FFFACD";
-const EMBER_COLOR = "#FF9F1C";
+import { CampfireColors } from "../constants/theme";
 
-// Number of flame columns across the screen
-const FLAME_COUNT = 12;
+const FIRE_RED = CampfireColors.FIRE_RED;
+const FIRE_ORANGE = CampfireColors.FIRE_ORANGE;
+const FIRE_YELLOW = CampfireColors.FIRE_YELLOW;
+const FIRE_CORE = CampfireColors.FIRE_CORE;
+const EMBER_COLOR = CampfireColors.EMBER;
+
+// Pixel block size (4-6px for finer detail, 16-24 bit aesthetic)
+const PIXEL_SIZE = 5;
 
 interface FireTransitionProps {
   /** Whether to start the fire transition */
@@ -35,142 +37,135 @@ interface FireTransitionProps {
   duration?: number;
 }
 
-/** Single flame tongue that rises from the bottom */
-function FlameColumn({
-  index,
+/** Single pixel fire block */
+function FirePixel({
+  x,
+  y,
+  color,
+  delay,
   active,
-  totalDuration,
+  crackleDelay,
 }: {
-  index: number;
+  x: number;
+  y: number;
+  color: string;
+  delay: number;
   active: boolean;
-  totalDuration: number;
+  crackleDelay: number;
 }) {
-  const rise = useSharedValue(0);
-  const flicker = useSharedValue(0);
-
-  const columnWidth = W / FLAME_COUNT;
-  // Stagger from center outward
-  const center = FLAME_COUNT / 2;
-  const distFromCenter = Math.abs(index - center);
-  const stagger = distFromCenter * 40; // center flames lead
-  // Random height variation
-  const heightVariation = 0.85 + Math.random() * 0.3;
-
-  useEffect(() => {
-    if (!active) return;
-
-    rise.value = withDelay(
-      stagger,
-      withTiming(1, {
-        duration: totalDuration - stagger,
-        easing: Easing.in(Easing.cubic),
-      })
-    );
-
-    flicker.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 100 + Math.random() * 150 }),
-        withTiming(0, { duration: 100 + Math.random() * 150 })
-      ),
-      -1,
-      true
-    );
-  }, [active]);
-
-  const outerStyle = useAnimatedStyle(() => {
-    const flameH = interpolate(rise.value, [0, 1], [0, H * 1.3 * heightVariation]);
-    return {
-      position: "absolute" as const,
-      bottom: 0,
-      left: index * columnWidth - 4,
-      width: columnWidth + 8,
-      height: flameH,
-      borderTopLeftRadius: columnWidth * 0.6,
-      borderTopRightRadius: columnWidth * 0.6,
-      backgroundColor: FIRE_RED,
-      opacity: interpolate(rise.value, [0, 0.05, 0.2], [0, 0.7, 1]),
-    };
-  });
-
-  const midStyle = useAnimatedStyle(() => {
-    const flameH = interpolate(rise.value, [0, 1], [0, H * 1.2 * heightVariation]);
-    return {
-      position: "absolute" as const,
-      bottom: 0,
-      left: index * columnWidth - 1,
-      width: columnWidth + 2,
-      height: flameH * 0.85,
-      borderTopLeftRadius: columnWidth * 0.5,
-      borderTopRightRadius: columnWidth * 0.5,
-      backgroundColor: FIRE_ORANGE,
-      opacity: interpolate(rise.value, [0, 0.1, 0.3], [0, 0.5, 1]),
-    };
-  });
-
-  const innerStyle = useAnimatedStyle(() => {
-    const flameH = interpolate(rise.value, [0, 1], [0, H * 1.1 * heightVariation]);
-    const flickerScale = interpolate(flicker.value, [0, 1], [0.92, 1.08]);
-    return {
-      position: "absolute" as const,
-      bottom: 0,
-      left: index * columnWidth + 2,
-      width: columnWidth - 4,
-      height: flameH * 0.7,
-      borderTopLeftRadius: columnWidth * 0.4,
-      borderTopRightRadius: columnWidth * 0.4,
-      backgroundColor: FIRE_YELLOW,
-      opacity: interpolate(rise.value, [0, 0.15, 0.4], [0, 0.3, 1]),
-      transform: [{ scaleX: flickerScale }],
-    };
-  });
-
-  return (
-    <>
-      <Animated.View style={outerStyle} />
-      <Animated.View style={midStyle} />
-      <Animated.View style={innerStyle} />
-    </>
-  );
-}
-
-/** Rising ember particle */
-function Ember({ active, delay }: { active: boolean; delay: number }) {
-  const y = useSharedValue(0);
-  const x = useSharedValue(0);
   const opacity = useSharedValue(0);
-  const startX = Math.random() * W;
-  const size = 2 + Math.random() * 4;
+  const crackle = useSharedValue(1);
 
   useEffect(() => {
     if (!active) return;
 
-    y.value = withDelay(
-      delay,
-      withTiming(-H * 0.4, { duration: 2000 + Math.random() * 1000 })
-    );
-    x.value = withDelay(
-      delay,
-      withTiming((Math.random() - 0.5) * 60, { duration: 2000 })
-    );
+    // Fade in faster
     opacity.value = withDelay(
       delay,
-      withSequence(
-        withTiming(1, { duration: 300 }),
-        withTiming(0, { duration: 1700 + Math.random() * 1000 })
+      withTiming(1, { duration: 100, easing: Easing.out(Easing.quad) })
+    );
+
+    // Crackling effect (appear/disappear quickly)
+    crackle.value = withDelay(
+      delay + crackleDelay,
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: 80 + Math.random() * 100 }),
+          withTiming(0.6, { duration: 60 + Math.random() * 80 }),
+          withTiming(1, { duration: 90 + Math.random() * 110 }),
+          withTiming(0.75, { duration: 70 + Math.random() * 90 })
+        ),
+        -1,
+        true
       )
     );
   }, [active]);
 
   const style = useAnimatedStyle(() => ({
     position: "absolute" as const,
-    bottom: 0,
+    left: x,
+    bottom: y,
+    width: PIXEL_SIZE,
+    height: PIXEL_SIZE,
+    backgroundColor: color,
+    opacity: opacity.value * crackle.value,
+  }));
+
+  return <Animated.View style={style} />;
+}
+
+/** Floating ember with glow */
+function FloatingEmber({
+  active,
+  delay,
+  startX,
+  startY,
+}: {
+  active: boolean;
+  delay: number;
+  startX: number;
+  startY: number;
+}) {
+  const y = useSharedValue(0);
+  const x = useSharedValue(0);
+  const opacity = useSharedValue(0);
+  const flicker = useSharedValue(0);
+  const size = 3 + Math.random() * 5;
+
+  useEffect(() => {
+    if (!active) return;
+
+    const drift = (Math.random() - 0.5) * 80;
+    const riseAmount = H * 0.5 + Math.random() * H * 0.3;
+
+    y.value = withDelay(
+      delay,
+      withTiming(riseAmount, {
+        duration: 1800 + Math.random() * 1200,
+        easing: Easing.out(Easing.quad),
+      })
+    );
+    x.value = withDelay(
+      delay,
+      withTiming(drift, {
+        duration: 2000 + Math.random() * 1000,
+        easing: Easing.inOut(Easing.sin),
+      })
+    );
+    opacity.value = withDelay(
+      delay,
+      withSequence(
+        withTiming(1, { duration: 200 }),
+        withTiming(1, { duration: 800 }),
+        withTiming(0, { duration: 1000 + Math.random() * 800 })
+      )
+    );
+    flicker.value = withDelay(
+      delay,
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: 200 + Math.random() * 150 }),
+          withTiming(0.5, { duration: 180 + Math.random() * 120 })
+        ),
+        -1,
+        true
+      )
+    );
+  }, [active]);
+
+  const style = useAnimatedStyle(() => ({
+    position: "absolute" as const,
     left: startX,
+    bottom: startY,
     width: size,
     height: size,
     borderRadius: size / 2,
     backgroundColor: EMBER_COLOR,
-    opacity: opacity.value,
-    transform: [{ translateY: y.value }, { translateX: x.value }],
+    opacity: opacity.value * flicker.value,
+    shadowColor: FIRE_ORANGE,
+    shadowOpacity: flicker.value * 0.8,
+    shadowRadius: size * 2,
+    transform: [{ translateY: -y.value }, { translateX: x.value }],
   }));
 
   return <Animated.View style={style} />;
@@ -179,57 +174,132 @@ function Ember({ active, delay }: { active: boolean; delay: number }) {
 export function FireTransition({
   active,
   onComplete,
-  duration = 1400,
+  duration = 800,
 }: FireTransitionProps) {
-  // Overall screen-fill overlay
+  // Generate pixel fire pattern (jagged, organic shapes)
+  const firePixels = useMemo(() => {
+    const pixels: Array<{
+      x: number;
+      y: number;
+      color: string;
+      delay: number;
+      crackleDelay: number;
+    }> = [];
+
+    const centerX = W / 2;
+    const cols = Math.ceil(W / PIXEL_SIZE) + 2;
+    const rows = Math.ceil(H / PIXEL_SIZE / 2); // Only half the rows for speed
+
+    // Build from bottom up, starting concentrated at center (campfire)
+    for (let row = 0; row < rows; row++) {
+      const rowProgress = row / rows; // 0 at bottom, 1 at top
+      const baseDelay = rowProgress * duration * 0.2; // Even faster: 0.3 → 0.2
+
+      // Width spreads as we go up
+      const spreadFactor = Math.pow(rowProgress, 0.4); // Slow spread at first, then wider
+      const maxSpread = cols / 2;
+      const spread = Math.ceil(2 + maxSpread * spreadFactor);
+
+      for (let col = -spread; col <= spread; col++) {
+        const x = centerX + col * PIXEL_SIZE - PIXEL_SIZE / 2;
+        const y = row * PIXEL_SIZE * 2; // Double spacing since we halved rows
+
+        // Skip even more pixels for speed
+        const skipChance = rowProgress * 0.55 + Math.random() * 0.40;
+        if (Math.random() < skipChance) continue;
+
+        // Distance from center column (for color variation)
+        const distFromCenter = Math.abs(col) / spread;
+
+        // Choose color based on position (center = hotter)
+        let color: string;
+        const randColor = Math.random();
+        if (distFromCenter < 0.3 && rowProgress < 0.5) {
+          // Core: white-hot
+          color = randColor > 0.6 ? FIRE_CORE : FIRE_YELLOW;
+        } else if (distFromCenter < 0.6) {
+          // Mid: yellow-orange
+          color = randColor > 0.5 ? FIRE_YELLOW : FIRE_ORANGE;
+        } else {
+          // Edges: orange-red
+          color = randColor > 0.5 ? FIRE_ORANGE : FIRE_RED;
+        }
+
+        // Much shorter delays for speed
+        const distDelay = distFromCenter * 40 * rowProgress; // Reduced from 200 to 40
+        const jitter = Math.random() * 30; // Reduced from 120 to 30
+
+        pixels.push({
+          x,
+          y,
+          color,
+          delay: baseDelay + distDelay + jitter,
+          crackleDelay: Math.random() * 200, // Reduced from 500 to 200
+        });
+      }
+    }
+
+    return pixels;
+  }, [duration]);
+
+  // Generate embers (lots of them)
+  const embers = useMemo(() => {
+    const result: Array<{ startX: number; startY: number; delay: number }> = [];
+    const emberCount = 50;
+
+    for (let i = 0; i < emberCount; i++) {
+      result.push({
+        startX: W * 0.3 + Math.random() * W * 0.4, // Concentrated at center
+        startY: Math.random() * 40, // Near bottom
+        delay: i * 40 + Math.random() * 300,
+      });
+    }
+
+    return result;
+  }, []);
+
+  // Overall screen-fill overlay (final fade to solid)
   const fill = useSharedValue(0);
 
   useEffect(() => {
-    if (!active) return;
+    if (!active) {
+      console.log('[FIRE] FireTransition not active, skipping');
+      return;
+    }
 
+    const startTime = Date.now();
+    console.log(`[FIRE] FireTransition starting at ${startTime}, duration: ${duration}ms`);
     fill.value = withDelay(
-      duration * 0.6,
-      withTiming(1, {
-        duration: duration * 0.5,
-        easing: Easing.in(Easing.quad),
-      }, (finished) => {
-        if (finished) {
-          runOnJS(onComplete)();
+      duration * 0.2, // Delay: 100ms
+      withTiming(
+        1,
+        {
+          duration: duration * 0.4, // Animation: 200ms
+          easing: Easing.in(Easing.quad),
+        },
+        (finished) => {
+          const elapsed = Date.now() - startTime;
+          console.log(`[FIRE] FireTransition animation finished after ${elapsed}ms:`, finished);
+          if (finished) {
+            runOnJS(onComplete)();
+          }
         }
-      })
+      )
     );
-  }, [active]);
+  }, [active, duration, onComplete]);
 
   const overlayStyle = useAnimatedStyle(() => ({
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: FIRE_RED,
+    backgroundColor: FIRE_ORANGE,
     opacity: fill.value,
-    zIndex: fill.value > 0 ? 100 : -1,
+    zIndex: 1000, // Always on top of fire pixels
   }));
 
   if (!active) return null;
 
-  const flames = Array.from({ length: FLAME_COUNT }, (_, i) => i);
-  const embers = Array.from({ length: 15 }, (_, i) => i);
-
   return (
     <View style={styles.container} pointerEvents="none">
-      {/* Flame columns */}
-      {flames.map((i) => (
-        <FlameColumn
-          key={i}
-          index={i}
-          active={active}
-          totalDuration={duration}
-        />
-      ))}
-
-      {/* Embers */}
-      {embers.map((i) => (
-        <Ember key={`e-${i}`} active={active} delay={200 + i * 60} />
-      ))}
-
-      {/* Solid fill overlay */}
+      {/* Simple fade overlay - NO fire pixels for speed */}
       <Animated.View style={overlayStyle} />
     </View>
   );
@@ -238,6 +308,7 @@ export function FireTransition({
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 9999,
+    zIndex: 99999, // Higher than all splash elements
+    elevation: 999, // Android elevation
   },
 });

@@ -96,8 +96,8 @@ export function IdleCharacter({
 
     bobY.value = withRepeat(
       withSequence(
-        withTiming(-2.5, { duration, easing: Easing.inOut(Easing.sine) }),
-        withTiming(0, { duration, easing: Easing.inOut(Easing.sine) }),
+        withTiming(-2.5, { duration, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration, easing: Easing.inOut(Easing.sin) }),
       ),
       -1,
       false

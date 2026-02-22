@@ -3,6 +3,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { View } from "react-native";
+import { CampfireColors } from "../constants/theme";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -140,7 +141,7 @@ export function PixelLake() {
             right: 10,
             width: 40,
             height: 18,
-            backgroundColor: "#FF6B35",
+            backgroundColor: CampfireColors.FIRE_ORANGE,
             borderRadius: 20,
             opacity: 0.06,
           }}

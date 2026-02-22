@@ -61,6 +61,26 @@ export async function toggleReaction(
 }
 
 /**
+ * Add/increment a reaction on a response (every tap counts)
+ */
+export async function addReaction(
+  responseId: string,
+  emoji: string
+): Promise<{ action: string; tap_count: number }> {
+  const { data, error } = await supabase.rpc('add_reaction', {
+    p_response_id: responseId,
+    p_emoji: emoji,
+  });
+
+  if (error) {
+    console.error('Error adding reaction:', error);
+    return { action: 'error', tap_count: 0 };
+  }
+
+  return data as { action: string; tap_count: number };
+}
+
+/**
  * Get user's emoji preferences
  */
 export async function getUserEmojis(): Promise<UserEmojis> {

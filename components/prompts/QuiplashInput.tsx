@@ -3,18 +3,19 @@
  */
 
 import React from 'react';
-import { View, TextInput, Text, StyleSheet } from 'react-native';
+import { View, TextInput, Text, StyleSheet, Keyboard } from 'react-native';
 import { WordCounter } from './WordCounter';
 import { WORD_LIMITS } from '../../lib/types/prompts';
+import { CampfireColors, Radii, Typography } from '../../constants/theme';
 
-// Theme colors
+// Theme colors (DESIGN.md §19: Never hardcode hex values)
 const COLORS = {
-  bg: '#0D1426',
-  border: '#27406B',
-  text: '#E6F0FF',
-  placeholder: '#6B8EC2',
-  accent: '#8B5CF6', // Purple for quiplash
-  muted: '#9EC5FF',
+  bg: CampfireColors.BG,
+  border: CampfireColors.BORDER,
+  text: CampfireColors.TEXT,
+  placeholder: CampfireColors.PLACEHOLDER, // DESIGN.md §5.2 - Input placeholders
+  accent: CampfireColors.ACCENT_PURPLE, // DESIGN.md §5.8 - Accent colors for special prompts
+  muted: CampfireColors.MUTED,
 };
 
 interface QuiplashInputProps {
@@ -51,6 +52,7 @@ export function QuiplashInput({
         maxLength={500}
         editable={!disabled}
         textAlignVertical="top"
+        inputAccessoryViewID="groupInputAccessory"
       />
       <WordCounter text={value} min={min} max={max} showProgress={false} />
     </View>
@@ -62,8 +64,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   badge: {
-    backgroundColor: '#8B5CF620',
-    borderRadius: 8,
+    // DESIGN.md §19: Never hardcode hex values - use design tokens
+    backgroundColor: CampfireColors.ACCENT_PURPLE + '20', // 20 = ~12% opacity
+    borderRadius: Radii.sm, // DESIGN.md §7 - Use Radii tokens for border radius
     paddingHorizontal: 12,
     paddingVertical: 4,
     alignSelf: 'flex-start',
@@ -71,12 +74,12 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: COLORS.accent,
-    fontSize: 12,
+    fontSize: Typography.caption.fontSize, // DESIGN.md §6 - Use Typography scale
     fontWeight: '600',
   },
   hint: {
     color: COLORS.muted,
-    fontSize: 13,
+    fontSize: Typography.caption.fontSize, // DESIGN.md §6 - Use Typography scale
     marginBottom: 12,
     fontStyle: 'italic',
   },
@@ -84,10 +87,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.bg,
     borderWidth: 2,
     borderColor: COLORS.accent,
-    borderRadius: 12,
+    borderRadius: Radii.md, // DESIGN.md §7 - Use Radii tokens
     padding: 16,
     color: COLORS.text,
-    fontSize: 16,
+    fontSize: Typography.body.fontSize, // DESIGN.md §6 - Use Typography scale
     minHeight: 80,
   },
   disabled: {

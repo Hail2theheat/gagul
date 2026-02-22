@@ -5,3 +5,4 @@ export { useGroupStatus, useGroupInfo, useInvalidateGroupStatus } from './useGro
 export { useFiresideData } from './useFiresideData';
 export { useLeaderboard, usePointsSummary } from './useLeaderboard';
 export { useSubmitResponse, useSubmitQuiplashVote, useSubmitTelephoneStep } from './useSubmitResponse';
+export { useWeekSchedule, usePromptResponses, useGroupMemberCount, useDeactivatePrompt } from './useAdminData';

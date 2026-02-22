@@ -20,7 +20,7 @@ import {
   DEFAULT_EMOJIS,
   UserEmojis,
   getResponseReactions,
-  toggleReaction,
+  addReaction,
   subscribeToReactions,
   ReactionSummary,
 } from '../../lib/services/reactionService';
@@ -55,7 +55,6 @@ export function FiresideReactions({ responseId, promptId }: FiresideReactionsPro
   const emojiIdCounter = useRef(0);
   const prevReactionsRef = useRef<ReactionSummary[]>([]);
   const hasLoadedRef = useRef(false);
-  const savedEmojiRef = useRef<string | null>(null); // Track which emoji is already persisted
 
   useEffect(() => {
     loadEmojis();
@@ -65,7 +64,6 @@ export function FiresideReactions({ responseId, promptId }: FiresideReactionsPro
   useEffect(() => {
     hasLoadedRef.current = false;
     prevReactionsRef.current = [];
-    savedEmojiRef.current = null;
 
     // Fetch existing reactions and replay them as a staggered burst
     const loadExistingReactions = async () => {
@@ -170,12 +168,17 @@ export function FiresideReactions({ responseId, promptId }: FiresideReactionsPro
     // Spawn local floating emoji immediately (always - every tap)
     spawnFloatingEmoji(emoji, buttonX);
 
-    // Only persist if this is a new emoji or different from what's saved
-    // Avoids toggling off on repeated taps of the same emoji
-    if (savedEmojiRef.current !== emoji) {
-      savedEmojiRef.current = emoji;
-      toggleReaction(responseId, emoji);
+    // Pre-increment prevReactionsRef so real-time subscription doesn't spawn a duplicate
+    const prev = prevReactionsRef.current;
+    const existing = prev.find(r => r.emoji === emoji);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      prev.push({ emoji, count: 1, users: [] });
     }
+
+    // Persist every tap (increments tap_count in DB)
+    addReaction(responseId, emoji);
 
     // Track every tap for engagement metrics
     trackInteraction('emoji_reaction', {

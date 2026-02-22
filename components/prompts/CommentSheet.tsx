@@ -13,9 +13,9 @@ import {
   StyleSheet,
   Animated,
   Dimensions,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
+  Keyboard,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -26,18 +26,19 @@ import {
   FiresideComment,
 } from '../../lib/services/firesideService';
 import { trackInteraction } from '../../lib/services/metricsService';
+import { CampfireColors } from '../../constants/theme';
 import { awardPoints } from '../../lib/services/pointsService';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SHEET_HEIGHT = SCREEN_HEIGHT * 0.7;
 
 const COLORS = {
-  bg: '#0A0A0F',
-  card: '#1A1A2E',
-  border: '#2D2D44',
-  text: '#F5F5F5',
-  muted: '#9CA3AF',
-  accent: '#FF6B35',
+  bg: CampfireColors.BG,
+  card: CampfireColors.CARD_SOLID,
+  border: CampfireColors.BORDER,
+  text: CampfireColors.TEXT,
+  muted: CampfireColors.MUTED,
+  accent: CampfireColors.BTN_PRIMARY,
   purple: '#8B5CF6',
 };
 
@@ -57,7 +58,31 @@ export function CommentSheet({ visible, responseId, onClose }: CommentSheetProps
 
   const slideAnim = useRef(new Animated.Value(SHEET_HEIGHT)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
+  const keyboardOffset = useRef(new Animated.Value(0)).current;
   const inputRef = useRef<TextInput>(null);
+
+  // Move sheet above keyboard when it appears
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      Animated.timing(keyboardOffset, {
+        toValue: -e.endCoordinates.height,
+        duration: Platform.OS === 'ios' ? (e.duration || 250) : 250,
+        useNativeDriver: true,
+      }).start();
+    });
+    const hideSub = Keyboard.addListener(hideEvent, (e) => {
+      Animated.timing(keyboardOffset, {
+        toValue: 0,
+        duration: Platform.OS === 'ios' ? ((e as any).duration || 250) : 250,
+        useNativeDriver: true,
+      }).start();
+    });
+
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
 
   useEffect(() => {
     if (visible) {
@@ -255,17 +280,14 @@ export function CommentSheet({ visible, responseId, onClose }: CommentSheetProps
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
 
-      {/* Sheet */}
+      {/* Sheet - moves up when keyboard appears */}
       <Animated.View
         style={[
           styles.sheet,
-          { transform: [{ translateY: slideAnim }] },
+          { transform: [{ translateY: slideAnim }, { translateY: keyboardOffset }] },
         ]}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.sheetContent}
-        >
+        <View style={styles.sheetContent}>
           {/* Handle */}
           <View style={styles.handle}>
             <View style={styles.handleBar} />
@@ -290,7 +312,7 @@ export function CommentSheet({ visible, responseId, onClose }: CommentSheetProps
             ListEmptyComponent={
               <View style={styles.empty}>
                 <Text style={styles.emptyText}>
-                  {loading ? 'Loading...' : 'No comments yet. Be the first!'}
+                  {loading ? 'Warming up...' : 'No comments yet. Be the first!'}
                 </Text>
               </View>
             }
@@ -335,7 +357,7 @@ export function CommentSheet({ visible, responseId, onClose }: CommentSheetProps
               </TouchableOpacity>
             </View>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </Animated.View>
     </View>
   );

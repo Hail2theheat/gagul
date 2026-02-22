@@ -2,16 +2,17 @@
  * CountdownTimer - displays time remaining until prompt expires
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { getTimeRemaining } from '../../lib/services/promptService';
+import { CampfireColors } from '../../constants/theme';
 
 // Theme colors
 const COLORS = {
-  text: '#E6F0FF',
-  muted: '#9EC5FF',
+  text: CampfireColors.TEXT,
+  muted: CampfireColors.MUTED,
   warning: '#FFA500',
-  urgent: '#FF4444',
+  urgent: CampfireColors.DANGER,
 };
 
 interface CountdownTimerProps {
@@ -21,6 +22,8 @@ interface CountdownTimerProps {
 
 export function CountdownTimer({ expiresAt, onExpire }: CountdownTimerProps) {
   const [timeLeft, setTimeLeft] = useState(() => getTimeRemaining(expiresAt));
+  const onExpireRef = useRef(onExpire);
+  useEffect(() => { onExpireRef.current = onExpire; }, [onExpire]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -29,12 +32,12 @@ export function CountdownTimer({ expiresAt, onExpire }: CountdownTimerProps) {
 
       if (remaining.expired) {
         clearInterval(interval);
-        onExpire?.();
+        onExpireRef.current?.();
       }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [expiresAt, onExpire]);
+  }, [expiresAt]);
 
   // Determine color based on urgency
   const getColor = () => {

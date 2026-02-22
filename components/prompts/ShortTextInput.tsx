@@ -1,18 +1,20 @@
 /**
  * ShortTextInput - text input with 1-50 word limit
+ * DESIGN.md §10: Cozy input with warm campfire tone
  */
 
 import React from 'react';
-import { View, TextInput, StyleSheet } from 'react-native';
+import { View, TextInput, StyleSheet, Keyboard } from 'react-native';
 import { WordCounter } from './WordCounter';
 import { WORD_LIMITS } from '../../lib/types/prompts';
+import { CampfireColors, Radii, Typography } from '../../constants/theme';
 
-// Theme colors
+// Theme colors (DESIGN.md §5)
 const COLORS = {
-  bg: '#0D1426',
-  border: '#27406B',
-  text: '#E6F0FF',
-  placeholder: '#6B8EC2',
+  bg: CampfireColors.BG,
+  border: CampfireColors.BORDER,
+  text: CampfireColors.TEXT,
+  placeholder: CampfireColors.PLACEHOLDER, // #6B8EC2
 };
 
 interface ShortTextInputProps {
@@ -27,7 +29,7 @@ interface ShortTextInputProps {
 export function ShortTextInput({
   value,
   onChangeText,
-  placeholder = 'Your quick response...',
+  placeholder = 'Toss your thoughts on the fire...',  // DESIGN.md §16: campfire metaphor
   disabled = false,
   minWords,
   maxWords,
@@ -49,6 +51,7 @@ export function ShortTextInput({
         maxLength={500}
         editable={!disabled}
         textAlignVertical="top"
+        inputAccessoryViewID="groupInputAccessory"
       />
       <WordCounter text={value} min={min} max={max} />
     </View>
@@ -59,14 +62,16 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
   },
+  // DESIGN.md §10: Input with Radii.input (14), Typography.body
   input: {
     backgroundColor: COLORS.bg,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 12,
+    borderRadius: Radii.input, // 14 (not 12)
     padding: 16,
     color: COLORS.text,
-    fontSize: 16,
+    fontFamily: Typography.body.fontFamily, // 'Paaxel'
+    fontSize: Typography.body.fontSize, // 16
     minHeight: 80,
   },
   disabled: {

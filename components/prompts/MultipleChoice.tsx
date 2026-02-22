@@ -9,17 +9,18 @@ import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-na
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { SPRING_SNAPPY } from '../../constants/animations';
+import { CampfireColors } from '../../constants/theme';
 import { PixelCharacter, CharacterConfig, DEFAULT_CHARACTER } from '../PixelCharacter';
 import type { GroupMember } from '../../lib/types/prompts';
 
 // Theme colors
 const COLORS = {
-  bg: '#0D1426',
-  bgSelected: '#1E4ED820',
-  border: '#27406B',
-  borderSelected: '#1E4ED8',
-  text: '#E6F0FF',
-  muted: '#9EC5FF',
+  bg: CampfireColors.BG,
+  bgSelected: CampfireColors.BTN_PRIMARY + '20',
+  border: CampfireColors.BORDER,
+  borderSelected: CampfireColors.BTN_PRIMARY,
+  text: CampfireColors.TEXT,
+  muted: CampfireColors.MUTED,
 };
 
 // Animated option with press scale feedback

@@ -6,15 +6,16 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { CampfireColors } from '../../constants/theme';
 
 // Theme colors - quiz uses a distinctive green accent
 const COLORS = {
-  bg: '#0D1426',
+  bg: CampfireColors.BG,
   bgSelected: '#10B98120',
-  border: '#27406B',
+  border: CampfireColors.BORDER,
   borderSelected: '#10B981',
-  text: '#E6F0FF',
-  muted: '#9EC5FF',
+  text: CampfireColors.TEXT,
+  muted: CampfireColors.MUTED,
   accent: '#10B981',
 };
 

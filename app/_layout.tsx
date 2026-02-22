@@ -1,8 +1,8 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, router, useSegments, useRootNavigationState } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, Alert, View, ActivityIndicator } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Platform, Alert, View, ActivityIndicator, Text, Pressable } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Updates from 'expo-updates';
 import * as SplashScreen from 'expo-splash-screen';
@@ -31,6 +31,7 @@ import { PointsPopup } from '@/components/PointsPopup';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { AnimatedSplash } from '@/components/AnimatedSplash';
 import { FireTransition } from '@/components/FireTransition';
+import { CampfireColors } from '@/constants/theme';
 
 // Keep native splash visible while we load fonts
 SplashScreen.preventAutoHideAsync();
@@ -95,6 +96,57 @@ AppState.addEventListener('change', (status: AppStateStatus) => {
 });
 checkOnline();
 
+class RootErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    // Log to Supabase crash_logs (fire-and-forget)
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) {
+        supabase.from('crash_logs').insert({
+          user_id: data.user.id,
+          screen: 'root_error_boundary',
+          error_message: String(error.message).substring(0, 500),
+          error_stack: String(info.componentStack || error.stack || '').substring(0, 2000),
+          metadata: { isFatal: false },
+        }).then(() => {});
+      }
+    }).catch(() => {});
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={{ flex: 1, backgroundColor: CampfireColors.BG, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
+          <Text style={{ color: CampfireColors.TEXT_CREAM, fontSize: 22, fontWeight: '700', marginBottom: 12 }}>
+            Something went wrong
+          </Text>
+          <Text style={{ color: CampfireColors.MUTED, fontSize: 14, textAlign: 'center', marginBottom: 24 }}>
+            {this.state.error?.message || 'An unexpected error occurred'}
+          </Text>
+          <Pressable
+            onPress={() => this.setState({ hasError: false, error: null })}
+            style={{ backgroundColor: CampfireColors.BTN_PRIMARY, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}
+          >
+            <Text style={{ color: CampfireColors.TEXT_CREAM, fontSize: 16, fontWeight: '600' }}>Try Again</Text>
+          </Pressable>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const segments = useSegments();
@@ -103,6 +155,7 @@ export default function RootLayout() {
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [pendingRoute, setPendingRoute] = useState<string | null>(null);
 
   // Splash phases: 'splash' -> 'fire' -> 'done'
   const [splashPhase, setSplashPhase] = useState<'splash' | 'fire' | 'done'>('splash');
@@ -127,13 +180,23 @@ export default function RootLayout() {
     }
   }, [fontsLoaded]);
 
-  // When splash animation finishes, start fire transition
+  // Navigate once navigation is ready and a route is pending
+  useEffect(() => {
+    if (pendingRoute && navigationState?.key) {
+      router.replace(pendingRoute as any);
+      setPendingRoute(null);
+    }
+  }, [pendingRoute, navigationState?.key]);
+
+  // When splash animation finishes, go straight to main screen
   const handleSplashComplete = useCallback(() => {
-    setSplashPhase('fire');
+    console.log(`[LAYOUT] Splash complete at ${Date.now()}, setting phase to done`);
+    setSplashPhase('done');
   }, []);
 
   // When fire transition finishes, remove overlay
   const handleFireComplete = useCallback(() => {
+    console.log(`[LAYOUT] Fire complete at ${Date.now()}, setting phase to done`);
     setSplashPhase('done');
   }, []);
 
@@ -179,10 +242,7 @@ export default function RootLayout() {
 
         // If no profile or no username, redirect to character creation
         if (!profile?.username) {
-          // Wait for navigation to be ready
-          if (navigationState?.key) {
-            router.replace('/create-character');
-          }
+          setPendingRoute('/create-character');
         }
 
         // Register push token
@@ -192,10 +252,7 @@ export default function RootLayout() {
         await checkStreakBonus();
       } else {
         setIsLoggedIn(false);
-        // Redirect to login if not logged in
-        if (navigationState?.key) {
-          router.replace('/login');
-        }
+        setPendingRoute('/login');
       }
 
       setAuthChecked(true);
@@ -214,14 +271,12 @@ export default function RootLayout() {
           .eq('id', session.user.id)
           .single();
 
-        if (!profile?.username && navigationState?.key) {
-          router.replace('/create-character');
+        if (!profile?.username) {
+          setPendingRoute('/create-character');
         }
       } else if (event === 'SIGNED_OUT') {
         setIsLoggedIn(false);
-        if (navigationState?.key) {
-          router.replace('/login');
-        }
+        setPendingRoute('/login');
       }
     });
 
@@ -242,7 +297,7 @@ export default function RootLayout() {
         name: 'default',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#1D4ED8',
+        lightColor: CampfireColors.BTN_PRIMARY,
       });
     }
 
@@ -255,12 +310,13 @@ export default function RootLayout() {
         responseListener.current.remove();
       }
     };
-  }, [navigationState?.key]);
+  }, []);
 
   // Show nothing until fonts are ready (native splash is still visible)
   if (!fontsLoaded) return null;
 
   return (
+    <RootErrorBoundary>
     <PersistQueryClientProvider
       client={queryClient}
       persistOptions={{ persister: asyncStoragePersister, maxAge: 1000 * 60 * 60 * 24, dehydrateOptions: { shouldDehydrateQuery } }}
@@ -300,6 +356,20 @@ export default function RootLayout() {
                   animation: 'fade',
                 }}
               />
+              <Stack.Screen
+                name="admin"
+                options={{
+                  headerShown: false,
+                  animation: 'slide_from_right',
+                }}
+              />
+              <Stack.Screen
+                name="judge-test"
+                options={{
+                  headerShown: false,
+                  animation: 'fade',
+                }}
+              />
               <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
             </Stack>
             <StatusBar style="light" />
@@ -308,19 +378,13 @@ export default function RootLayout() {
 
             {/* Animated splash overlay — only on cold start */}
             {splashPhase !== 'done' && (
-              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998 }}>
-                {(splashPhase === 'splash' || splashPhase === 'fire') && (
-                  <AnimatedSplash onAnimationComplete={handleSplashComplete} />
-                )}
-                <FireTransition
-                  active={splashPhase === 'fire'}
-                  onComplete={handleFireComplete}
-                  duration={1200}
-                />
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999 }}>
+                <AnimatedSplash onAnimationComplete={handleSplashComplete} />
               </View>
             )}
           </View>
       </ThemeProvider>
     </PersistQueryClientProvider>
+    </RootErrorBoundary>
   );
 }

@@ -1,0 +1,650 @@
+// app/admin.tsx — Admin Dashboard for weekly prompt management
+import { router } from "expo-router";
+import React, { useState, useMemo } from "react";
+import {
+  View,
+  Text,
+  Pressable,
+  ScrollView,
+  Modal,
+  Alert,
+  Dimensions,
+  ActivityIndicator,
+  Image,
+} from "react-native";
+import { useMyGroups, type GroupRow } from "../lib/hooks/useMyGroups";
+import {
+  useWeekSchedule,
+  usePromptResponses,
+  useGroupMemberCount,
+  useDeactivatePrompt,
+} from "../lib/hooks/useAdminData";
+import { getWeekOf, type AdminGroupPrompt, type AdminResponse } from "../lib/services/adminService";
+import { getSignedImageUrl } from "../lib/services/firesideService";
+import { NightSky } from "../components/sky";
+import { PixelTitle } from "../components/PixelTitle";
+import { PixelCharacter, DEFAULT_CHARACTER } from "../components/PixelCharacter";
+import { CampfireColors, Spacing, Radii, Typography } from "../constants/theme";
+
+const { width: SCREEN_W } = Dimensions.get("window");
+const { BG, TEXT_CREAM: TEXT, MUTED, BTN_PRIMARY: BTN, BORDER, CARD_SOLID: CARD, SUCCESS, DANGER } = CampfireColors;
+
+// ─── Prompt type badge colors ────────────────────────────────
+const TYPE_COLORS: Record<string, string> = {
+  short_text: "#4A9EFF",
+  long_text: "#7B68EE",
+  photo: "#FF6B9D",
+  multiple_choice: "#FFA033",
+  quiz: "#FFD700",
+  quiplash: "#FF4444",
+  quiplash_vote: "#FF8C00",
+  meme_upload: "#9B59B6",
+  meme_caption: "#9B59B6",
+  photo_caption: "#FF6B9D",
+};
+
+// ─── Helpers ─────────────────────────────────────────────────
+function formatDay(dateStr: string): string {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    timeZone: "America/Denver",
+  });
+}
+
+function formatWeekRange(weekOf: string): string {
+  const mon = new Date(weekOf + "T12:00:00");
+  const sat = new Date(mon);
+  sat.setDate(mon.getDate() + 5);
+  const fmt = (d: Date) =>
+    d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/Denver" });
+  return `${fmt(mon)} - ${fmt(sat)}`;
+}
+
+function promptStatus(gp: AdminGroupPrompt): "active" | "expired" | "upcoming" | "deactivated" {
+  if (!gp.is_active) return "deactivated";
+  const now = new Date();
+  const scheduled = new Date(gp.scheduled_for);
+  const expires = new Date(gp.expires_at);
+  if (now < scheduled) return "upcoming";
+  if (now > expires) return "expired";
+  return "active";
+}
+
+const STATUS_COLORS = {
+  active: SUCCESS,
+  expired: MUTED,
+  upcoming: "#4A9EFF",
+  deactivated: DANGER,
+};
+
+function typeLabel(type: string): string {
+  const labels: Record<string, string> = {
+    short_text: "Text",
+    long_text: "Long",
+    photo: "Photo",
+    multiple_choice: "MC",
+    quiz: "Quiz",
+    quiplash: "Quip Prompt",
+    quiplash_vote: "Quip Vote",
+    meme_upload: "Meme",
+    meme_caption: "Caption",
+    photo_caption: "Caption",
+  };
+  return labels[type] || type;
+}
+
+// ─── Group Picker ────────────────────────────────────────────
+function GroupPicker({
+  groups,
+  selected,
+  onSelect,
+}: {
+  groups: GroupRow[];
+  selected: string | undefined;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={{ marginBottom: Spacing.md }}
+      contentContainerStyle={{ gap: 8 }}
+    >
+      {groups.map((g) => {
+        const active = g.id === selected;
+        return (
+          <Pressable
+            key={g.id}
+            onPress={() => onSelect(g.id)}
+            style={{
+              paddingHorizontal: 16,
+              paddingVertical: 10,
+              borderRadius: Radii.md,
+              backgroundColor: active ? BTN : CARD,
+              borderColor: active ? BTN : BORDER,
+              borderWidth: 1,
+            }}
+          >
+            <Text style={{ color: active ? "#000" : TEXT, fontFamily: "Paaxel", fontSize: 14 }}>
+              {g.name || "Group"}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+// ─── Week Navigator ──────────────────────────────────────────
+function WeekNavigator({
+  weekOf,
+  onPrev,
+  onNext,
+}: {
+  weekOf: string;
+  onPrev: () => void;
+  onNext: () => void;
+}) {
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: Spacing.md,
+        backgroundColor: CARD,
+        borderRadius: Radii.md,
+        borderColor: BORDER,
+        borderWidth: 1,
+        padding: Spacing.sm,
+      }}
+    >
+      <Pressable onPress={onPrev} style={{ padding: 8, minWidth: 44, minHeight: 44, justifyContent: "center", alignItems: "center" }}>
+        <Text style={{ color: TEXT, fontSize: 20, fontFamily: "Paaxel" }}>&lt;</Text>
+      </Pressable>
+      <Text style={{ color: TEXT, fontFamily: "Paaxel", fontSize: 15 }}>
+        {formatWeekRange(weekOf)}
+      </Text>
+      <Pressable onPress={onNext} style={{ padding: 8, minWidth: 44, minHeight: 44, justifyContent: "center", alignItems: "center" }}>
+        <Text style={{ color: TEXT, fontSize: 20, fontFamily: "Paaxel" }}>&gt;</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+// ─── Prompt Row ──────────────────────────────────────────────
+function AdminPromptRow({
+  gp,
+  memberCount,
+  onPress,
+  onDeactivate,
+}: {
+  gp: AdminGroupPrompt;
+  memberCount: number;
+  onPress: () => void;
+  onDeactivate: () => void;
+}) {
+  const status = promptStatus(gp);
+  const type = gp.prompt?.type || "?";
+  const content = gp.prompt?.content || "(no content)";
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        backgroundColor: CARD,
+        borderColor: status === "deactivated" ? DANGER : BORDER,
+        borderWidth: 1,
+        borderRadius: Radii.md,
+        padding: Spacing.md,
+        marginBottom: Spacing.sm,
+        opacity: status === "deactivated" ? 0.5 : 1,
+      }}
+    >
+      {/* Top row: day + type badge + status dot */}
+      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 6 }}>
+        <Text style={{ color: MUTED, fontFamily: "Paaxel", fontSize: 12, width: 90 }}>
+          {formatDay(gp.scheduled_for)}
+        </Text>
+        <View
+          style={{
+            backgroundColor: type === "quiplash" ? TYPE_COLORS.quiplash_vote : (TYPE_COLORS[type] || MUTED),
+            paddingHorizontal: 8,
+            paddingVertical: 2,
+            borderRadius: 4,
+            marginRight: 8,
+          }}
+        >
+          <Text style={{ color: "#000", fontFamily: "Paaxel", fontSize: 11 }}>
+            {type === "quiplash" ? "Quiplash" : typeLabel(type)}
+          </Text>
+        </View>
+        {/* For non-quiplash, show status dot inline (quiplash shows per-phase below) */}
+        {type !== "quiplash" && (
+          <>
+            <View
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: STATUS_COLORS[status],
+                marginRight: 6,
+              }}
+            />
+            <Text style={{ color: MUTED, fontSize: 11 }}>{status}</Text>
+          </>
+        )}
+
+        {/* Spacer + deactivate button */}
+        <View style={{ flex: 1 }} />
+        {gp.is_active && (
+          <Pressable
+            onPress={(e) => {
+              e.stopPropagation?.();
+              onDeactivate();
+            }}
+            hitSlop={8}
+            style={{
+              paddingHorizontal: 8,
+              paddingVertical: 4,
+              borderRadius: 4,
+              backgroundColor: "rgba(255,68,68,0.15)",
+              minWidth: 44,
+              minHeight: 32,
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: DANGER, fontFamily: "Paaxel", fontSize: 11 }}>Remove</Text>
+          </Pressable>
+        )}
+      </View>
+
+      {/* Content preview */}
+      <Text style={{ color: TEXT, fontSize: 14, marginBottom: 4 }} numberOfLines={2}>
+        {content}
+      </Text>
+
+      {/* Response count — quiplash shows answers + votes as separate phases */}
+      {type === "quiplash" ? (
+        <View style={{ gap: 3 }}>
+          {/* Phase 1: Prompt answers (2 players per prompt) */}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <View style={{
+              width: 6, height: 6, borderRadius: 3,
+              backgroundColor: (gp.quiplash_answered || 0) >= 2 ? SUCCESS : MUTED,
+            }} />
+            <Text style={{ color: TYPE_COLORS.quiplash, fontSize: 12, fontFamily: "Paaxel" }}>
+              Answers: {gp.quiplash_answered || 0}/2
+            </Text>
+            {(gp.quiplash_answered || 0) >= 2 && (
+              <Text style={{ color: SUCCESS, fontSize: 11, fontFamily: "Paaxel" }}>done</Text>
+            )}
+          </View>
+          {/* Phase 2: Voting (everyone except the 2 who answered) */}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <View style={{
+              width: 6, height: 6, borderRadius: 3,
+              backgroundColor: STATUS_COLORS[status],
+            }} />
+            <Text style={{ color: TYPE_COLORS.quiplash_vote, fontSize: 12, fontFamily: "Paaxel" }}>
+              Votes: {gp.quiplash_vote_count || 0}/{Math.max(0, memberCount - 2)}
+            </Text>
+            <Text style={{ color: MUTED, fontSize: 11 }}>{status}</Text>
+          </View>
+        </View>
+      ) : (
+        <Text style={{ color: MUTED, fontSize: 12 }}>
+          {gp.response_count}/{memberCount} responded
+        </Text>
+      )}
+    </Pressable>
+  );
+}
+
+// ─── Response Detail Modal ───────────────────────────────────
+function ResponseDetailModal({
+  visible,
+  groupPromptId,
+  promptType,
+  promptContent,
+  onClose,
+}: {
+  visible: boolean;
+  groupPromptId: string | undefined;
+  promptType?: string;
+  promptContent?: string;
+  onClose: () => void;
+}) {
+  const { data: responses, isLoading } = usePromptResponses(
+    visible ? groupPromptId : undefined,
+    promptType
+  );
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.85)" }}>
+        {/* Header */}
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            paddingHorizontal: 20,
+            paddingTop: 60,
+            paddingBottom: 12,
+          }}
+        >
+          <Text style={{ color: TEXT, fontFamily: "Paaxel", fontSize: 18, flex: 1 }} numberOfLines={1}>
+            Responses
+          </Text>
+          <Pressable
+            onPress={onClose}
+            style={{ padding: 8, backgroundColor: CARD, borderRadius: 8, minWidth: 44, minHeight: 44, justifyContent: "center", alignItems: "center" }}
+          >
+            <Text style={{ color: TEXT, fontFamily: "Paaxel", fontSize: 16 }}>X</Text>
+          </Pressable>
+        </View>
+
+        {/* Prompt content */}
+        {promptContent && (
+          <Text style={{ color: MUTED, fontSize: 13, paddingHorizontal: 20, marginBottom: 12 }}>
+            {promptContent}
+          </Text>
+        )}
+
+        {/* Responses list */}
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+        >
+          {isLoading && (
+            <ActivityIndicator color={BTN} style={{ marginTop: 20 }} />
+          )}
+          {!isLoading && (!responses || responses.length === 0) && (
+            <Text style={{ color: MUTED, textAlign: "center", marginTop: 20 }}>
+              No responses yet
+            </Text>
+          )}
+          {responses?.map((r) => (
+            <ResponseRow key={r.id} response={r} promptType={promptType} />
+          ))}
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+}
+
+function ResponseRow({
+  response,
+  promptType,
+}: {
+  response: AdminResponse;
+  promptType?: string;
+}) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+  // Resolve signed URL for photos
+  React.useEffect(() => {
+    if (response.media_url) {
+      getSignedImageUrl(response.media_url).then(setImageUrl);
+    }
+  }, [response.media_url]);
+
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        backgroundColor: CARD,
+        borderColor: BORDER,
+        borderWidth: 1,
+        borderRadius: Radii.sm,
+        padding: Spacing.sm,
+        marginBottom: 8,
+        alignItems: "flex-start",
+      }}
+    >
+      {/* Mini avatar */}
+      <View style={{ width: 32, height: 40, marginRight: 10, overflow: "hidden" }}>
+        <View style={{ transform: [{ translateX: -24 }, { scale: 0.5 }] }}>
+          <PixelCharacter config={response.avatar_config || DEFAULT_CHARACTER} size={50} />
+        </View>
+      </View>
+
+      {/* Content */}
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: TEXT, fontFamily: "Paaxel", fontSize: 13, marginBottom: 2 }}>
+          {response.username}
+        </Text>
+
+        {/* Text response */}
+        {response.content && (
+          <Text style={{ color: MUTED, fontSize: 13 }}>{response.content}</Text>
+        )}
+
+        {/* MC/Quiz selected option */}
+        {response.selected_option && !response.content && (
+          <Text style={{ color: MUTED, fontSize: 13 }}>Selected: {response.selected_option}</Text>
+        )}
+
+        {/* Photo */}
+        {imageUrl && (
+          <Image
+            source={{ uri: imageUrl }}
+            style={{ width: 120, height: 120, borderRadius: 8, marginTop: 4 }}
+            resizeMode="cover"
+          />
+        )}
+
+        {/* No answer (quiplash) */}
+        {promptType === "quiplash" && !response.content && (
+          <Text style={{ color: MUTED, fontSize: 12, fontStyle: "italic" }}>(no answer)</Text>
+        )}
+      </View>
+    </View>
+  );
+}
+
+// ─── Main Admin Screen ───────────────────────────────────────
+export default function AdminScreen() {
+  const { data: groups, isLoading: groupsLoading } = useMyGroups();
+  const [selectedGroupId, setSelectedGroupId] = useState<string | undefined>();
+  const [weekOf, setWeekOf] = useState(() => getWeekOf());
+
+  // Response detail modal state
+  const [detailPrompt, setDetailPrompt] = useState<{
+    id: string;
+    type?: string;
+    content?: string;
+  } | null>(null);
+
+  // Auto-select first group
+  const activeGroupId = selectedGroupId || groups?.[0]?.id;
+
+  const { data: schedule, isLoading: scheduleLoading, refetch } = useWeekSchedule(activeGroupId, weekOf);
+  const { data: memberCount } = useGroupMemberCount(activeGroupId);
+  const deactivateMutation = useDeactivatePrompt();
+
+  const handlePrevWeek = () => {
+    const d = new Date(weekOf + "T12:00:00");
+    d.setDate(d.getDate() - 7);
+    setWeekOf(d.toISOString().split("T")[0]);
+  };
+
+  const handleNextWeek = () => {
+    const d = new Date(weekOf + "T12:00:00");
+    d.setDate(d.getDate() + 7);
+    setWeekOf(d.toISOString().split("T")[0]);
+  };
+
+  const handleDeactivate = (gp: AdminGroupPrompt) => {
+    Alert.alert(
+      "Remove Prompt",
+      `Deactivate "${gp.prompt?.content?.substring(0, 60)}..."?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: () => {
+            deactivateMutation.mutate(gp.id, {
+              onSuccess: (result) => {
+                if (result.success) {
+                  refetch();
+                } else {
+                  Alert.alert("Error", result.error || "Failed to deactivate");
+                }
+              },
+              onError: (err: any) => {
+                Alert.alert("Error", err?.message || "Failed to deactivate");
+              },
+            });
+          },
+        },
+      ]
+    );
+  };
+
+  // Group prompts by day for visual clarity
+  const groupedByDay = useMemo(() => {
+    if (!schedule) return [];
+    const days: { day: string; prompts: AdminGroupPrompt[] }[] = [];
+    let currentDay = "";
+    for (const gp of schedule) {
+      const day = formatDay(gp.scheduled_for);
+      if (day !== currentDay) {
+        days.push({ day, prompts: [gp] });
+        currentDay = day;
+      } else {
+        days[days.length - 1].prompts.push(gp);
+      }
+    }
+    return days;
+  }, [schedule]);
+
+  return (
+    <View style={{ flex: 1, backgroundColor: BG }}>
+      <NightSky density="minimal" showMoon showShootingStars={false} showFireflies={false} showGradient={false} moonBgColor={BG} />
+
+      <ScrollView
+        style={{ flex: 1, zIndex: 10 }}
+        contentContainerStyle={{ padding: Spacing.xl, paddingBottom: 100 }}
+      >
+        {/* Header */}
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: Spacing.lg, marginTop: 30 }}>
+          <Pressable
+            onPress={() => router.back()}
+            style={{ padding: 8, marginRight: 8, minWidth: 44, minHeight: 44, justifyContent: "center", alignItems: "center" }}
+          >
+            <Text style={{ color: TEXT, fontSize: 22, fontFamily: "Paaxel" }}>&lt;</Text>
+          </Pressable>
+          <PixelTitle fontSize={24}>Admin</PixelTitle>
+        </View>
+
+        {/* Group Picker */}
+        {groupsLoading ? (
+          <ActivityIndicator color={BTN} style={{ marginBottom: 16 }} />
+        ) : (
+          <GroupPicker
+            groups={groups || []}
+            selected={activeGroupId}
+            onSelect={setSelectedGroupId}
+          />
+        )}
+
+        {/* Week Navigator */}
+        <WeekNavigator weekOf={weekOf} onPrev={handlePrevWeek} onNext={handleNextWeek} />
+
+        {/* Schedule */}
+        {scheduleLoading ? (
+          <ActivityIndicator color={BTN} style={{ marginTop: 30 }} />
+        ) : !schedule || schedule.length === 0 ? (
+          <View style={{ alignItems: "center", marginTop: 40 }}>
+            <Text style={{ color: MUTED, fontFamily: "Paaxel", fontSize: 15 }}>
+              No prompts this week
+            </Text>
+          </View>
+        ) : (
+          groupedByDay.map((dayGroup) => (
+            <View key={dayGroup.day}>
+              {dayGroup.prompts.map((gp) => (
+                <AdminPromptRow
+                  key={gp.id}
+                  gp={gp}
+                  memberCount={memberCount || 0}
+                  onPress={() =>
+                    setDetailPrompt({
+                      id: gp.id,
+                      type: gp.prompt?.type,
+                      content: gp.prompt?.content,
+                    })
+                  }
+                  onDeactivate={() => handleDeactivate(gp)}
+                />
+              ))}
+            </View>
+          ))
+        )}
+
+        {/* Summary stats */}
+        {schedule && schedule.length > 0 && (
+          <View
+            style={{
+              backgroundColor: CARD,
+              borderColor: BORDER,
+              borderWidth: 1,
+              borderRadius: Radii.md,
+              padding: Spacing.md,
+              marginTop: Spacing.md,
+            }}
+          >
+            <Text style={{ color: TEXT, fontFamily: "Paaxel", fontSize: 14, marginBottom: 4 }}>
+              Week Summary
+            </Text>
+            <Text style={{ color: MUTED, fontSize: 13 }}>
+              {schedule.filter((gp) => gp.is_active).length} active prompts  |  {" "}
+              {schedule.filter((gp) => !gp.is_active).length} removed
+            </Text>
+            <Text style={{ color: MUTED, fontSize: 13 }}>
+              {memberCount || 0} members  |  {" "}
+              {schedule.reduce((sum, gp) => sum + gp.response_count, 0)} total responses
+            </Text>
+          </View>
+        )}
+
+        {/* AI Judge Test Button */}
+        <Pressable
+          onPress={() => router.push({ pathname: "/judge-test", params: { groupId: activeGroupId } })}
+          style={{
+            backgroundColor: "rgba(255, 215, 0, 0.12)",
+            borderColor: "#FFD700",
+            borderWidth: 1,
+            borderRadius: Radii.md,
+            padding: Spacing.md,
+            marginTop: Spacing.lg,
+            alignItems: "center",
+          }}
+        >
+          <Text style={{ color: "#FFD700", fontFamily: "Paaxel", fontSize: 16, marginBottom: 2 }}>
+            Test AI Judge
+          </Text>
+          <Text style={{ color: MUTED, fontSize: 12 }}>
+            Vertical Jump Challenge (Mock Data)
+          </Text>
+        </Pressable>
+      </ScrollView>
+
+      {/* Response Detail Modal */}
+      <ResponseDetailModal
+        visible={!!detailPrompt}
+        groupPromptId={detailPrompt?.id}
+        promptType={detailPrompt?.type}
+        promptContent={detailPrompt?.content}
+        onClose={() => setDetailPrompt(null)}
+      />
+    </View>
+  );
+}

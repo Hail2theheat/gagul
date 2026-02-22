@@ -3,27 +3,29 @@
  * 1 = disgusted, 2 = sad, 3 = neutral, 4 = happy, 5 = laughing
  */
 
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Animated } from 'react-native';
 import { submitRating } from '../../lib/services/promptService';
 import { awardPoints } from '../../lib/services/pointsService';
+import { CampfireColors } from '../../constants/theme';
 
-// Theme colors
+// DESIGN.md §19: Never hardcode hex values
 const COLORS = {
-  bg: '#0D1426',
-  border: '#27406B',
-  text: '#E6F0FF',
-  muted: '#9EC5FF',
-  selected: '#FFD93D',
+  bg: CampfireColors.BG,
+  border: CampfireColors.BORDER,
+  text: CampfireColors.TEXT,
+  muted: CampfireColors.MUTED,
+  selected: CampfireColors.RATING_LOVE, // DESIGN.md §5.8 - Use RATING_* tokens
 };
 
 // Face emoji components for each rating
+// DESIGN.md §5.8: Rating face colors (prompt feedback)
 const FACE_CONFIGS = [
-  { rating: 1, label: 'Awful', color: '#8B0000' },      // Disgusted - dark red
-  { rating: 2, label: 'Meh', color: '#FF6B6B' },        // Sad - light red
-  { rating: 3, label: 'Okay', color: '#9CA3AF' },       // Neutral - gray
-  { rating: 4, label: 'Good', color: '#4ADE80' },       // Happy - green
-  { rating: 5, label: 'Great!', color: '#FFD93D' },     // Laughing - gold
+  { rating: 1, label: 'Awful', color: CampfireColors.RATING_HATE },      // Terrible
+  { rating: 2, label: 'Meh', color: CampfireColors.RATING_DISLIKE },     // Dislike
+  { rating: 3, label: 'Okay', color: CampfireColors.RATING_NEUTRAL },    // Neutral
+  { rating: 4, label: 'Good', color: CampfireColors.RATING_LIKE },       // Like
+  { rating: 5, label: 'Great!', color: CampfireColors.RATING_LOVE },     // Love
 ];
 
 // Pixel art face component
@@ -31,9 +33,9 @@ function PixelFace({ rating, size = 36, selected = false }: { rating: number; si
   const s = size / 36; // Scale factor
   const config = FACE_CONFIGS[rating - 1];
 
-  // Face base color based on rating
-  const faceColor = selected ? '#FFD93D' : '#FFF8DC';
-  const featureColor = selected ? '#7C2D12' : '#5D4037';
+  // Face base color based on rating (DESIGN.md §19: Never hardcode hex values)
+  const faceColor = selected ? CampfireColors.RATING_LOVE : CampfireColors.TEXT_CREAM;
+  const featureColor = selected ? '#7C2D12' : '#5D4037'; // Feature colors for eyes/mouth (pixel art details)
 
   return (
     <View style={{
@@ -44,8 +46,9 @@ function PixelFace({ rating, size = 36, selected = false }: { rating: number; si
       borderRadius: size / 2,
       backgroundColor: faceColor,
       borderWidth: 2 * s,
-      borderColor: selected ? '#F59E0B' : '#DEB887',
-      shadowColor: selected ? '#FFD93D' : 'transparent',
+      // DESIGN.md §19: Never hardcode hex values - use design tokens
+      borderColor: selected ? CampfireColors.RATING_LIKE : CampfireColors.RATING_LOVE_BG,
+      shadowColor: selected ? CampfireColors.RATING_LOVE : 'transparent',
       shadowOffset: { width: 0, height: 0 },
       shadowOpacity: selected ? 0.8 : 0,
       shadowRadius: selected ? 8 : 0,
@@ -120,35 +123,65 @@ export function PromptRating({
   onRated,
 }: PromptRatingProps) {
   const [hasRated, setHasRated] = useState(initialHasRated);
+  const [dismissed, setDismissed] = useState(initialHasRated);
   // Convert boolean to number if needed (legacy support)
   const convertedInitial = typeof initialRating === 'boolean'
     ? (initialRating ? 5 : 1)
     : (initialRating ?? null);
   const [rating, setRating] = useState<number | null>(convertedInitial);
   const [loading, setLoading] = useState(false);
+  const [fadeAnim] = useState(() => new Animated.Value(1));
+
+  // Sync with parent prop - if parent says already rated, skip to dismissed
+  useEffect(() => {
+    if (initialHasRated && !hasRated) {
+      setHasRated(true);
+      setDismissed(true);
+    }
+  }, [initialHasRated]);
+
+  // Auto-dismiss after rating
+  useEffect(() => {
+    if (hasRated && rating !== null) {
+      const timer = setTimeout(() => {
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 400,
+          useNativeDriver: true,
+        }).start(() => setDismissed(true));
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [hasRated, rating]);
 
   const handleRate = async (newRating: number) => {
-    if (loading) return;
+    if (loading || hasRated) return;
 
     setLoading(true);
-    // Convert to boolean for now (will update DB later)
-    // Rating >= 4 is positive, < 4 is negative
-    const boolRating = newRating >= 4;
-    const result = await submitRating(promptId, boolRating);
-    setLoading(false);
+    try {
+      const result = await submitRating(promptId, newRating);
 
-    if (result.success) {
+      if (result.success) {
+        // Award point in background - don't block dismissal
+        awardPoints('rating').catch(() => {});
+      }
+    } catch (err) {
+      console.error('Rating submission error:', err);
+    } finally {
+      // Always show "Thanks" and dismiss, even if the call failed
+      // (rating is low-stakes, don't block the user)
       setHasRated(true);
       setRating(newRating);
-      // Award 1 point for rating
-      await awardPoints('rating');
+      setLoading(false);
       onRated?.(newRating);
     }
   };
 
+  if (dismissed) return null;
+
   if (hasRated && rating !== null) {
     return (
-      <View style={styles.container}>
+      <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
         <Text style={styles.thanksText}>Thanks for rating!</Text>
         <View style={styles.ratedIndicator}>
           <PixelFace rating={rating} size={48} selected />
@@ -156,7 +189,7 @@ export function PromptRating({
             {FACE_CONFIGS[rating - 1].label}
           </Text>
         </View>
-      </View>
+      </Animated.View>
     );
   }
 

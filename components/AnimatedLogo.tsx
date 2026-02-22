@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useMemo } from "react";
 import { View, Text, Animated, StyleSheet } from "react-native";
 import Svg, { Rect } from "react-native-svg";
+import { CampfireColors } from "../constants/theme";
 
 // ---------------------------------------------------------------------------
 // Types & helpers
@@ -25,20 +26,20 @@ const r = (x: number, y: number, w: number, h: number, color: string): PixelRect
 // ---------------------------------------------------------------------------
 
 const C = {
-  flameOuter:  "#CC2200",
-  flameOuter2: "#B81C00",
-  flameMid:    "#FF6B35",
-  flameInner:  "#FFD93D",
-  flameCore:   "#FFFACD",
-  logDark:     "#4A3020",
-  logLight:    "#5C3D2E",
-  coalBase:    "#2A1810",
-  coalGlow1:   "#CC2200",
-  coalGlow2:   "#FF4500",
-  rock1:       "#4a4a52",
-  rock2:       "#5a5a62",
-  rock3:       "#6b6b73",
-  glow:        "#FF6B35",
+  flameOuter:  CampfireColors.FIRE_RED,
+  flameOuter2: CampfireColors.FIRE_DEEP_RED,
+  flameMid:    CampfireColors.FIRE_ORANGE,
+  flameInner:  CampfireColors.FIRE_YELLOW,
+  flameCore:   CampfireColors.MOON_GLOW,
+  logDark:     CampfireColors.LOG_DARK,
+  logLight:    CampfireColors.LOG_MID,
+  coalBase:    '#2A1810',
+  coalGlow1:   CampfireColors.FIRE_RED,
+  coalGlow2:   '#FF4500',
+  rock1:       CampfireColors.STONE_DARKEST,
+  rock2:       CampfireColors.STONE_DARK,
+  rock3:       CampfireColors.STONE_MID,
+  glow:        CampfireColors.FIRE_ORANGE,
 };
 
 // ---------------------------------------------------------------------------
@@ -503,7 +504,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: "Paaxel",
-    color: "#FFF8DC",
+    color: CampfireColors.TEXT_CREAM,
     textShadowOffset: { width: 0, height: 0 },
   },
 });

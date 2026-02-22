@@ -2,7 +2,6 @@
  * Prompt service - handles all prompt-related operations
  */
 
-import { File as ExpoFile } from 'expo-file-system';
 import { supabase } from '../supabase';
 import type {
   GroupStatus,
@@ -75,17 +74,6 @@ export async function uploadPhoto(
   }
 
   try {
-    // Read file using SDK 54 File API
-    const file = new ExpoFile(photoUri);
-    const arrayBuffer = await file.arrayBuffer();
-
-    console.log('[uploadPhoto] file URI:', photoUri);
-    console.log('[uploadPhoto] arrayBuffer size:', arrayBuffer.byteLength);
-
-    if (!arrayBuffer || arrayBuffer.byteLength === 0) {
-      return { url: null, error: 'Failed to read photo file (0 bytes)' };
-    }
-
     // Determine extension from URI
     const uriLower = photoUri.toLowerCase();
     let contentType = 'image/jpeg';
@@ -96,32 +84,57 @@ export async function uploadPhoto(
 
     const fileName = `${groupId}/${groupPromptId}/${userData.user.id}_${Date.now()}.${ext}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from('uploads')
-      .upload(fileName, arrayBuffer, {
-        contentType,
-        upsert: false,
-      });
+    console.log('[uploadPhoto] file URI:', photoUri);
+    console.log('[uploadPhoto] fileName:', fileName);
 
-    if (uploadError) {
-      console.error('Upload error:', uploadError);
-      return { url: null, error: uploadError.message };
+    // Use FormData with the file URI - the proven React Native upload method
+    const formData = new FormData();
+    formData.append('', {
+      uri: photoUri,
+      name: fileName.split('/').pop(),
+      type: contentType,
+    } as any);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      return { url: null, error: 'No active session' };
     }
 
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+    const uploadUrl = `${supabaseUrl}/storage/v1/object/uploads/${fileName}`;
+
+    console.log('[uploadPhoto] uploading to:', uploadUrl);
+
+    const response = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'x-upsert': 'false',
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Upload error:', response.status, errorText);
+      return { url: null, error: `Upload failed (${response.status}): ${errorText}` };
+    }
+
+    console.log('[uploadPhoto] success!');
     // Store just the file path - we'll generate signed URLs on demand when displaying
     return { url: fileName };
-  } catch (err) {
+  } catch (err: any) {
     console.error('Photo upload failed:', err);
-    return { url: null, error: 'Failed to upload photo' };
+    return { url: null, error: `Failed to upload photo: ${err?.message || err}` };
   }
 }
 
 /**
- * Submit a rating for a prompt (thumbs up/down)
+ * Submit a rating for a prompt (1-5 scale)
  */
 export async function submitRating(
   promptId: string,
-  rating: boolean
+  rating: number
 ): Promise<{ success: boolean; error?: string }> {
   const { error } = await supabase.rpc('submit_prompt_rating', {
     p_prompt_id: promptId,

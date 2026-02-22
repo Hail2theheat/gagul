@@ -1,6 +1,7 @@
 // components/AnimatedSplash.tsx
 // Full-screen animated splash: night sky, mountains, lake reflection,
 // campfire with woodland creatures, shooting stars, and "STOKIE" rising text.
+// REDESIGNED: Enhanced visual hierarchy, glowing effects, intentional details
 import React, { useEffect } from "react";
 import { View, Dimensions, StyleSheet } from "react-native";
 import Animated, {
@@ -16,31 +17,24 @@ import Animated, {
   interpolateColor,
 } from "react-native-reanimated";
 import { CampfireColors } from "../constants/theme";
+import { AnimatedLogo } from "./AnimatedLogo";
+import { SilhouetteTree } from "./campfire/SilhouetteTree";
 
 const { width: W, height: H } = Dimensions.get("window");
 
 // ──────────────────────────────────────────
-// Color palette
+// Color palette (from theme)
 // ──────────────────────────────────────────
-const SKY_TOP = "#040810";
-const SKY_MID = "#0A1428";
-const SKY_LOW = "#101E38";
-const MTN_FAR = "#0C1420";
-const MTN_MID = "#0E1824";
-const MTN_NEAR = "#0A1218";
-const LAKE_TOP = "#0A1828";
-const LAKE_MID = "#081420";
-const LAKE_BOT = "#060E18";
-const GROUND = "#152515";
-const FIRE_ORANGE = "#FF6B35";
-const FIRE_YELLOW = "#FFD93D";
-const FIRE_RED = "#CC2200";
-const FIRE_CORE = "#FFFACD";
-const LOG_DARK = "#4A3020";
-const LOG_LIGHT = "#5C3D2E";
-const ROCK = "#4A4A52";
-const ROCK_L = "#5A5A62";
-const TEXT_COLOR = "#FFF8DC";
+const SKY_TOP = CampfireColors.SKY_TOP;
+const SKY_MID = CampfireColors.SKY_MID;
+const SKY_LOW = CampfireColors.SKY_LOW;
+const MTN_FAR = CampfireColors.MTN_FAR;
+const MTN_MID = CampfireColors.MTN_MID;
+const MTN_NEAR = CampfireColors.MTN_NEAR;
+const LAKE_TOP = CampfireColors.LAKE_TOP;
+const LAKE_MID = CampfireColors.LAKE_MID;
+const LAKE_BOT = CampfireColors.LAKE_BOT;
+const GROUND = CampfireColors.GROUND_DEEP;
 
 // ──────────────────────────────────────────
 // Helpers
@@ -113,9 +107,10 @@ function MountainReflection({
   );
 }
 
-/** Single twinkling star */
-function Star({ x, y, size, delay }: { x: number; y: number; size: number; delay: number }) {
+/** Single twinkling star with glow */
+function Star({ x, y, size, delay, color }: { x: number; y: number; size: number; delay: number; color?: string }) {
   const opacity = useSharedValue(0.3);
+  const glow = useSharedValue(0);
 
   useEffect(() => {
     opacity.value = withDelay(
@@ -124,6 +119,18 @@ function Star({ x, y, size, delay }: { x: number; y: number; size: number; delay
         withSequence(
           withTiming(1, { duration: 1500 + Math.random() * 1000, easing: Easing.inOut(Easing.quad) }),
           withTiming(0.3, { duration: 1500 + Math.random() * 1000, easing: Easing.inOut(Easing.quad) })
+        ),
+        -1,
+        true
+      )
+    );
+    // Glow pulses independently for variety
+    glow.value = withDelay(
+      delay + 500,
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: 2000 + Math.random() * 1500, easing: Easing.inOut(Easing.quad) }),
+          withTiming(0.4, { duration: 2000 + Math.random() * 1500, easing: Easing.inOut(Easing.quad) })
         ),
         -1,
         true
@@ -138,14 +145,17 @@ function Star({ x, y, size, delay }: { x: number; y: number; size: number; delay
     width: size,
     height: size,
     borderRadius: size / 2,
-    backgroundColor: "#FFF",
+    backgroundColor: color || CampfireColors.STAR_WHITE,
     opacity: opacity.value,
+    shadowColor: color || "#FFF",
+    shadowOpacity: glow.value * 0.8,
+    shadowRadius: size * 3,
   }));
 
   return <Animated.View style={style} />;
 }
 
-/** Animated shooting star */
+/** Animated shooting star with enhanced glow */
 function SplashShootingStar({ delay }: { delay: number }) {
   const progress = useSharedValue(0);
   const startX = 40 + Math.random() * (W * 0.5);
@@ -154,10 +164,10 @@ function SplashShootingStar({ delay }: { delay: number }) {
   useEffect(() => {
     const fire = () => {
       progress.value = 0;
-      progress.value = withTiming(1, { duration: 800 });
+      progress.value = withTiming(1, { duration: 1800, easing: Easing.out(Easing.cubic) }); // Slower: 900ms → 1800ms
     };
     const t = setTimeout(fire, delay);
-    const interval = setInterval(fire, 6000 + Math.random() * 8000);
+    const interval = setInterval(fire, 7000 + Math.random() * 9000);
     return () => {
       clearTimeout(t);
       clearInterval(interval);
@@ -166,28 +176,31 @@ function SplashShootingStar({ delay }: { delay: number }) {
 
   const headStyle = useAnimatedStyle(() => ({
     position: "absolute" as const,
-    left: startX + interpolate(progress.value, [0, 1], [0, 160]),
-    top: startY + interpolate(progress.value, [0, 1], [0, 100]),
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#FFFFF0",
-    opacity: interpolate(progress.value, [0, 0.1, 0.7, 1], [0, 1, 1, 0]),
-    shadowColor: "#FFF",
-    shadowOpacity: 1,
-    shadowRadius: 8,
+    left: startX + interpolate(progress.value, [0, 1], [0, 180]),
+    top: startY + interpolate(progress.value, [0, 1], [0, 110]),
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: CampfireColors.FIRE_CORE,
+    opacity: interpolate(progress.value, [0, 0.08, 0.65, 1], [0, 1, 1, 0]),
+    shadowColor: CampfireColors.FIRE_YELLOW,
+    shadowOpacity: interpolate(progress.value, [0, 0.15, 0.7, 1], [0, 1, 0.8, 0]),
+    shadowRadius: 12,
   }));
 
   const trailStyle = useAnimatedStyle(() => ({
     position: "absolute" as const,
-    left: startX + interpolate(progress.value, [0, 1], [0, 160]) - 60,
-    top: startY + interpolate(progress.value, [0, 1], [0, 100]) - 1,
-    width: 60,
-    height: 2,
-    opacity: interpolate(progress.value, [0, 0.15, 0.6, 1], [0, 0.6, 0.3, 0]),
-    transform: [{ rotate: "33deg" }],
-    backgroundColor: "rgba(255,255,240,0.4)",
-    borderRadius: 1,
+    left: startX + interpolate(progress.value, [0, 1], [0, 180]) - 70,
+    top: startY + interpolate(progress.value, [0, 1], [0, 110]) - 1.5,
+    width: 70,
+    height: 3,
+    opacity: interpolate(progress.value, [0, 0.12, 0.55, 1], [0, 0.7, 0.35, 0]),
+    transform: [{ rotate: "31deg" }],
+    backgroundColor: "rgba(255, 250, 220, 0.5)",
+    borderRadius: 1.5,
+    shadowColor: CampfireColors.STAR_WARM,
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
   }));
 
   return (
@@ -199,82 +212,167 @@ function SplashShootingStar({ delay }: { delay: number }) {
 }
 
 // ──────────────────────────────────────────
-// Woodland creatures (tiny pixel art)
+// Fireflies with glowing trails
 // ──────────────────────────────────────────
 
-/** Tiny pixel owl sitting on a log */
-function PixelOwl({ x, bottom }: { x: number; bottom: number }) {
-  return (
-    <View style={{ position: "absolute", left: x, bottom, width: 14, height: 16 }}>
-      {/* Body */}
-      <View style={{ position: "absolute", bottom: 0, left: 2, width: 10, height: 10, backgroundColor: "#8B6914", borderRadius: 3 }} />
-      {/* Head */}
-      <View style={{ position: "absolute", bottom: 8, left: 1, width: 12, height: 9, backgroundColor: "#A07818", borderRadius: 4 }} />
-      {/* Ears */}
-      <View style={{ position: "absolute", bottom: 14, left: 1, width: 3, height: 3, backgroundColor: "#8B6914", borderTopLeftRadius: 2 }} />
-      <View style={{ position: "absolute", bottom: 14, left: 10, width: 3, height: 3, backgroundColor: "#8B6914", borderTopRightRadius: 2 }} />
-      {/* Eyes */}
-      <View style={{ position: "absolute", bottom: 11, left: 3, width: 3, height: 3, backgroundColor: "#FFD93D", borderRadius: 1.5 }} />
-      <View style={{ position: "absolute", bottom: 11, left: 8, width: 3, height: 3, backgroundColor: "#FFD93D", borderRadius: 1.5 }} />
-      {/* Pupils */}
-      <View style={{ position: "absolute", bottom: 12, left: 4, width: 1.5, height: 1.5, backgroundColor: "#000", borderRadius: 1 }} />
-      <View style={{ position: "absolute", bottom: 12, left: 9, width: 1.5, height: 1.5, backgroundColor: "#000", borderRadius: 1 }} />
-      {/* Beak */}
-      <View style={{ position: "absolute", bottom: 9, left: 5.5, width: 3, height: 2, backgroundColor: "#E0A020", borderRadius: 1 }} />
-    </View>
-  );
+/** Single firefly drifting with trail */
+function Firefly({ delay, startX, startY }: { delay: number; startX: number; startY: number }) {
+  const progress = useSharedValue(0);
+  const glow = useSharedValue(0.3);
+
+  useEffect(() => {
+    // Drift path
+    progress.value = withDelay(
+      delay,
+      withRepeat(
+        withTiming(1, { duration: 4000 + Math.random() * 3000, easing: Easing.inOut(Easing.sin) }),
+        -1,
+        false
+      )
+    );
+    // Glow pulse
+    glow.value = withDelay(
+      delay + 200,
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.quad) }),
+          withTiming(0.3, { duration: 1800, easing: Easing.inOut(Easing.quad) })
+        ),
+        -1,
+        true
+      )
+    );
+  }, []);
+
+  const fireflyStyle = useAnimatedStyle(() => {
+    // Sinusoidal drift pattern
+    const x = startX + interpolate(progress.value, [0, 0.5, 1], [0, 30, -10]);
+    const y = startY + interpolate(progress.value, [0, 0.5, 1], [0, -40, -80]);
+    const sway = Math.sin(progress.value * Math.PI * 4) * 15;
+
+    return {
+      position: "absolute" as const,
+      left: x + sway,
+      top: y,
+      width: 3,
+      height: 3,
+      borderRadius: 1.5,
+      backgroundColor: CampfireColors.FIREFLY,
+      opacity: interpolate(progress.value, [0, 0.1, 0.85, 1], [0, 1, 1, 0]),
+      shadowColor: CampfireColors.FIREFLY_GLOW,
+      shadowOpacity: glow.value,
+      shadowRadius: interpolate(glow.value, [0.3, 1], [6, 14]),
+    };
+  });
+
+  return <Animated.View style={fireflyStyle} />;
 }
 
-/** Tiny pixel bunny */
-function PixelBunny({ x, bottom, flip }: { x: number; bottom: number; flip?: boolean }) {
-  return (
-    <View style={{ position: "absolute", left: x, bottom, width: 12, height: 14, transform: [{ scaleX: flip ? -1 : 1 }] }}>
-      {/* Body */}
-      <View style={{ position: "absolute", bottom: 0, left: 1, width: 10, height: 8, backgroundColor: "#D4C4B0", borderRadius: 4 }} />
-      {/* Head */}
-      <View style={{ position: "absolute", bottom: 5, left: 0, width: 8, height: 7, backgroundColor: "#E0D4C4", borderRadius: 4 }} />
-      {/* Ear */}
-      <View style={{ position: "absolute", bottom: 10, left: 1, width: 2.5, height: 5, backgroundColor: "#E0D4C4", borderRadius: 1.5 }} />
-      <View style={{ position: "absolute", bottom: 10, left: 4.5, width: 2.5, height: 5, backgroundColor: "#E0D4C4", borderRadius: 1.5 }} />
-      {/* Inner ear */}
-      <View style={{ position: "absolute", bottom: 11, left: 1.5, width: 1.5, height: 3, backgroundColor: "#FFB0B0", borderRadius: 1 }} />
-      <View style={{ position: "absolute", bottom: 11, left: 5, width: 1.5, height: 3, backgroundColor: "#FFB0B0", borderRadius: 1 }} />
-      {/* Eye */}
-      <View style={{ position: "absolute", bottom: 8, left: 2, width: 2, height: 2, backgroundColor: "#222", borderRadius: 1 }} />
-      {/* Nose */}
-      <View style={{ position: "absolute", bottom: 6.5, left: 0.5, width: 1.5, height: 1.5, backgroundColor: "#FFB0B0", borderRadius: 1 }} />
-      {/* Tail */}
-      <View style={{ position: "absolute", bottom: 3, left: 9, width: 3, height: 3, backgroundColor: "#FFF", borderRadius: 1.5 }} />
-    </View>
-  );
+// ──────────────────────────────────────────
+// Animals removed for cleaner, more focused design
+// ──────────────────────────────────────────
+
+// ──────────────────────────────────────────
+// Rising embers from campfire
+// ──────────────────────────────────────────
+
+/** Single ember floating up from fire */
+function RisingEmber({ delay, startX }: { delay: number; startX: number }) {
+  const progress = useSharedValue(0);
+  const flicker = useSharedValue(0);
+
+  useEffect(() => {
+    progress.value = withDelay(
+      delay,
+      withRepeat(
+        withTiming(1, { duration: 3500 + Math.random() * 1500, easing: Easing.out(Easing.quad) }),
+        -1,
+        false
+      )
+    );
+    flicker.value = withDelay(
+      delay,
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: 300 }),
+          withTiming(0.4, { duration: 400 }),
+          withTiming(0.9, { duration: 250 })
+        ),
+        -1,
+        true
+      )
+    );
+  }, []);
+
+  const emberStyle = useAnimatedStyle(() => {
+    const drift = Math.sin(progress.value * Math.PI * 3) * 12;
+    return {
+      position: "absolute" as const,
+      left: startX + drift,
+      bottom: interpolate(progress.value, [0, 1], [0, 120]),
+      width: 3,
+      height: 3,
+      borderRadius: 1.5,
+      backgroundColor: CampfireColors.EMBER,
+      opacity: interpolate(progress.value, [0, 0.1, 0.7, 1], [0, flicker.value, flicker.value * 0.6, 0]),
+      shadowColor: CampfireColors.FIRE_ORANGE,
+      shadowOpacity: flicker.value * 0.9,
+      shadowRadius: 8,
+    };
+  });
+
+  return <Animated.View style={emberStyle} />;
 }
 
-/** Tiny pixel fox */
-function PixelFox({ x, bottom }: { x: number; bottom: number }) {
+// ──────────────────────────────────────────
+// Pulsing moon with enhanced glow
+// ──────────────────────────────────────────
+
+function PulsingMoon({ top, right }: { top: number; right: number }) {
+  const pulse = useSharedValue(0);
+
+  useEffect(() => {
+    pulse.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 3000, easing: Easing.inOut(Easing.sin) })
+      ),
+      -1,
+      true
+    );
+  }, []);
+
+  const moonGlowStyle = useAnimatedStyle(() => ({
+    shadowOpacity: interpolate(pulse.value, [0, 1], [0.6, 0.9]),
+    shadowRadius: interpolate(pulse.value, [0, 1], [18, 28]),
+  }));
+
   return (
-    <View style={{ position: "absolute", left: x, bottom, width: 18, height: 12 }}>
-      {/* Body */}
-      <View style={{ position: "absolute", bottom: 0, left: 4, width: 12, height: 7, backgroundColor: "#D4600A", borderRadius: 3 }} />
-      {/* Head */}
-      <View style={{ position: "absolute", bottom: 3, left: 0, width: 8, height: 7, backgroundColor: "#E87020", borderRadius: 3 }} />
-      {/* Ears */}
-      <View style={{ position: "absolute", bottom: 9, left: 0, width: 3, height: 4, backgroundColor: "#E87020", borderTopLeftRadius: 2, borderTopRightRadius: 2 }} />
-      <View style={{ position: "absolute", bottom: 9, left: 5, width: 3, height: 4, backgroundColor: "#E87020", borderTopLeftRadius: 2, borderTopRightRadius: 2 }} />
-      {/* Inner ears */}
-      <View style={{ position: "absolute", bottom: 10, left: 0.5, width: 2, height: 2, backgroundColor: "#FFB060", borderRadius: 1 }} />
-      <View style={{ position: "absolute", bottom: 10, left: 5.5, width: 2, height: 2, backgroundColor: "#FFB060", borderRadius: 1 }} />
-      {/* Snout */}
-      <View style={{ position: "absolute", bottom: 3, left: 0, width: 4, height: 4, backgroundColor: "#FFF0E0", borderRadius: 2 }} />
-      {/* Nose */}
-      <View style={{ position: "absolute", bottom: 5.5, left: 0.5, width: 2, height: 1.5, backgroundColor: "#222", borderRadius: 1 }} />
-      {/* Eyes */}
-      <View style={{ position: "absolute", bottom: 7, left: 2, width: 2, height: 2, backgroundColor: "#222", borderRadius: 1 }} />
-      {/* Tail */}
-      <View style={{ position: "absolute", bottom: 3, left: 14, width: 4, height: 5, backgroundColor: "#D4600A", borderRadius: 2.5 }} />
-      <View style={{ position: "absolute", bottom: 3, left: 16, width: 2, height: 3, backgroundColor: "#FFF0E0", borderRadius: 1.5 }} />
-      {/* Legs */}
-      <View style={{ position: "absolute", bottom: -1, left: 5, width: 2, height: 3, backgroundColor: "#222" }} />
-      <View style={{ position: "absolute", bottom: -1, left: 13, width: 2, height: 3, backgroundColor: "#222" }} />
+    <View style={{ position: "absolute", top, right }}>
+      <Animated.View
+        style={[
+          {
+            width: 28,
+            height: 28,
+            borderRadius: 14,
+            backgroundColor: CampfireColors.MOON,
+            shadowColor: CampfireColors.MOON_GLOW,
+          },
+          moonGlowStyle,
+        ]}
+      />
+      {/* Dark bite for crescent */}
+      <View
+        style={{
+          position: "absolute",
+          top: -3,
+          left: 7,
+          width: 22,
+          height: 22,
+          borderRadius: 11,
+          backgroundColor: CampfireColors.SKY_TOP,
+        }}
+      />
     </View>
   );
 }
@@ -283,122 +381,7 @@ function PixelFox({ x, bottom }: { x: number; bottom: number }) {
 // Campfire scene at the bottom
 // ──────────────────────────────────────────
 
-function SplashCampfire() {
-  const flame1 = useSharedValue(1);
-  const flame2 = useSharedValue(0.9);
-  const glow = useSharedValue(0.3);
-
-  useEffect(() => {
-    flame1.value = withRepeat(
-      withSequence(
-        withTiming(1.15, { duration: 300, easing: Easing.inOut(Easing.quad) }),
-        withTiming(0.95, { duration: 350, easing: Easing.inOut(Easing.quad) })
-      ),
-      -1,
-      true
-    );
-    flame2.value = withRepeat(
-      withSequence(
-        withTiming(1.1, { duration: 250, easing: Easing.inOut(Easing.quad) }),
-        withTiming(0.85, { duration: 280, easing: Easing.inOut(Easing.quad) })
-      ),
-      -1,
-      true
-    );
-    glow.value = withRepeat(
-      withSequence(
-        withTiming(0.6, { duration: 1200, easing: Easing.inOut(Easing.quad) }),
-        withTiming(0.3, { duration: 1200, easing: Easing.inOut(Easing.quad) })
-      ),
-      -1,
-      true
-    );
-  }, []);
-
-  const flame1Style = useAnimatedStyle(() => ({
-    transform: [{ scaleY: flame1.value }, { scaleX: flame2.value }],
-  }));
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: glow.value,
-  }));
-
-  return (
-    <View style={{ alignItems: "center", width: 110, height: 80 }}>
-      {/* Glow */}
-      <Animated.View
-        style={[
-          {
-            position: "absolute",
-            width: 140,
-            height: 80,
-            borderRadius: 70,
-            backgroundColor: FIRE_ORANGE,
-            bottom: 5,
-            left: -15,
-          },
-          glowStyle,
-        ]}
-      />
-      {/* Fire ring rocks */}
-      <View style={{ position: "absolute", bottom: 0, left: 6, width: 11, height: 7, backgroundColor: ROCK, borderRadius: 3 }} />
-      <View style={{ position: "absolute", bottom: 0, left: 18, width: 9, height: 6, backgroundColor: ROCK_L, borderRadius: 3 }} />
-      <View style={{ position: "absolute", bottom: 0, left: 82, width: 12, height: 7, backgroundColor: ROCK_L, borderRadius: 4 }} />
-      <View style={{ position: "absolute", bottom: 0, left: 95, width: 10, height: 6, backgroundColor: ROCK, borderRadius: 3 }} />
-      <View style={{ position: "absolute", bottom: 0, left: 0, width: 9, height: 5, backgroundColor: ROCK_L, borderRadius: 3 }} />
-      <View style={{ position: "absolute", bottom: 0, left: 100, width: 9, height: 5, backgroundColor: ROCK, borderRadius: 3 }} />
-      {/* Logs */}
-      <View
-        style={{
-          position: "absolute",
-          bottom: 3,
-          left: 15,
-          width: 38,
-          height: 7,
-          backgroundColor: LOG_DARK,
-          borderRadius: 3,
-          transform: [{ rotate: "-15deg" }],
-        }}
-      />
-      <View
-        style={{
-          position: "absolute",
-          bottom: 3,
-          left: 55,
-          width: 38,
-          height: 7,
-          backgroundColor: LOG_LIGHT,
-          borderRadius: 3,
-          transform: [{ rotate: "15deg" }],
-        }}
-      />
-      {/* Small cross log */}
-      <View
-        style={{
-          position: "absolute",
-          bottom: 6,
-          left: 38,
-          width: 32,
-          height: 5,
-          backgroundColor: "#4E3422",
-          borderRadius: 2,
-          transform: [{ rotate: "5deg" }],
-        }}
-      />
-      {/* Flames (bigger) */}
-      <Animated.View style={[{ position: "absolute", bottom: 8, alignItems: "center" }, flame1Style]}>
-        {/* Outer flame */}
-        <View style={{ width: 30, height: 42, backgroundColor: FIRE_RED, borderRadius: 15, marginBottom: -8 }} />
-        {/* Mid flame */}
-        <View style={{ position: "absolute", bottom: 0, width: 24, height: 36, backgroundColor: FIRE_ORANGE, borderRadius: 12 }} />
-        {/* Inner flame */}
-        <View style={{ position: "absolute", bottom: 3, width: 16, height: 28, backgroundColor: FIRE_YELLOW, borderRadius: 8 }} />
-        {/* Core */}
-        <View style={{ position: "absolute", bottom: 6, width: 10, height: 18, backgroundColor: FIRE_CORE, borderRadius: 5 }} />
-      </Animated.View>
-    </View>
-  );
-}
+// SplashCampfire replaced by shared CampfireSimple component
 
 // ──────────────────────────────────────────
 // "STOKIE" branch/twig style text
@@ -414,15 +397,29 @@ function TwigLetter({
   delay: number;
 }) {
   const wiggle = useSharedValue(0);
+  const flicker = useSharedValue(0);
 
   useEffect(() => {
-    // Gentle wiggle only
+    // Gentle wiggle
     wiggle.value = withDelay(
       delay + 200,
       withRepeat(
         withSequence(
-          withTiming(2, { duration: 2000, easing: Easing.inOut(Easing.quad) }),
-          withTiming(-2, { duration: 2000, easing: Easing.inOut(Easing.quad) })
+          withTiming(1.5, { duration: 2000, easing: Easing.inOut(Easing.quad) }),
+          withTiming(-1.5, { duration: 2000, easing: Easing.inOut(Easing.quad) })
+        ),
+        -1,
+        true
+      )
+    );
+    // Subtle flicker for fire effect
+    flicker.value = withDelay(
+      delay + index * 100,
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: 600 + Math.random() * 400 }),
+          withTiming(0.85, { duration: 500 + Math.random() * 300 }),
+          withTiming(1, { duration: 700 + Math.random() * 400 })
         ),
         -1,
         true
@@ -437,53 +434,63 @@ function TwigLetter({
     ],
   }));
 
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(flicker.value, [0.85, 1], [0.15, 0.25]),
+  }));
+
   // Amber fire gradient: red (bottom) → orange → yellow → white (tips)
-  // with faint fire glow behind each letter
-  const fontSize = 52;
+  // with animated fire glow behind each letter
+  const fontSize = 56;
   const letterHeight = fontSize * 1.15; // approximate rendered height
 
   return (
     <Animated.View style={[{ marginHorizontal: 2 }, style]}>
-      {/* Outer fire glow - faint warm halo */}
-      <View
-        style={{
-          position: "absolute",
-          top: -20,
-          left: -18,
-          right: -18,
-          bottom: -12,
-          backgroundColor: "#FF6B35",
-          borderRadius: 28,
-          opacity: 0.1,
-        }}
+      {/* Outer fire glow - faint warm halo (animated) */}
+      <Animated.View
+        style={[
+          {
+            position: "absolute",
+            top: -24,
+            left: -20,
+            right: -20,
+            bottom: -14,
+            backgroundColor: CampfireColors.FIRE_ORANGE,
+            borderRadius: 32,
+          },
+          glowStyle,
+        ]}
         pointerEvents="none"
       />
-      {/* Middle glow layer */}
-      <View
-        style={{
-          position: "absolute",
-          top: -12,
-          left: -12,
-          right: -12,
-          bottom: -8,
-          backgroundColor: "#FF8C00",
-          borderRadius: 20,
-          opacity: 0.18,
-        }}
+      {/* Middle glow layer (animated) */}
+      <Animated.View
+        style={[
+          {
+            position: "absolute",
+            top: -14,
+            left: -14,
+            right: -14,
+            bottom: -10,
+            backgroundColor: CampfireColors.FIRE_YELLOW,
+            borderRadius: 24,
+            opacity: interpolate(flicker.value, [0.85, 1], [0.2, 0.3]),
+          },
+        ]}
         pointerEvents="none"
       />
-      {/* Inner glow - brighter, closer */}
-      <View
-        style={{
-          position: "absolute",
-          top: -6,
-          left: -6,
-          right: -6,
-          bottom: -4,
-          backgroundColor: "#FFD93D",
-          borderRadius: 14,
-          opacity: 0.12,
-        }}
+      {/* Inner glow - brighter, closer (animated) */}
+      <Animated.View
+        style={[
+          {
+            position: "absolute",
+            top: -8,
+            left: -8,
+            right: -8,
+            bottom: -6,
+            backgroundColor: CampfireColors.FIRE_CORE,
+            borderRadius: 18,
+            opacity: interpolate(flicker.value, [0.85, 1], [0.12, 0.18]),
+          },
+        ]}
         pointerEvents="none"
       />
 
@@ -492,7 +499,7 @@ function TwigLetter({
         style={{
           fontFamily: "Paaxel",
           fontSize,
-          color: "#CC2200",
+          color: CampfireColors.FIRE_RED,
           textShadowColor: "#4A0800",
           textShadowOffset: { width: 2, height: 3 },
           textShadowRadius: 2,
@@ -517,7 +524,7 @@ function TwigLetter({
           style={{
             fontFamily: "Paaxel",
             fontSize,
-            color: "#FF6B35",
+            color: CampfireColors.FIRE_ORANGE,
             textShadowColor: "transparent",
             textShadowOffset: { width: 0, height: 0 },
             textShadowRadius: 0,
@@ -586,8 +593,14 @@ function StokieTitle({ onComplete }: { onComplete: () => void }) {
   const letters = "STOKIE".split("");
 
   useEffect(() => {
-    // Show for 2.5 seconds then signal done
-    const t = setTimeout(() => onComplete(), 2500);
+    const startTime = Date.now();
+    console.log(`[SPLASH] StokieTitle mounted at ${startTime}, will complete in 1600ms`);
+    // Show for 1.6 seconds then signal done
+    const t = setTimeout(() => {
+      const elapsed = Date.now() - startTime;
+      console.log(`[SPLASH] StokieTitle timeout fired after ${elapsed}ms, calling onComplete`);
+      onComplete();
+    }, 1600);
     return () => clearTimeout(t);
   }, []);
 
@@ -604,66 +617,7 @@ function StokieTitle({ onComplete }: { onComplete: () => void }) {
 // Pine tree silhouettes for forest edge
 // ──────────────────────────────────────────
 
-function SplashTree({ x, height, shade }: { x: number; height: number; shade: number }) {
-  const g = 12 + shade * 8;
-  const color = `rgb(${g - 2}, ${g + 10}, ${g - 4})`;
-  const trunkW = Math.max(3, height * 0.06);
-  return (
-    <View style={{ position: "absolute", bottom: 0, left: x, alignItems: "center" }}>
-      {/* Trunk */}
-      <View
-        style={{
-          width: trunkW,
-          height: height * 0.15,
-          backgroundColor: `rgb(${30 + shade * 5}, ${20 + shade * 3}, ${15 + shade * 2})`,
-        }}
-      />
-      {/* Canopy tiers */}
-      <View
-        style={{
-          position: "absolute",
-          bottom: height * 0.1,
-          width: 0,
-          height: 0,
-          borderLeftWidth: height * 0.3,
-          borderRightWidth: height * 0.3,
-          borderBottomWidth: height * 0.35,
-          borderLeftColor: "transparent",
-          borderRightColor: "transparent",
-          borderBottomColor: color,
-        }}
-      />
-      <View
-        style={{
-          position: "absolute",
-          bottom: height * 0.28,
-          width: 0,
-          height: 0,
-          borderLeftWidth: height * 0.24,
-          borderRightWidth: height * 0.24,
-          borderBottomWidth: height * 0.3,
-          borderLeftColor: "transparent",
-          borderRightColor: "transparent",
-          borderBottomColor: color,
-        }}
-      />
-      <View
-        style={{
-          position: "absolute",
-          bottom: height * 0.45,
-          width: 0,
-          height: 0,
-          borderLeftWidth: height * 0.18,
-          borderRightWidth: height * 0.18,
-          borderBottomWidth: height * 0.28,
-          borderLeftColor: "transparent",
-          borderRightColor: "transparent",
-          borderBottomColor: color,
-        }}
-      />
-    </View>
-  );
-}
+// SplashTree replaced by shared SilhouetteTree component
 
 // ──────────────────────────────────────────
 // Main splash component
@@ -697,97 +651,148 @@ export function AnimatedSplash({ onAnimationComplete }: AnimatedSplashProps) {
     { x: W * 0.7, w: W * 0.38, h: 100, color: MTN_NEAR },
   ];
 
-  // Star field
+  // Star field with varied colors
   const stars = React.useMemo(() => {
-    const result: { x: number; y: number; size: number; delay: number }[] = [];
+    const result: { x: number; y: number; size: number; delay: number; color: string }[] = [];
     const seed = 7;
     let s = seed;
     const rand = () => {
       s = (s * 16807) % 2147483647;
       return s / 2147483647;
     };
-    for (let i = 0; i < 60; i++) {
+    const starColors = [
+      CampfireColors.STAR_WHITE,
+      CampfireColors.STAR_WARM,
+      CampfireColors.STAR_LAVENDER,
+      CampfireColors.MOON,
+    ];
+    for (let i = 0; i < 75; i++) {
       result.push({
         x: rand() * (W - 10) + 5,
         y: rand() * (skyHeight - 20) + 10,
-        size: 1 + rand() * 3,
-        delay: rand() * 3000,
+        size: 1.5 + rand() * 3.5,
+        delay: rand() * 3500,
+        color: starColors[Math.floor(rand() * starColors.length)],
       });
     }
     return result;
   }, []);
 
-  // Forest trees — rendered IN FRONT of the lake
+  // Fireflies
+  const fireflies = React.useMemo(() => {
+    const result: { startX: number; startY: number; delay: number }[] = [];
+    const seed = 42;
+    let s = seed;
+    const rand = () => {
+      s = (s * 16807) % 2147483647;
+      return s / 2147483647;
+    };
+    for (let i = 0; i < 12; i++) {
+      result.push({
+        startX: rand() * W,
+        startY: lakeTop + rand() * 60,
+        delay: rand() * 4000,
+      });
+    }
+    return result;
+  }, []);
+
+  // Rising embers
+  const embers = React.useMemo(() => {
+    const result: { startX: number; delay: number }[] = [];
+    const centerX = W / 2;
+    for (let i = 0; i < 8; i++) {
+      result.push({
+        startX: centerX - 30 + Math.random() * 60,
+        delay: i * 600 + Math.random() * 1000,
+      });
+    }
+    return result;
+  }, []);
+
+  // Forest trees — rendered IN FRONT of the lake (DENSE FOREST)
   // Back row (smaller, lighter shade, peek above lake)
-  const backTrees = React.useMemo(() => [
-    { x: -15, height: 55, shade: 0 },
-    { x: 18, height: 45, shade: 0 },
-    { x: 50, height: 60, shade: 1 },
-    { x: 80, height: 48, shade: 0 },
-    { x: 110, height: 52, shade: 1 },
-    { x: W - 120, height: 50, shade: 0 },
-    { x: W - 90, height: 55, shade: 1 },
-    { x: W - 60, height: 48, shade: 0 },
-    { x: W - 30, height: 58, shade: 1 },
-    { x: W - 5, height: 45, shade: 0 },
-  ], []);
+  const backTrees = React.useMemo(() => {
+    const trees: { x: number; height: number; shade: number }[] = [];
+    let s = 123;
+    const rand = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+
+    // Dense back row - every 10-15px
+    for (let x = -30; x < W + 30; x += 10 + rand() * 8) {
+      trees.push({
+        x,
+        height: 40 + rand() * 25,
+        shade: Math.floor(rand() * 2) // shades 0-1
+      });
+    }
+    return trees;
+  }, []);
+
   // Front row (taller, darker shade, overlap the lake more)
-  const frontTrees = React.useMemo(() => [
-    { x: -25, height: 100, shade: 2 },
-    { x: 5, height: 85, shade: 3 },
-    { x: 35, height: 110, shade: 2 },
-    { x: 65, height: 78, shade: 3 },
-    { x: 95, height: 92, shade: 2 },
-    { x: W - 110, height: 88, shade: 3 },
-    { x: W - 80, height: 105, shade: 2 },
-    { x: W - 50, height: 95, shade: 3 },
-    { x: W - 20, height: 90, shade: 2 },
-    { x: W + 5, height: 80, shade: 3 },
-  ], []);
-  // Ground trees — dense forest covering ALL grass, small clearing for campfire only
-  const groundTrees = React.useMemo(() => [
-    // Far left — off-screen overlap for fullness
-    { x: -30, height: 75, shade: 3 },
-    { x: -18, height: 62, shade: 4 },
-    { x: -8, height: 80, shade: 3 },
-    // Left side — packed tight
-    { x: 4, height: 68, shade: 5 },
-    { x: 14, height: 82, shade: 3 },
-    { x: 22, height: 58, shade: 4 },
-    { x: 30, height: 76, shade: 5 },
-    { x: 38, height: 65, shade: 3 },
-    { x: 46, height: 72, shade: 4 },
-    { x: 54, height: 60, shade: 5 },
-    { x: 62, height: 78, shade: 3 },
-    { x: 70, height: 55, shade: 4 },
-    { x: 78, height: 68, shade: 5 },
-    { x: 86, height: 62, shade: 3 },
-    { x: 94, height: 74, shade: 4 },
-    // Left edge of clearing
-    { x: 102, height: 56, shade: 5 },
-    { x: 110, height: 64, shade: 4 },
-    // Right edge of clearing
-    { x: W - 125, height: 60, shade: 4 },
-    { x: W - 117, height: 68, shade: 5 },
-    // Right side — packed tight
-    { x: W - 108, height: 74, shade: 3 },
-    { x: W - 100, height: 58, shade: 4 },
-    { x: W - 92, height: 70, shade: 5 },
-    { x: W - 84, height: 80, shade: 3 },
-    { x: W - 76, height: 62, shade: 4 },
-    { x: W - 68, height: 72, shade: 5 },
-    { x: W - 60, height: 56, shade: 3 },
-    { x: W - 52, height: 78, shade: 4 },
-    { x: W - 44, height: 64, shade: 5 },
-    { x: W - 36, height: 70, shade: 3 },
-    { x: W - 28, height: 58, shade: 4 },
-    { x: W - 20, height: 76, shade: 5 },
-    { x: W - 12, height: 66, shade: 3 },
-    { x: W - 4, height: 72, shade: 4 },
-    // Far right — off-screen overlap
-    { x: W + 4, height: 60, shade: 3 },
-    { x: W + 12, height: 55, shade: 5 },
-  ], []);
+  const frontTrees = React.useMemo(() => {
+    const trees: { x: number; height: number; shade: number }[] = [];
+    let s = 456;
+    const rand = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+
+    // Dense front row - every 12-20px
+    for (let x = -35; x < W + 35; x += 12 + rand() * 10) {
+      trees.push({
+        x,
+        height: 70 + rand() * 50,
+        shade: 2 + Math.floor(rand() * 2) // shades 2-3
+      });
+    }
+    return trees;
+  }, []);
+  // Middle trees - fill the gap between lake treeline and ground
+  const middleTrees = React.useMemo(() => {
+    const trees: { x: number; height: number; shade: number }[] = [];
+    let s = 789;
+    const rand = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+
+    // Dense middle layer - covers entire width
+    for (let x = -40; x < W + 40; x += 8 + rand() * 6) {
+      trees.push({
+        x,
+        height: 60 + rand() * 40,
+        shade: 2 + Math.floor(rand() * 2) // shades 2-3
+      });
+    }
+    return trees;
+  }, []);
+
+  // Ground trees — VERY DENSE forest, smaller clearing for campfire
+  // Back layer
+  const groundTreesBack = React.useMemo(() => {
+    const trees: { x: number; height: number; shade: number }[] = [];
+    let s = 42;
+    const rand = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+    // Left side - very dense
+    for (let x = -35; x < W / 2 - 45; x += 6 + rand() * 4) {
+      trees.push({ x, height: 50 + rand() * 35, shade: 3 + Math.floor(rand() * 3) });
+    }
+    // Right side - very dense
+    for (let x = W / 2 + 45; x < W + 25; x += 6 + rand() * 4) {
+      trees.push({ x, height: 50 + rand() * 35, shade: 3 + Math.floor(rand() * 3) });
+    }
+    return trees;
+  }, []);
+
+  // Front layer - even denser
+  const groundTreesFront = React.useMemo(() => {
+    const trees: { x: number; height: number; shade: number }[] = [];
+    let s = 99;
+    const rand = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+    // Left side
+    for (let x = -30; x < W / 2 - 40; x += 5 + rand() * 3) {
+      trees.push({ x, height: 45 + rand() * 32, shade: 3 + Math.floor(rand() * 3) });
+    }
+    // Right side
+    for (let x = W / 2 + 40; x < W + 20; x += 5 + rand() * 3) {
+      trees.push({ x, height: 45 + rand() * 32, shade: 3 + Math.floor(rand() * 3) });
+    }
+    return trees;
+  }, []);
 
   return (
     <Animated.View style={[styles.container, sceneStyle]}>
@@ -798,42 +803,23 @@ export function AnimatedSplash({ onAnimationComplete }: AnimatedSplashProps) {
         <View style={{ flex: 1, backgroundColor: SKY_MID }} />
         <View style={{ flex: 1, backgroundColor: SKY_LOW }} />
 
-        {/* Stars */}
+        {/* Stars with varied colors and glow */}
         {stars.map((s, i) => (
-          <Star key={i} x={s.x} y={s.y} size={s.size} delay={s.delay} />
+          <Star key={i} x={s.x} y={s.y} size={s.size} delay={s.delay} color={s.color} />
         ))}
 
         {/* Shooting stars */}
-        <SplashShootingStar delay={1500} />
-        <SplashShootingStar delay={4500} />
-        <SplashShootingStar delay={8000} />
+        {/* More shooting stars with timing within 1.5s window */}
+        <SplashShootingStar delay={200} />
+        <SplashShootingStar delay={450} />
+        <SplashShootingStar delay={700} />
+        <SplashShootingStar delay={950} />
+        <SplashShootingStar delay={1200} />
+        <SplashShootingStar delay={350} />
+        <SplashShootingStar delay={850} />
 
-        {/* Moon (crescent) */}
-        <View style={{ position: "absolute", top: 40, right: W * 0.15 }}>
-          <View
-            style={{
-              width: 24,
-              height: 24,
-              borderRadius: 12,
-              backgroundColor: "#FFF8DC",
-              shadowColor: "#FFFACD",
-              shadowOpacity: 0.8,
-              shadowRadius: 20,
-            }}
-          />
-          {/* Dark bite for crescent */}
-          <View
-            style={{
-              position: "absolute",
-              top: -3,
-              left: 6,
-              width: 20,
-              height: 20,
-              borderRadius: 10,
-              backgroundColor: SKY_TOP,
-            }}
-          />
-        </View>
+        {/* Pulsing moon (crescent) */}
+        <PulsingMoon top={40} right={W * 0.15} />
 
         {/* Mountains at bottom of sky */}
         <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 180 }}>
@@ -864,17 +850,17 @@ export function AnimatedSplash({ onAnimationComplete }: AnimatedSplashProps) {
           ))}
         </View>
 
-        {/* Water ripple lines */}
-        {[0.2, 0.4, 0.6, 0.8].map((pct, i) => (
+        {/* Water ripple lines - more visible */}
+        {[0.15, 0.3, 0.45, 0.6, 0.75, 0.9].map((pct, i) => (
           <View
             key={i}
             style={{
               position: "absolute",
               top: lakeHeight * pct,
-              left: W * (0.1 + i * 0.05),
-              width: W * (0.3 + i * 0.1),
+              left: W * (0.05 + i * 0.03),
+              width: W * (0.4 + i * 0.08),
               height: 1,
-              backgroundColor: "rgba(150, 180, 220, 0.08)",
+              backgroundColor: "rgba(150, 180, 220, 0.15)",
             }}
           />
         ))}
@@ -884,82 +870,142 @@ export function AnimatedSplash({ onAnimationComplete }: AnimatedSplashProps) {
       {/* Back row of trees — on top of lake zone */}
       <View style={{ position: "absolute", top: lakeTop + lakeHeight - 55, left: 0, right: 0, height: 120, zIndex: 2 }} pointerEvents="none">
         {backTrees.map((t, i) => (
-          <SplashTree key={`bt${i}`} x={t.x} height={t.height} shade={t.shade} />
+          <SilhouetteTree key={`bt${i}`} x={t.x} height={t.height} shade={t.shade} />
         ))}
       </View>
       {/* Front row of trees — taller, darker, more overlap */}
       <View style={{ position: "absolute", top: lakeTop + lakeHeight - 80, left: 0, right: 0, height: 160, zIndex: 3 }} pointerEvents="none">
         {frontTrees.map((t, i) => (
-          <SplashTree key={`ft${i}`} x={t.x} height={t.height} shade={t.shade} />
+          <SilhouetteTree key={`ft${i}`} x={t.x} height={t.height} shade={t.shade} />
+        ))}
+      </View>
+      {/* Middle trees — fill gap between lake and ground */}
+      <View style={{ position: "absolute", top: lakeTop + lakeHeight - 20, left: 0, right: 0, height: 120, zIndex: 4 }} pointerEvents="none">
+        {middleTrees.map((t, i) => (
+          <SilhouetteTree key={`mt${i}`} x={t.x} height={t.height} shade={t.shade} />
         ))}
       </View>
 
-      {/* ── Ground trees covering the grass on both sides ── */}
+      {/* ── Ground trees (back layer — behind creatures) ── */}
       <View style={{ position: "absolute", top: groundTop - 30, left: 0, right: 0, height: groundHeight + 30, zIndex: 5 }} pointerEvents="none">
-        {groundTrees.map((t, i) => (
-          <SplashTree key={`grt${i}`} x={t.x} height={t.height} shade={t.shade} />
+        {groundTreesBack.map((t, i) => (
+          <SilhouetteTree key={`grb${i}`} x={t.x} height={t.height} shade={t.shade} />
         ))}
       </View>
 
-      {/* ── Ground + Campfire + Creatures ── */}
-      <View style={[styles.zone, { height: groundHeight, backgroundColor: GROUND }]}>
-        {/* Grass edge — layered for texture */}
-        <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: 5, backgroundColor: "#2E5828" }} />
-        <View style={{ position: "absolute", top: 5, left: 0, right: 0, height: 3, backgroundColor: "#254A22" }} />
-        <View style={{ position: "absolute", top: 8, left: 0, right: 0, height: 2, backgroundColor: "#1F3D1C" }} />
-        {/* Grass tufts for texture */}
-        {[12, 35, 58, 85, 115, 145, 175, 210, 245, 280, 315, 350].map((gx, i) => (
-          <View key={`gt${i}`} style={{
-            position: "absolute", top: -2 - (i % 3) * 2, left: gx % W,
-            width: 4 + (i % 2) * 2, height: 6 + (i % 3) * 3,
-            backgroundColor: i % 2 === 0 ? "#2E5828" : "#3A6832",
-            borderTopLeftRadius: 2, borderTopRightRadius: 2,
-          }} />
+      {/* ── Animals removed - cleaner focus on fire & nature ── */}
+
+      {/* ── Ground trees (front layer — in front of creatures) ── */}
+      <View style={{ position: "absolute", top: groundTop - 30, left: 0, right: 0, height: groundHeight + 30, zIndex: 7 }} pointerEvents="none">
+        {groundTreesFront.map((t, i) => (
+          <SilhouetteTree key={`grf${i}`} x={t.x} height={t.height} shade={t.shade} />
         ))}
-        {/* Dirt patches */}
-        <View style={{ position: "absolute", top: 14, left: W * 0.2, width: 25, height: 6, backgroundColor: "#2A1F10", borderRadius: 3, opacity: 0.3 }} />
-        <View style={{ position: "absolute", top: 18, left: W * 0.6, width: 20, height: 5, backgroundColor: "#2A1F10", borderRadius: 3, opacity: 0.25 }} />
-        <View style={{ position: "absolute", top: 22, left: W * 0.4, width: 30, height: 4, backgroundColor: "#2A1F10", borderRadius: 2, opacity: 0.2 }} />
-
-        {/* Rocks scattered on the ground */}
-        <View style={{ position: "absolute", top: 12, left: W * 0.12, width: 10, height: 6, backgroundColor: "#4A4A52", borderRadius: 3 }} />
-        <View style={{ position: "absolute", top: 14, left: W * 0.12 + 3, width: 6, height: 3, backgroundColor: "#5A5A62", borderRadius: 2 }} />
-        <View style={{ position: "absolute", top: 16, left: W * 0.78, width: 12, height: 7, backgroundColor: "#3E3E46", borderRadius: 4 }} />
-        <View style={{ position: "absolute", top: 17, left: W * 0.78 + 2, width: 8, height: 4, backgroundColor: "#4E4E56", borderRadius: 3 }} />
-        <View style={{ position: "absolute", top: 10, left: W * 0.35, width: 7, height: 5, backgroundColor: "#444450", borderRadius: 3 }} />
-        <View style={{ position: "absolute", top: 20, left: W * 0.55, width: 8, height: 5, backgroundColor: "#3A3A42", borderRadius: 3 }} />
-        <View style={{ position: "absolute", top: 24, left: W * 0.9, width: 9, height: 6, backgroundColor: "#4A4A52", borderRadius: 3 }} />
-
-        {/* Stumps around the campfire */}
-        {/* Left stump */}
-        <View style={{ position: "absolute", top: 36, left: W / 2 - 72 }}>
-          <View style={{ width: 18, height: 7, backgroundColor: "#D4A040", borderRadius: 9, zIndex: 2 }} />
-          <View style={{ width: 16, height: 12, backgroundColor: "#5C3820", borderBottomLeftRadius: 4, borderBottomRightRadius: 4, marginTop: -1, marginLeft: 1 }} />
-        </View>
-        {/* Right stump */}
-        <View style={{ position: "absolute", top: 34, left: W / 2 + 58 }}>
-          <View style={{ width: 16, height: 6, backgroundColor: "#D4A040", borderRadius: 8, zIndex: 2 }} />
-          <View style={{ width: 14, height: 10, backgroundColor: "#5C3820", borderBottomLeftRadius: 3, borderBottomRightRadius: 3, marginTop: -1, marginLeft: 1 }} />
-        </View>
-        {/* Small front stump */}
-        <View style={{ position: "absolute", top: 52, left: W / 2 - 20 }}>
-          <View style={{ width: 14, height: 5, backgroundColor: "#C89838", borderRadius: 7, zIndex: 2 }} />
-          <View style={{ width: 12, height: 8, backgroundColor: "#4A2810", borderBottomLeftRadius: 3, borderBottomRightRadius: 3, marginTop: -1, marginLeft: 1 }} />
-        </View>
-
-        {/* Campfire (centered, bigger) */}
-        <View style={{ position: "absolute", top: 8, left: W / 2 - 55 }}>
-          <SplashCampfire />
-        </View>
-
-        {/* Woodland creatures */}
-        <PixelFox x={W / 2 - 80} bottom={groundHeight - 50} />
-        <PixelBunny x={W / 2 + 65} bottom={groundHeight - 44} />
-        <PixelBunny x={W / 2 + 85} bottom={groundHeight - 46} flip />
-        <PixelOwl x={W / 2 - 60} bottom={groundHeight - 28} />
       </View>
 
-      {/* ── STOKIE Title overlay ── */}
+      {/* ── Fireflies drifting ── */}
+      <View style={{ position: "absolute", top: lakeTop, left: 0, right: 0, height: lakeHeight + 100, zIndex: 8 }} pointerEvents="none">
+        {fireflies.map((f, i) => (
+          <Firefly key={`ff${i}`} delay={f.delay} startX={f.startX} startY={f.startY} />
+        ))}
+      </View>
+
+      {/* ── Ground ── */}
+      <View style={[styles.zone, { height: groundHeight, backgroundColor: "#0F1A0D" }]}>
+        {/* Dark forest floor */}
+        <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, backgroundColor: "#1A2818" }} />
+      </View>
+
+      {/* ── Campfire + embers (above trees) ── */}
+      <View style={{ position: "absolute", top: groundTop, left: 0, right: 0, height: groundHeight, zIndex: 9 }} pointerEvents="none">
+        {/* Ambient ground glow from fire */}
+        <View
+          style={{
+            position: "absolute",
+            top: 0,
+            left: W / 2 - 100,
+            width: 200,
+            height: 60,
+            backgroundColor: CampfireColors.FIRE_ORANGE,
+            opacity: 0.08,
+            borderRadius: 100,
+          }}
+        />
+
+        {/* Campfire (centered) with enhanced glow */}
+        <View style={{ position: "absolute", top: 8, left: W / 2 - 60 }}>
+          <AnimatedLogo size={120} />
+        </View>
+
+        {/* Rising embers from campfire */}
+        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
+          {embers.map((e, i) => (
+            <RisingEmber key={`em${i}`} delay={e.delay} startX={e.startX} />
+          ))}
+        </View>
+      </View>
+
+      {/* ── Subtle vignette to focus attention on center ── */}
+      <View
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 10,
+        }}
+        pointerEvents="none"
+      >
+        {/* Top vignette */}
+        <View
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: H * 0.15,
+            backgroundColor: "#000",
+            opacity: 0.12,
+          }}
+        />
+        {/* Bottom vignette */}
+        <View
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: H * 0.08,
+            backgroundColor: "#000",
+            opacity: 0.15,
+          }}
+        />
+        {/* Side vignettes */}
+        <View
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: W * 0.08,
+            bottom: 0,
+            backgroundColor: "#000",
+            opacity: 0.1,
+          }}
+        />
+        <View
+          style={{
+            position: "absolute",
+            top: 0,
+            right: 0,
+            width: W * 0.08,
+            bottom: 0,
+            backgroundColor: "#000",
+            opacity: 0.1,
+          }}
+        />
+      </View>
+
+      {/* ── STOKIE Title overlay (enhanced z-index) ── */}
       <View style={styles.titleContainer}>
         <StokieTitle onComplete={onAnimationComplete} />
       </View>
@@ -984,6 +1030,6 @@ const styles = StyleSheet.create({
     top: H * 0.38,
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 10,
+    zIndex: 11,
   },
 });

@@ -19,6 +19,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { SPRING_SNAPPY } from '../../constants/animations';
+import { CampfireColors, Radii } from '../../constants/theme';
 import type { GroupPrompt, PromptType } from '../../lib/types/prompts';
 import { validateResponse } from '../../lib/types/prompts';
 import {
@@ -36,20 +37,21 @@ import { PhotoPicker } from './PhotoPicker';
 import { MultipleChoice } from './MultipleChoice';
 import { QuizQuestion } from './QuizQuestion';
 import { QuiplashInput } from './QuiplashInput';
+import { PhotoCaptionInput } from './PhotoCaptionInput';
 import { PromptRating } from './PromptRating';
 import { MajorityGuess } from './MajorityGuess';
 
-// Theme colors
+// Theme colors (DESIGN.md §5)
 const COLORS = {
-  bg: '#070B14',
-  card: '#0D1426',
-  border: '#27406B',
-  text: '#E6F0FF',
-  muted: '#9EC5FF',
-  btn: '#1E4ED8',
-  btnText: '#E6F0FF',
-  success: '#4ADE80',
-  error: '#FF4444',
+  bg: CampfireColors.BG,
+  card: CampfireColors.CARD, // rgba(22, 28, 48, 0.88) - NOT BG
+  border: CampfireColors.BORDER,
+  text: CampfireColors.TEXT,
+  muted: CampfireColors.MUTED,
+  btn: CampfireColors.BTN_PRIMARY,
+  btnText: CampfireColors.TEXT,
+  success: CampfireColors.SUCCESS,
+  error: CampfireColors.DANGER,
 };
 
 interface PromptCardProps {
@@ -60,6 +62,7 @@ interface PromptCardProps {
   userRating?: boolean | null;
   onSubmitted?: () => void;
   onExpired?: () => void;
+  onRated?: (rating: number) => void;
 }
 
 export function PromptCard({
@@ -70,6 +73,7 @@ export function PromptCard({
   userRating,
   onSubmitted,
   onExpired,
+  onRated,
 }: PromptCardProps) {
   const prompt = groupPrompt.prompts;
   const promptType = (prompt?.type || 'short_text') as PromptType;
@@ -298,6 +302,16 @@ export function PromptCard({
           />
         );
 
+      case 'photo_caption':
+        return (
+          <PhotoCaptionInput
+            value={textValue}
+            onChangeText={setTextValue}
+            photoUrl={prompt.media_url || ''}
+            disabled={submitting}
+          />
+        );
+
       default:
         return (
           <ShortTextInput
@@ -310,7 +324,7 @@ export function PromptCard({
   };
 
   return (
-    <View style={styles.card}>
+    <Animated.View entering={FadeInDown.springify().damping(14)} style={styles.card}>
       {/* Timer - at the top, compact */}
       {!hasResponded && !expired && (
         <CountdownTimer
@@ -324,19 +338,19 @@ export function PromptCard({
         {prompt.content || prompt.title}
       </Text>
 
-      {/* Expired state */}
+      {/* Expired state - DESIGN.md §16: cozy error messages */}
       {expired && !hasResponded && (
         <View style={styles.expiredBox}>
-          <Text style={styles.expiredText}>This prompt has expired</Text>
+          <Text style={styles.expiredText}>The embers have cooled on this one</Text>
         </View>
       )}
 
-      {/* Submitted state */}
+      {/* Submitted state - DESIGN.md §16: warm campfire tone */}
       {hasResponded && (
         <Animated.View entering={FadeInDown.springify().damping(14)} style={styles.submittedBox}>
-          <Text style={styles.submittedText}>✓ Response submitted!</Text>
+          <Text style={styles.submittedText}>🔥 Fire stoked!</Text>
           <Text style={styles.submittedHint}>
-            Check back during the Lowdown to see everyone's answers
+            Gather 'round the Fireside on Sunday to see everyone's answers
           </Text>
         </Animated.View>
       )}
@@ -370,7 +384,7 @@ export function PromptCard({
             {submitting ? (
               <ActivityIndicator size="small" color={COLORS.btnText} />
             ) : (
-              <Text style={styles.submitButtonText}>Submit Response</Text>
+              <Text style={styles.submitButtonText}>Stoke the Fire</Text>
             )}
           </Pressable>
         </Animated.View>
@@ -382,18 +396,20 @@ export function PromptCard({
           promptId={prompt.id}
           hasRated={hasRated}
           initialRating={userRating}
+          onRated={onRated}
         />
       )}
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
+  // DESIGN.md §10: Card with warm wooden frame aesthetic
   card: {
-    backgroundColor: COLORS.card,
-    borderRadius: 16,
+    backgroundColor: COLORS.card, // rgba(22, 28, 48, 0.88)
+    borderRadius: Radii.card, // 18
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.border, // #2a3f5f
     padding: 20,
     gap: 8,
   },

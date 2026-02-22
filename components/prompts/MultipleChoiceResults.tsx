@@ -8,19 +8,20 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PixelCharacter, CharacterConfig, DEFAULT_CHARACTER } from '../PixelCharacter';
+import { CampfireColors } from '../../constants/theme';
 import type { MCResults, MCResultOption, FiresideResponse } from '../../lib/services/firesideService';
 
-// Theme colors
+// DESIGN.md §19: Never hardcode hex values - use design tokens
 const COLORS = {
-  bg: '#0D1426',
-  card: '#1A2744',
-  border: '#27406B',
-  text: '#E6F0FF',
-  muted: '#9EC5FF',
-  accent: '#1E4ED8',
-  success: '#4ADE80',
-  warning: '#FBBF24',
-  gold: '#FFD700',
+  bg: CampfireColors.BG,
+  card: CampfireColors.CARD_SOLID,
+  border: CampfireColors.BORDER,
+  text: CampfireColors.TEXT,
+  muted: CampfireColors.MUTED,
+  accent: CampfireColors.BTN_PRIMARY,
+  success: CampfireColors.SUCCESS,
+  warning: CampfireColors.WARNING, // DESIGN.md §5.4 - Use WARNING token
+  gold: CampfireColors.MEDAL_GOLD, // DESIGN.md §5.8 - Medals & achievements
 };
 
 // Voter info for showing avatars

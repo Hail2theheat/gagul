@@ -34,6 +34,12 @@ import {
   SHOE_COLORS,
   ACCESSORIES,
   POSES,
+  PETS,
+  WEAPONS,
+  DANCES,
+  SEASONAL_ACCESSORIES,
+  getCurrentSeason,
+  getSeasonEndDate,
 } from "../components/PixelCharacter";
 import { NightSky } from "../components/sky";
 import { CampfireColors, Radii, Typography, Spacing, Shadows } from "../constants/theme";
@@ -58,7 +64,7 @@ function PixelArrowBack({ size = 20 }: { size?: number }) {
   );
 }
 
-type Category = "skin" | "hair" | "shirt" | "pants" | "shoes" | "accessories" | "pose";
+type Category = "skin" | "hair" | "shirt" | "pants" | "shoes" | "accessories" | "pose" | "pets" | "weapons" | "dances";
 
 export default function CreateCharacterScreen() {
   const [username, setUsername] = useState("");
@@ -68,6 +74,14 @@ export default function CreateCharacterScreen() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [userPoints, setUserPoints] = useState(0);
+  const [unlockedSeasonal, setUnlockedSeasonal] = useState<string[]>([]);
+  const [seasonalResponseCount, setSeasonalResponseCount] = useState(0);
+
+  const currentSeason = getCurrentSeason();
+  const seasonEnd = getSeasonEndDate();
+  const daysLeft = Math.max(0, Math.ceil((seasonEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+  const seasonLabel = currentSeason.charAt(0).toUpperCase() + currentSeason.slice(1);
+  const currentSeasonItems = SEASONAL_ACCESSORIES.filter(s => s.season === currentSeason);
 
   const categories: { id: Category; label: string }[] = [
     { id: "skin", label: "Skin" },
@@ -77,6 +91,9 @@ export default function CreateCharacterScreen() {
     { id: "shoes", label: "Shoes" },
     { id: "accessories", label: "Extras" },
     { id: "pose", label: "Pose" },
+    { id: "pets", label: "Pets" },
+    { id: "weapons", label: "Weapons" },
+    { id: "dances", label: "Dances" },
   ];
 
   useEffect(() => {
@@ -94,7 +111,17 @@ export default function CreateCharacterScreen() {
         if (profile.username) { setUsername(profile.username); setIsEditing(true); }
         if (profile.avatar_config) setCharacter(profile.avatar_config as CharacterConfig);
         setUserPoints(profile.total_points || 0);
+        setUnlockedSeasonal((profile as any).unlocked_seasonal || []);
       }
+
+      // Load seasonal progress
+      const { data: seasonData } = await supabase.rpc("get_seasonal_progress", {
+        p_user_id: userData.user.id,
+      });
+      if (seasonData) {
+        setSeasonalResponseCount((seasonData as any).response_count || 0);
+      }
+
       setLoading(false);
     };
     loadProfile();
@@ -274,6 +301,31 @@ export default function CreateCharacterScreen() {
                 </Pressable>
               );
             })}
+            {/* Seasonal section */}
+            <View style={{ width: "100%", marginTop: 16 }}>
+              <Text style={{ color: "#FFD700", ...Typography.caption, fontFamily: "Paaxel", marginBottom: 4 }}>
+                {seasonLabel} Collection
+              </Text>
+              <Text style={{ color: MUTED, fontSize: 11, fontFamily: "Paaxel", marginBottom: 8 }}>
+                {daysLeft} days left this season  |  {seasonalResponseCount} responses
+              </Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                {currentSeasonItems.map(item => {
+                  const isUnlocked = unlockedSeasonal.includes(item.id) || seasonalResponseCount >= item.threshold;
+                  const isSelected = character.accessory === item.id;
+                  return (
+                    <Pressable key={item.id} onPress={() => isUnlocked && updateCharacter("accessory", item.id)}
+                      style={{ paddingHorizontal: 14, paddingVertical: 10, backgroundColor: isSelected ? SELECTED : CARD, borderRadius: Radii.sm, borderWidth: 1, borderColor: isUnlocked ? "#FFD700" : "#444", opacity: isUnlocked ? 1 : 0.5, minHeight: 44, justifyContent: "center" }}
+                      accessibilityRole="button" accessibilityLabel={`Seasonal ${item.name}`}
+                    >
+                      <Text style={{ color: isUnlocked ? TEXT : "#666", ...Typography.caption }}>
+                        {item.name} {!isUnlocked && `(${item.threshold - seasonalResponseCount} more)`}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
           </View>
         );
 
@@ -298,6 +350,80 @@ export default function CreateCharacterScreen() {
           </View>
         );
 
+      case "pets":
+        return (
+          <View>
+            <Text style={{ color: MUTED, ...Typography.caption, marginBottom: 12 }}>Choose a companion pet</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {PETS.map(pet => {
+                const locked = isItemLocked(pet);
+                const isSelected = (character.pet || "none") === pet.id;
+                return (
+                  <Pressable key={pet.id} onPress={() => !locked && updateCharacter("pet", pet.id)}
+                    style={{ paddingHorizontal: 14, paddingVertical: 10, backgroundColor: isSelected ? SELECTED : CARD, borderRadius: Radii.sm, borderWidth: 1, borderColor: locked ? "#444" : BORDER, opacity: locked ? 0.5 : 1, minHeight: 44, justifyContent: "center" }}
+                    accessibilityRole="button" accessibilityLabel={`Pet ${pet.name}`}
+                  >
+                    <Text style={{ color: locked ? "#666" : TEXT, ...Typography.caption }}>{pet.name} {locked && `(${pet.pointsRequired}pts)`}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        );
+
+      case "weapons":
+        return (
+          <View>
+            <Text style={{ color: MUTED, ...Typography.caption, marginBottom: 12 }}>Choose a weapon to hold</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {WEAPONS.map(weapon => {
+                const locked = isItemLocked(weapon);
+                const isSelected = (character.weapon || "none") === weapon.id;
+                return (
+                  <Pressable key={weapon.id} onPress={() => !locked && updateCharacter("weapon", weapon.id)}
+                    style={{ paddingHorizontal: 14, paddingVertical: 10, backgroundColor: isSelected ? SELECTED : CARD, borderRadius: Radii.sm, borderWidth: 1, borderColor: locked ? "#444" : BORDER, opacity: locked ? 0.5 : 1, minHeight: 44, justifyContent: "center" }}
+                    accessibilityRole="button" accessibilityLabel={`Weapon ${weapon.name}`}
+                  >
+                    <Text style={{ color: locked ? "#666" : TEXT, ...Typography.caption }}>{weapon.name} {locked && `(${weapon.pointsRequired}pts)`}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        );
+
+      case "dances":
+        return (
+          <View>
+            <Text style={{ color: MUTED, ...Typography.caption, marginBottom: 12 }}>Choose a dance move (replaces pose)</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {DANCES.map(dance => {
+                const locked = isItemLocked(dance);
+                const danceIds = DANCES.map(d => d.id);
+                const currentPose = character.pose || "idle";
+                const isSelected = dance.id === "none"
+                  ? !danceIds.includes(currentPose) || currentPose === "idle"
+                  : currentPose === dance.id;
+                return (
+                  <Pressable key={dance.id} onPress={() => {
+                    if (locked) return;
+                    if (dance.id === "none") {
+                      updateCharacter("pose", "idle");
+                    } else {
+                      updateCharacter("pose", dance.id);
+                    }
+                  }}
+                    style={{ paddingHorizontal: 14, paddingVertical: 10, backgroundColor: isSelected ? SELECTED : CARD, borderRadius: Radii.sm, borderWidth: 1, borderColor: locked ? "#444" : BORDER, opacity: locked ? 0.5 : 1, minHeight: 44, justifyContent: "center" }}
+                    accessibilityRole="button" accessibilityLabel={`Dance ${dance.name}`}
+                  >
+                    <Text style={{ color: locked ? "#666" : TEXT, ...Typography.caption }}>{dance.name} {locked && `(${dance.pointsRequired}pts)`}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        );
+
       default:
         return null;
     }
@@ -306,7 +432,7 @@ export default function CreateCharacterScreen() {
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: BG, alignItems: "center", justifyContent: "center" }}>
-        <Text style={{ color: TEXT }}>Loading...</Text>
+        <Text style={{ color: TEXT }}>Warming up...</Text>
       </View>
     );
   }
@@ -332,7 +458,7 @@ export default function CreateCharacterScreen() {
         </Pressable>
       )}
 
-      <ScrollView contentContainerStyle={{ padding: Spacing.xl, paddingTop: isEditing ? 90 : 60, paddingBottom: 100 }}>
+      <ScrollView contentContainerStyle={{ padding: Spacing.xl, paddingTop: isEditing ? 90 : 60, paddingBottom: 100 }} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <Animated.Text entering={FadeIn.duration(300)} style={{
           color: TEXT,
           ...Typography.heading1,
@@ -368,7 +494,9 @@ export default function CreateCharacterScreen() {
           overflow: "visible",
         }}>
           <Animated.View style={[{ overflow: "visible" }, previewAnimStyle]}>
-            <PixelCharacter config={character} size={120} />
+            <View style={{ transform: [{ translateX: -90 }] }}>
+              <PixelCharacter config={character} size={120} />
+            </View>
           </Animated.View>
         </Animated.View>
 
