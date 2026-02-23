@@ -26,7 +26,7 @@ export const SCHEDULE = {
     nudgeHour: 18,          // Sun 6 PM — nudge ALL users
     unlockHour: 19,         // Sun 7 PM — fireside opens
     endDay: 1,              // Monday
-    endHour: 2,             // Mon 2 AM — fireside closes, new week starts
+    endHour: 6,             // Mon 6 AM ET — fireside closes (noon Amsterdam for overseas)
   },
 } as const;
 
@@ -115,9 +115,9 @@ export function getActivePromptDay(now?: Date): number | null {
 /**
  * Get the current fireside state.
  *
- * HIDDEN:          Mon 2 AM → Sun 1:59 AM  (all week)
+ * HIDDEN:          Mon 6 AM → Sun 1:59 AM  (all week)
  * VISIBLE_LOCKED:  Sun 2 AM → Sun 6:59 PM  (card visible, can't enter)
- * UNLOCKED:        Sun 7 PM → Mon 1:59 AM  (fireside open)
+ * UNLOCKED:        Sun 7 PM → Mon 5:59 AM  (fireside open)
  */
 export function getFiresideState(now?: Date): FiresideState {
   const { dayOfWeek, hour } = getNowET(now);

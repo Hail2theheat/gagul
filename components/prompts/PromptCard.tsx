@@ -17,7 +17,9 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
+
 import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
 import { SPRING_SNAPPY } from '../../constants/animations';
 import { CampfireColors, Radii } from '../../constants/theme';
 import type { GroupPrompt, PromptType } from '../../lib/types/prompts';
@@ -40,6 +42,11 @@ import { QuiplashInput } from './QuiplashInput';
 import { PhotoCaptionInput } from './PhotoCaptionInput';
 import { PromptRating } from './PromptRating';
 import { MajorityGuess } from './MajorityGuess';
+
+// "What is cool?" easter egg - Thugz Tribunal prompt group_prompt_id
+const TRIBUNAL_GROUP_PROMPT_ID = 'f0101e2b-4263-4842-b60d-de107bffee05';
+// "Photo Advice Tips" easter egg - Wirthlin Artsy Photo group_prompt_id
+const ARTSY_PHOTO_GROUP_PROMPT_ID = '87225fb7-47cc-49c3-ac7b-8609e59b3ac9';
 
 // Theme colors (DESIGN.md §5)
 const COLORS = {
@@ -91,6 +98,9 @@ export function PromptCard({
 
   // Check if this is a majority guess prompt
   const isMajorityGuess = prompt?.is_majority_guess === true;
+
+  // Check if this is a Tribunal (AI-judged) prompt
+  const isTribunal = (prompt?.payload as any)?.is_tribunal === true;
 
   // Submit button press feedback
   const submitScale = useSharedValue(1);
@@ -338,6 +348,49 @@ export function PromptCard({
         {prompt.content || prompt.title}
       </Text>
 
+      {/* Tribunal AI judge caption */}
+      {isTribunal && (
+        <Text style={styles.tribunalCaption}>
+          Your submission will be analyzed and scored by The Tribunal — an AI of impeccable taste and questionable mercy.
+        </Text>
+      )}
+
+      {/* "What is cool?" easter egg button for Tribunal prompt */}
+      {groupPrompt.id === TRIBUNAL_GROUP_PROMPT_ID && !hasResponded && !expired && (
+        <Animated.View entering={FadeIn}>
+          <Pressable
+            style={styles.coolButton}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              router.push({
+                pathname: '/what-is-cool',
+                params: { groupId, groupPromptId: groupPrompt.id },
+              });
+            }}
+          >
+            <Text style={styles.coolButtonText}>What is cool?</Text>
+          </Pressable>
+        </Animated.View>
+      )}
+
+      {/* "Photo Advice Tips" button for Wirthlin Artsy Photo prompt */}
+      {groupPrompt.id === ARTSY_PHOTO_GROUP_PROMPT_ID && !hasResponded && !expired && (
+        <Animated.View entering={FadeIn}>
+          <Pressable
+            style={styles.coolButton}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              router.push({
+                pathname: '/photo-tips',
+                params: { groupId, groupPromptId: groupPrompt.id },
+              });
+            }}
+          >
+            <Text style={styles.coolButtonText}>Photo advice tips</Text>
+          </Pressable>
+        </Animated.View>
+      )}
+
       {/* Expired state - DESIGN.md §16: cozy error messages */}
       {expired && !hasResponded && (
         <View style={styles.expiredBox}>
@@ -420,6 +473,14 @@ const styles = StyleSheet.create({
     lineHeight: 30,
     textAlign: 'center',
   },
+  tribunalCaption: {
+    color: CampfireColors.FIRE_YELLOW,
+    fontSize: 12,
+    fontFamily: 'Paaxel',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    opacity: 0.85,
+  },
   expiredBox: {
     backgroundColor: COLORS.error + '15',
     borderRadius: 12,
@@ -467,6 +528,22 @@ const styles = StyleSheet.create({
     color: COLORS.btnText,
     fontSize: 16,
     fontWeight: '600',
+  },
+  coolButton: {
+    alignSelf: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: CampfireColors.MUTED + '40',
+    backgroundColor: CampfireColors.BG + '60',
+    marginTop: 4,
+  },
+  coolButtonText: {
+    color: CampfireColors.MUTED,
+    fontSize: 13,
+    fontFamily: 'Paaxel',
+    fontStyle: 'italic',
   },
 });
 

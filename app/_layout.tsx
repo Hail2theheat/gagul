@@ -370,6 +370,22 @@ export default function RootLayout() {
                   animation: 'fade',
                 }}
               />
+              <Stack.Screen
+                name="what-is-cool"
+                options={{
+                  headerShown: false,
+                  presentation: 'fullScreenModal',
+                  animation: 'fade',
+                }}
+              />
+              <Stack.Screen
+                name="photo-tips"
+                options={{
+                  headerShown: false,
+                  presentation: 'fullScreenModal',
+                  animation: 'fade',
+                }}
+              />
               <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
             </Stack>
             <StatusBar style="light" />

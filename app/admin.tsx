@@ -1,6 +1,6 @@
 // app/admin.tsx — Admin Dashboard for weekly prompt management
 import { router } from "expo-router";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import {
 } from "../lib/hooks/useAdminData";
 import { getWeekOf, type AdminGroupPrompt, type AdminResponse } from "../lib/services/adminService";
 import { getSignedImageUrl } from "../lib/services/firesideService";
+import { supabase } from "../lib/supabase";
 import { NightSky } from "../components/sky";
 import { PixelTitle } from "../components/PixelTitle";
 import { PixelCharacter, DEFAULT_CHARACTER } from "../components/PixelCharacter";
@@ -57,7 +58,7 @@ function formatDay(dateStr: string): string {
 function formatWeekRange(weekOf: string): string {
   const mon = new Date(weekOf + "T12:00:00");
   const sat = new Date(mon);
-  sat.setDate(mon.getDate() + 5);
+  sat.setDate(mon.getDate() + 6);
   const fmt = (d: Date) =>
     d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/Denver" });
   return `${fmt(mon)} - ${fmt(sat)}`;
@@ -448,6 +449,177 @@ function ResponseRow({
   );
 }
 
+// ─── Feedback Section ────────────────────────────────────────
+interface FeedbackItem {
+  id: string;
+  content: string;
+  source: string;
+  created_at: string;
+  group_id: string | null;
+  week_of: string | null;
+}
+
+interface CustomPromptItem {
+  id: string;
+  content: string;
+  title: string | null;
+  type: string;
+  created_at: string;
+  created_by_username: string | null;
+}
+
+function FeedbackSection() {
+  const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
+  const [customPrompts, setCustomPrompts] = useState<CustomPromptItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        // Fetch feedback
+        const { data: fb } = await supabase
+          .from('app_feedback')
+          .select('id, content, source, created_at, group_id, week_of')
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        // Fetch user-generated prompts
+        const { data: prompts } = await supabase
+          .from('prompts')
+          .select('id, content, title, type, created_at, created_by')
+          .eq('is_user_generated', true)
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        // Get usernames for custom prompts
+        let promptItems: CustomPromptItem[] = [];
+        if (prompts && prompts.length > 0) {
+          const userIds = [...new Set(prompts.map((p: any) => p.created_by).filter(Boolean))];
+          const { data: profiles } = userIds.length > 0
+            ? await supabase.from('profiles').select('id, username').in('id', userIds)
+            : { data: [] };
+          const usernameMap = new Map((profiles || []).map((p: any) => [p.id, p.username]));
+          promptItems = prompts.map((p: any) => ({
+            id: p.id,
+            content: p.content || p.title || '(no content)',
+            title: p.title,
+            type: p.type,
+            created_at: p.created_at,
+            created_by_username: usernameMap.get(p.created_by) || null,
+          }));
+        }
+
+        setFeedback(fb || []);
+        setCustomPrompts(promptItems);
+      } catch (e) {
+        console.error('Error loading feedback:', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  const formatDate = (d: string) =>
+    new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+
+  return (
+    <View
+      style={{
+        backgroundColor: CARD,
+        borderColor: BORDER,
+        borderWidth: 1,
+        borderRadius: Radii.md,
+        padding: Spacing.md,
+        marginTop: Spacing.lg,
+      }}
+    >
+      <Pressable
+        onPress={() => setExpanded(!expanded)}
+        style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+      >
+        <Text style={{ color: TEXT, fontFamily: "Paaxel", fontSize: 16 }}>
+          Feedback
+        </Text>
+        <Text style={{ color: MUTED, fontFamily: "Paaxel", fontSize: 14 }}>
+          {expanded ? "▲" : "▼"}
+        </Text>
+      </Pressable>
+
+      {expanded && (
+        <View style={{ marginTop: Spacing.md }}>
+          {loading && <ActivityIndicator color={BTN} style={{ marginVertical: 12 }} />}
+
+          {!loading && feedback.length === 0 && customPrompts.length === 0 && (
+            <Text style={{ color: MUTED, fontSize: 13, textAlign: "center" }}>No feedback yet</Text>
+          )}
+
+          {/* Anonymous Feedback */}
+          {feedback.length > 0 && (
+            <>
+              <Text style={{ color: MUTED, fontFamily: "Paaxel", fontSize: 13, marginBottom: 8 }}>
+                Anonymous Feedback ({feedback.length})
+              </Text>
+              {feedback.map((fb) => (
+                <View
+                  key={fb.id}
+                  style={{
+                    backgroundColor: BG,
+                    borderColor: BORDER,
+                    borderWidth: 1,
+                    borderRadius: Radii.sm,
+                    padding: Spacing.sm,
+                    marginBottom: 8,
+                  }}
+                >
+                  <Text style={{ color: TEXT, fontSize: 14, marginBottom: 4 }}>{fb.content}</Text>
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    <Text style={{ color: MUTED, fontSize: 11 }}>{formatDate(fb.created_at)}</Text>
+                    <Text style={{ color: TYPE_COLORS.short_text, fontSize: 11 }}>{fb.source}</Text>
+                  </View>
+                </View>
+              ))}
+            </>
+          )}
+
+          {/* Custom Prompt Submittals */}
+          {customPrompts.length > 0 && (
+            <>
+              <Text style={{ color: MUTED, fontFamily: "Paaxel", fontSize: 13, marginBottom: 8, marginTop: feedback.length > 0 ? 12 : 0 }}>
+                Custom Prompts ({customPrompts.length})
+              </Text>
+              {customPrompts.map((p) => (
+                <View
+                  key={p.id}
+                  style={{
+                    backgroundColor: BG,
+                    borderColor: BORDER,
+                    borderWidth: 1,
+                    borderRadius: Radii.sm,
+                    padding: Spacing.sm,
+                    marginBottom: 8,
+                  }}
+                >
+                  <Text style={{ color: TEXT, fontSize: 14, marginBottom: 4 }}>{p.content}</Text>
+                  <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+                    <Text style={{ color: MUTED, fontSize: 11 }}>{formatDate(p.created_at)}</Text>
+                    <Text style={{ color: TYPE_COLORS[p.type] || MUTED, fontSize: 11 }}>{typeLabel(p.type)}</Text>
+                    {p.created_by_username && (
+                      <Text style={{ color: SUCCESS, fontSize: 11 }}>by {p.created_by_username}</Text>
+                    )}
+                  </View>
+                </View>
+              ))}
+            </>
+          )}
+        </View>
+      )}
+    </View>
+  );
+}
+
 // ─── Main Admin Screen ───────────────────────────────────────
 export default function AdminScreen() {
   const { data: groups, isLoading: groupsLoading } = useMyGroups();
@@ -635,6 +807,9 @@ export default function AdminScreen() {
             Vertical Jump Challenge (Mock Data)
           </Text>
         </Pressable>
+
+        {/* Feedback & Custom Prompts */}
+        <FeedbackSection />
       </ScrollView>
 
       {/* Response Detail Modal */}

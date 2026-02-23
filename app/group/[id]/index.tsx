@@ -1460,7 +1460,21 @@ function GroupScreenInner() {
       setPendingQuiplashVotes(votable);
 
       // Load meme game state (What do you Meme)
-      const memeState = await getMemeGameStatus(groupId);
+      // Only show if the associated group_prompt is within its scheduled window
+      let memeState = await getMemeGameStatus(groupId);
+      if (memeState && memeState.photo_group_prompt_id) {
+        const { data: gp } = await supabase
+          .from('group_prompts')
+          .select('scheduled_for, expires_at')
+          .eq('id', memeState.phase === 'photo_upload' ? memeState.photo_group_prompt_id : memeState.caption_group_prompt_id)
+          .single();
+        if (gp) {
+          const now = new Date();
+          if (now < new Date(gp.scheduled_for) || now > new Date(gp.expires_at)) {
+            memeState = null; // Not yet scheduled or already expired
+          }
+        }
+      }
       setMemeGameState(memeState);
 
       // Load telephone assignment
@@ -1811,6 +1825,12 @@ function GroupScreenInner() {
                   {groupName ?? "Group"}
                 </FireText>
                 <FireStreakBadge streak={groupStreak} />
+              </View>
+              {/* Hint arrow pointing to member avatars */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: -2 }}>
+                <Text style={{ color: MUTED, fontSize: 10, fontFamily: 'Paaxel', opacity: 0.7 }}>
+                  tap to see who's in the group  ↓
+                </Text>
               </View>
               <Pressable onPress={() => setShowMembersModal(true)} hitSlop={10} style={{ flexDirection: "row", alignItems: "flex-start", gap: 8, paddingVertical: 4, marginRight: 'auto' }}>
                 {/* Show all member avatars with status dots */}
