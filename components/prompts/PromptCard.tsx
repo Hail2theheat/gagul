@@ -348,10 +348,10 @@ export function PromptCard({
         {prompt.content || prompt.title}
       </Text>
 
-      {/* Tribunal AI judge caption */}
+      {/* Tribunal AI judge stamp */}
       {isTribunal && (
         <Text style={styles.tribunalCaption}>
-          Your submission will be analyzed and scored by The Tribunal — an AI of impeccable taste and questionable mercy.
+          AI-Judged
         </Text>
       )}
 
@@ -475,11 +475,18 @@ const styles = StyleSheet.create({
   },
   tribunalCaption: {
     color: CampfireColors.FIRE_YELLOW,
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: 'Paaxel',
-    fontStyle: 'italic',
     textAlign: 'center',
-    opacity: 0.85,
+    alignSelf: 'center',
+    borderWidth: 1,
+    borderColor: CampfireColors.FIRE_YELLOW + '60',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    overflow: 'hidden',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   expiredBox: {
     backgroundColor: COLORS.error + '15',
