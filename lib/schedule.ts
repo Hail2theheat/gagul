@@ -25,8 +25,8 @@ export const SCHEDULE = {
     visibleHour: 2,         // Sun 2 AM — card appears (locked)
     nudgeHour: 18,          // Sun 6 PM — nudge ALL users
     unlockHour: 19,         // Sun 7 PM — fireside opens
-    endDay: 1,              // Monday
-    endHour: 6,             // Mon 6 AM ET — fireside closes (noon Amsterdam for overseas)
+    endDay: 2,              // Tuesday (temporarily extended for Rinkley)
+    endHour: 6,             // Tue 6 AM ET — fireside closes (temp extension)
   },
 } as const;
 
@@ -130,9 +130,14 @@ export function getFiresideState(now?: Date): FiresideState {
     return 'UNLOCKED';                              // Sun 19:00–23:59
   }
 
-  // Monday before endHour
+  // Days between Sunday unlock and endDay (e.g. Monday when endDay is Tuesday)
+  if (dayOfWeek > day && dayOfWeek < endDay) {
+    return 'UNLOCKED';
+  }
+
+  // endDay before endHour
   if (dayOfWeek === endDay && hour < endHour) {
-    return 'UNLOCKED';                              // Mon 0:00–1:59
+    return 'UNLOCKED';
   }
 
   return 'HIDDEN';
