@@ -2491,10 +2491,11 @@ const styles = StyleSheet.create({
   // Reactions container - fixed at bottom center
   reactionsContainer: {
     position: "absolute",
-    bottom: 60,
+    bottom: 55,
     left: 0,
     right: 0,
-    zIndex: 50,
+    zIndex: 100,
+    elevation: 100,
   },
   // All-responses view for text-only prompts
   allResponsesRow: {
