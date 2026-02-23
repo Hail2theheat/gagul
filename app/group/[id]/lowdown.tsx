@@ -544,12 +544,7 @@ export default function LowdownScreen() {
       // Finalize the week (idempotent - safe to call multiple times)
       await finalizeWeek(groupId);
 
-      // TEMP: Hardcode last week's week_of so Rinkley can catch the fireside.
-      // DB has week_of='2026-02-17' for last week (not a Monday, hence hardcoded).
-      // TODO: Revert this once Rinkley has seen it — go back to default RPC behavior.
-      const prevWeekOf = '2026-02-17';
-
-      const data = await getFiresideData(groupId, prevWeekOf);
+      const data = await getFiresideData(groupId);
       if (data) {
         // Inject meme game as a synthetic prompt if data exists
         if (data.meme_data && data.meme_data.captions && data.meme_data.captions.length > 0) {

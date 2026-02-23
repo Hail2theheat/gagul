@@ -25,8 +25,8 @@ export const SCHEDULE = {
     visibleHour: 2,         // Sun 2 AM — card appears (locked)
     nudgeHour: 18,          // Sun 6 PM — nudge ALL users
     unlockHour: 19,         // Sun 7 PM — fireside opens
-    endDay: 2,              // Tuesday (temporarily extended for Rinkley)
-    endHour: 6,             // Tue 6 AM ET — fireside closes (temp extension)
+    endDay: 1,              // Monday
+    endHour: 6,             // Mon 6 AM ET — fireside closes
   },
 } as const;
 
