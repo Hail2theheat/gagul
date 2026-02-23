@@ -544,20 +544,12 @@ export default function LowdownScreen() {
       // Finalize the week (idempotent - safe to call multiple times)
       await finalizeWeek(groupId);
 
-      // Fireside reviews the PREVIOUS week, not the current one.
-      // Query DB for the second-most-recent distinct week_of for this group,
-      // since week_of dates aren't always Mondays in the DB.
-      const { data: weekRows } = await supabase
-        .from('group_prompts')
-        .select('week_of')
-        .eq('group_id', groupId)
-        .not('week_of', 'is', null)
-        .order('week_of', { ascending: false });
-      const distinctWeeks = [...new Set(weekRows?.map(w => w.week_of) ?? [])];
-      // Use second-most-recent week (index 1), falling back to latest if only one exists
-      const prevWeekOf = distinctWeeks.length > 1 ? distinctWeeks[1] : distinctWeeks[0];
+      // TEMP: Hardcode last week's week_of so Rinkley can catch the fireside.
+      // DB has week_of='2026-02-17' for last week (not a Monday, hence hardcoded).
+      // TODO: Revert this once Rinkley has seen it — go back to default RPC behavior.
+      const prevWeekOf = '2026-02-17';
 
-      const data = prevWeekOf ? await getFiresideData(groupId, prevWeekOf) : null;
+      const data = await getFiresideData(groupId, prevWeekOf);
       if (data) {
         // Inject meme game as a synthetic prompt if data exists
         if (data.meme_data && data.meme_data.captions && data.meme_data.captions.length > 0) {
