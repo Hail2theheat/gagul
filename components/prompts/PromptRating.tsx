@@ -123,7 +123,7 @@ export function PromptRating({
   onRated,
 }: PromptRatingProps) {
   const [hasRated, setHasRated] = useState(initialHasRated);
-  const [dismissed, setDismissed] = useState(initialHasRated);
+  const [dismissed, setDismissed] = useState(initialHasRated || initialRating != null);
   // Convert boolean to number if needed (legacy support)
   const convertedInitial = typeof initialRating === 'boolean'
     ? (initialRating ? 5 : 1)
@@ -142,13 +142,15 @@ export function PromptRating({
 
   // Auto-dismiss after rating
   useEffect(() => {
-    if (hasRated && rating !== null) {
+    if (hasRated && rating !== null && !dismissed) {
       const timer = setTimeout(() => {
         Animated.timing(fadeAnim, {
           toValue: 0,
           duration: 400,
           useNativeDriver: true,
-        }).start(() => setDismissed(true));
+        }).start();
+        // Dismiss after fade completes (don't rely on callback)
+        setTimeout(() => setDismissed(true), 500);
       }, 1500);
       return () => clearTimeout(timer);
     }
