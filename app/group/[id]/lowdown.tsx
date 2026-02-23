@@ -544,7 +544,19 @@ export default function LowdownScreen() {
       // Finalize the week (idempotent - safe to call multiple times)
       await finalizeWeek(groupId);
 
-      const data = await getFiresideData(groupId);
+      // Fireside reviews the PREVIOUS week, not the current one.
+      // Calculate previous week_of (Monday-based) so we don't accidentally
+      // show this week's prompts that were just scheduled.
+      const now = new Date();
+      const dayOfWeek = now.getDay(); // 0=Sun
+      const daysToLastMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      const thisMonday = new Date(now);
+      thisMonday.setDate(now.getDate() - daysToLastMonday);
+      const prevMonday = new Date(thisMonday);
+      prevMonday.setDate(thisMonday.getDate() - 7);
+      const prevWeekOf = prevMonday.toISOString().split('T')[0];
+
+      const data = await getFiresideData(groupId, prevWeekOf);
       if (data) {
         // Inject meme game as a synthetic prompt if data exists
         if (data.meme_data && data.meme_data.captions && data.meme_data.captions.length > 0) {
