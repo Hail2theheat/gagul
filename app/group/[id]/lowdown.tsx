@@ -545,18 +545,19 @@ export default function LowdownScreen() {
       await finalizeWeek(groupId);
 
       // Fireside reviews the PREVIOUS week, not the current one.
-      // Calculate previous week_of (Monday-based) so we don't accidentally
-      // show this week's prompts that were just scheduled.
-      const now = new Date();
-      const dayOfWeek = now.getDay(); // 0=Sun
-      const daysToLastMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-      const thisMonday = new Date(now);
-      thisMonday.setDate(now.getDate() - daysToLastMonday);
-      const prevMonday = new Date(thisMonday);
-      prevMonday.setDate(thisMonday.getDate() - 7);
-      const prevWeekOf = prevMonday.toISOString().split('T')[0];
+      // Query DB for the second-most-recent distinct week_of for this group,
+      // since week_of dates aren't always Mondays in the DB.
+      const { data: weekRows } = await supabase
+        .from('group_prompts')
+        .select('week_of')
+        .eq('group_id', groupId)
+        .not('week_of', 'is', null)
+        .order('week_of', { ascending: false });
+      const distinctWeeks = [...new Set(weekRows?.map(w => w.week_of) ?? [])];
+      // Use second-most-recent week (index 1), falling back to latest if only one exists
+      const prevWeekOf = distinctWeeks.length > 1 ? distinctWeeks[1] : distinctWeeks[0];
 
-      const data = await getFiresideData(groupId, prevWeekOf);
+      const data = prevWeekOf ? await getFiresideData(groupId, prevWeekOf) : null;
       if (data) {
         // Inject meme game as a synthetic prompt if data exists
         if (data.meme_data && data.meme_data.captions && data.meme_data.captions.length > 0) {
