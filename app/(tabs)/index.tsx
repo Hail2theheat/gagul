@@ -427,14 +427,14 @@ export default function HomeGroupsScreen() {
         <LakeCreatures />
       </View>
 
-      {/* Campfire warm ground glow */}
+      {/* Campfire warm ground glow — muted for winter */}
       <View style={{
         position: "absolute", bottom: 10,
         left: "50%", marginLeft: -120,
         width: 240, height: 60,
         backgroundColor: CampfireColors.FIRE_ORANGE,
         borderRadius: 120,
-        opacity: 0.12,
+        opacity: 0.08,
         zIndex: 2,
       }} />
       <View style={{
@@ -443,7 +443,7 @@ export default function HomeGroupsScreen() {
         width: 160, height: 40,
         backgroundColor: CampfireColors.FIRE_YELLOW,
         borderRadius: 80,
-        opacity: 0.08,
+        opacity: 0.05,
         zIndex: 2,
       }} />
 

@@ -146,6 +146,11 @@ export function ForestGround({
             <MountainTriangle x={120} w={280} h={190} color="#161E32" />
             <MountainTriangle x={SCREEN_WIDTH - 250} w={260} h={170} color="#141C2E" />
             <MountainTriangle x={SCREEN_WIDTH - 100} w={220} h={150} color="#161E32" />
+            {/* Snow caps on far peaks */}
+            <MountainTriangle x={-60 + 90} w={60} h={40} color="rgba(200, 220, 240, 0.25)" />
+            <MountainTriangle x={120 + 110} w={60} h={40} color="rgba(200, 220, 240, 0.3)" />
+            <MountainTriangle x={SCREEN_WIDTH - 250 + 100} w={60} h={40} color="rgba(200, 220, 240, 0.25)" />
+            <MountainTriangle x={SCREEN_WIDTH - 100 + 80} w={60} h={35} color="rgba(200, 220, 240, 0.3)" />
           </View>
 
           {/* Mid mountains with tree silhouettes */}
@@ -190,13 +195,13 @@ export function ForestGround({
         </>
       )}
 
-      {/* Forest - DESIGN.md §15.1: Trees sway with staggered timing */}
+      {/* Forest - DESIGN.md §15.1: Trees sway with staggered timing — winter: snow-capped */}
       {showForest && (
         <View style={{ position: 'absolute', bottom: 22, left: 0, right: 0, height: 250, zIndex: 1 }}>
           {trees.map((tree, i) => (
             <View key={i} style={{ position: 'absolute', left: tree.x, bottom: 0 }}>
               <SwayingTree height={tree.height} shade={tree.shade} stagger={i * 0.05}>
-                <DetailedPineTree height={tree.height} shade={tree.shade} />
+                <DetailedPineTree height={tree.height} shade={tree.shade} snowCapped />
               </SwayingTree>
             </View>
           ))}
@@ -213,51 +218,33 @@ export function ForestGround({
         </View>
       )}
 
-      {/* Ground layers - DESIGN.md §15.3: Seasonal colors */}
+      {/* Ground layers — winter snow cover */}
       <View style={{
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
         height: 30,
-        backgroundColor: groundDark,
+        backgroundColor: '#1A2A38',
         zIndex: 2,
       }}>
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, backgroundColor: groundGrass }} />
-        <View style={{ position: 'absolute', top: 4, left: 0, right: 0, height: 2, backgroundColor: groundMoss }} />
+        {/* Top snow layer */}
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 5, backgroundColor: '#D4E5F7' }} />
+        {/* Snow shadow layer */}
+        <View style={{ position: 'absolute', top: 5, left: 0, right: 0, height: 3, backgroundColor: '#A8C4DE' }} />
+        {/* Frozen earth beneath */}
+        <View style={{ position: 'absolute', top: 8, left: 0, right: 0, height: 2, backgroundColor: '#1F3040' }} />
       </View>
 
-      {/* Wildflowers - DESIGN.md §15.3: Seasonal accent colors */}
+      {/* Winter — small snow mounds instead of wildflowers */}
       {showWildflowers && (
         <>
-          <Wildflowers
-            x={30}
-            color1={enableSeasonal ? palette.accent1 : '#E890B0'}
-            color2={enableSeasonal ? palette.accent2 : '#FFD060'}
-            color3={enableSeasonal ? palette.accent3 : '#B0C0FF'}
-            stemColor={enableSeasonal ? palette.treeLight : '#2D5B2D'}
-          />
-          <Wildflowers
-            x={SCREEN_WIDTH - 50}
-            color1={enableSeasonal ? palette.accent2 : '#FFD060'}
-            color2={enableSeasonal ? palette.accent3 : '#B0C0FF'}
-            color3={enableSeasonal ? palette.accent1 : '#E890B0'}
-            stemColor={enableSeasonal ? palette.treeLight : '#2D5B2D'}
-          />
-          <Wildflowers
-            x={SCREEN_WIDTH / 2 - 80}
-            color1={enableSeasonal ? palette.accent3 : '#B0C0FF'}
-            color2={enableSeasonal ? palette.accent1 : '#E890B0'}
-            color3={enableSeasonal ? palette.accent2 : '#FFD060'}
-            stemColor={enableSeasonal ? palette.treeLight : '#2D5B2D'}
-          />
-          <Wildflowers
-            x={SCREEN_WIDTH / 2 + 60}
-            color1={enableSeasonal ? palette.accent1 : '#E890B0'}
-            color2={enableSeasonal ? palette.accent3 : '#B0C0FF'}
-            color3={enableSeasonal ? palette.accent2 : '#FFD060'}
-            stemColor={enableSeasonal ? palette.treeLight : '#2D5B2D'}
-          />
+          {[30, SCREEN_WIDTH - 50, SCREEN_WIDTH / 2 - 80, SCREEN_WIDTH / 2 + 60].map((xPos, i) => (
+            <View key={`snow-mound-${i}`} style={{ position: 'absolute', bottom: 22, left: xPos, zIndex: 3 }}>
+              <View style={{ width: 14, height: 5, backgroundColor: '#D4E5F7', borderTopLeftRadius: 5, borderTopRightRadius: 5 }} />
+              <View style={{ width: 10, height: 3, backgroundColor: '#E8F0FE', borderTopLeftRadius: 3, borderTopRightRadius: 3, position: 'absolute', bottom: 2, left: 2 }} />
+            </View>
+          ))}
         </>
       )}
     </>

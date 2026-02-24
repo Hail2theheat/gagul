@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { View, Dimensions } from 'react-native';
+import React, { useMemo, useEffect, useRef } from 'react';
+import { View, Animated, Dimensions } from 'react-native';
 import { PixelStar } from './PixelStar';
 import { Firefly } from './Firefly';
 import { ShootingStar } from './ShootingStar';
@@ -34,6 +34,52 @@ interface NightSkyProps {
   showGradient?: boolean;
   /** Use seasonal sky colors (DESIGN.MD §15.3) */
   enableSeasonal?: boolean;
+}
+
+// Falling snowflake particle
+function Snowflake({ x, delay, size, duration }: { x: number; delay: number; size: number; duration: number }) {
+  const translateY = useRef(new Animated.Value(-20)).current;
+  const translateX = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animate = () => {
+      translateY.setValue(-20);
+      translateX.setValue(0);
+      opacity.setValue(0);
+      Animated.parallel([
+        Animated.sequence([
+          Animated.timing(opacity, { toValue: 0.7, duration: 400, useNativeDriver: true }),
+          Animated.timing(opacity, { toValue: 0.6, duration: duration - 800, useNativeDriver: true }),
+          Animated.timing(opacity, { toValue: 0, duration: 400, useNativeDriver: true }),
+        ]),
+        Animated.timing(translateY, { toValue: SCREEN_HEIGHT + 20, duration, useNativeDriver: true }),
+        Animated.sequence([
+          Animated.timing(translateX, { toValue: 15, duration: duration / 3, useNativeDriver: true }),
+          Animated.timing(translateX, { toValue: -10, duration: duration / 3, useNativeDriver: true }),
+          Animated.timing(translateX, { toValue: 5, duration: duration / 3, useNativeDriver: true }),
+        ]),
+      ]).start(() => {
+        setTimeout(animate, Math.random() * 2000);
+      });
+    };
+    const timer = setTimeout(animate, delay);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <Animated.View
+      style={{
+        position: 'absolute', left: x, top: 0,
+        width: size, height: size, borderRadius: size / 2,
+        backgroundColor: '#FFFFFF', opacity,
+        transform: [{ translateY }, { translateX }],
+        shadowColor: '#FFFFFF', shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.5, shadowRadius: size,
+        zIndex: 100,
+      }}
+    />
+  );
 }
 
 /** Seeded pseudo-random number generator for deterministic star placement */
@@ -120,6 +166,20 @@ export function NightSky({
     return delays;
   }, [config.shootingStars]);
 
+  // Snowflakes
+  const snowflakes = useMemo(() => {
+    const result = [];
+    for (let i = 0; i < 20; i++) {
+      result.push({
+        x: Math.random() * SCREEN_WIDTH,
+        delay: Math.random() * 6000,
+        size: 1.5 + Math.random() * 3,
+        duration: 6000 + Math.random() * 6000,
+      });
+    }
+    return result;
+  }, []);
+
   const fireflyPositions = useMemo(() => {
     const positions: { x: number; y: number; delay: number }[] = [];
     const rand = createRng(99);
@@ -198,6 +258,11 @@ export function NightSky({
       {/* Fireflies */}
       {showFireflies && fireflyPositions.map((ff, i) => (
         <Firefly key={`ff-${i}`} x={ff.x} y={ff.y} delay={ff.delay} />
+      ))}
+
+      {/* Snowflakes — winter */}
+      {snowflakes.map((flake, i) => (
+        <Snowflake key={`snow-${i}`} x={flake.x} delay={flake.delay} size={flake.size} duration={flake.duration} />
       ))}
     </>
   );

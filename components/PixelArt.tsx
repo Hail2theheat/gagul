@@ -535,6 +535,32 @@ export function DetailedPineTree({ height = 100, shade = 2, snowCapped = false }
       <Block w={2} h={28} color="#301810" x={13} y={52} />
       <Block w={2} h={20} color="#301810" x={17} y={58} />
 
+      {/* Snow caps on branches */}
+      {snowCapped && (
+        <>
+          {/* Snow on tip */}
+          <Block w={6} h={3} color="#E8F0FE" x={13} y={0} />
+          <Block w={4} h={2} color="#FFFFFF" x={14} y={0} />
+          {/* Snow on upper tier */}
+          <Block w={10} h={3} color="#E8F0FE" x={11} y={7} />
+          <Block w={8} h={2} color="#FFFFFF" x={12} y={7} />
+          {/* Snow on middle tier */}
+          <Block w={16} h={3} color="#E8F0FE" x={8} y={17} />
+          <Block w={12} h={2} color="#FFFFFF" x={10} y={17} />
+          {/* Snow on lower tier */}
+          <Block w={22} h={3} color="#E8F0FE" x={5} y={31} />
+          <Block w={18} h={2} color="#FFFFFF" x={7} y={31} />
+          {/* Snow on bottom foliage */}
+          <Block w={26} h={3} color="#E8F0FE" x={3} y={39} />
+          <Block w={20} h={2} color="#FFFFFF" x={6} y={39} />
+          {/* Icicle accents (tiny drips) */}
+          <Block w={2} h={3} color="rgba(180, 220, 255, 0.6)" x={9} y={20} />
+          <Block w={2} h={4} color="rgba(180, 220, 255, 0.5)" x={21} y={20} />
+          <Block w={2} h={3} color="rgba(180, 220, 255, 0.6)" x={7} y={34} />
+          <Block w={2} h={4} color="rgba(180, 220, 255, 0.5)" x={24} y={34} />
+        </>
+      )}
+
       {/* Tree base shadow */}
       <Block w={10} h={4} color="rgba(0,0,0,0.3)" x={11} y={86} />
       <Block w={14} h={2} color="rgba(0,0,0,0.2)" x={9} y={90} />

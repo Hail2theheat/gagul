@@ -20,6 +20,8 @@ import { getMemeGameStatus } from "../../../lib/services/memeGameService";
 import { getMyTelephone, TelephoneAssignment } from "../../../lib/services/telephoneService";
 import { PixelCharacter, CharacterConfig, DEFAULT_CHARACTER } from "../../../components/PixelCharacter";
 import { MembersCircleModal } from "../../../components/MembersCircleModal";
+import { SeasonLeaderboardModal } from "../../../components/SeasonLeaderboardModal";
+import { TrophyLeadersModal } from "../../../components/TrophyLeadersModal";
 import { DetailedPineTree, DetailedGrass } from "../../../components/PixelArt";
 import { AnimatedLogo } from "../../../components/AnimatedLogo";
 import { WeatherBackground } from "../../../components/WeatherBackground";
@@ -1244,7 +1246,7 @@ function GroupScreenInner() {
   const [userStreak, setUserStreak] = useState<number>(0);
   const [longestStreak, setLongestStreak] = useState<number>(0);
   const [myAvatar, setMyAvatar] = useState<CharacterConfig | null>(null);
-  const [allMembers, setAllMembers] = useState<Array<{ user_id: string; avatar_config: CharacterConfig | null; username: string | null; weekly_crown_until: string | null; current_streak: number }>>([]);
+  const [allMembers, setAllMembers] = useState<Array<{ user_id: string; avatar_config: CharacterConfig | null; username: string | null; weekly_crown_until: string | null; current_streak: number; hasPerfectWeek: boolean }>>([]);
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [memberStatuses, setMemberStatuses] = useState<Record<string, 'not_seen' | 'seen' | 'responded'>>({});
   const [firesideProgress, setFiresideProgress] = useState<Record<string, 'completed' | 'partial' | 'not_started'>>({});
@@ -1291,6 +1293,10 @@ function GroupScreenInner() {
   const [recPromptText, setRecPromptText] = useState('');
   const [recOptions, setRecOptions] = useState<string[]>(['', '']);
   const [recSubmitting, setRecSubmitting] = useState(false);
+
+  // Season modal state
+  const [showSeasonModal, setShowSeasonModal] = useState(false);
+  const [showTrophyModal, setShowTrophyModal] = useState(false);
 
   const active = status?.active_prompt_instance ?? null;
   const hasResponded = status?.has_responded ?? false;
@@ -1544,6 +1550,23 @@ function GroupScreenInner() {
           console.error("Error loading profiles:", profilesError);
         }
 
+        // Query perfect week status from last completed week
+        const now = new Date();
+        const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon, ...
+        const daysToLastMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        const lastMonday = new Date(now);
+        lastMonday.setDate(now.getDate() - daysToLastMonday - 7);
+        const lastWeekOf = lastMonday.toISOString().split('T')[0];
+        const { data: perfectWeekData } = await supabase
+          .from("weekly_points")
+          .select("user_id, perfect_week")
+          .eq("group_id", groupId)
+          .eq("week_of", lastWeekOf)
+          .eq("perfect_week", true);
+        const perfectWeekUserIds = new Set(
+          (perfectWeekData || []).map((pw: any) => pw.user_id)
+        );
+
         // Combine member data with avatars
         const membersWithAvatars = members.map((m: any) => {
           const profile = profiles?.find((p: any) => p.id === m.user_id);
@@ -1553,6 +1576,7 @@ function GroupScreenInner() {
             username: (profile as any)?.username as string | null ?? null,
             weekly_crown_until: (profile as any)?.weekly_crown_until as string | null ?? null,
             current_streak: (profile as any)?.current_streak as number || 0,
+            hasPerfectWeek: perfectWeekUserIds.has(m.user_id),
           };
         });
         setAllMembers(membersWithAvatars);
@@ -1862,6 +1886,7 @@ function GroupScreenInner() {
                         showWeeklyCrown={!!member.weekly_crown_until && new Date(member.weekly_crown_until) > new Date()}
                         showTorch={member.user_id === streakLeaderId}
                         showStreakAura={member.current_streak >= 20}
+                        showPerfectWeek={member.hasPerfectWeek}
                       />
                       {(hasPromptData || hasFiresideData) && (
                         <View style={{
@@ -1908,6 +1933,54 @@ function GroupScreenInner() {
 
           {/* Personal Streak Sign */}
           <StreakSign currentStreak={userStreak} longestStreak={longestStreak} />
+
+          {/* Season & All-Time Buttons — Frost/Ice Theme */}
+          <View style={{ flexDirection: "row", justifyContent: "center", gap: 12, marginBottom: 12 }}>
+            <Pressable
+              onPress={() => setShowSeasonModal(true)}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+                backgroundColor: "rgba(140, 200, 255, 0.1)",
+                paddingVertical: 8,
+                paddingHorizontal: 14,
+                borderRadius: 10,
+                borderWidth: 1.5,
+                borderColor: "rgba(160, 210, 255, 0.5)",
+                shadowColor: "#7EC8E3",
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+              }}
+            >
+              <Text style={{ fontSize: 14 }}>{"⚔️"}</Text>
+              <Text style={{ color: "#B0D4F1", fontSize: 12, fontFamily: "Paaxel" }}>Season</Text>
+              <Text style={{ fontSize: 8, position: "absolute", top: -2, right: -2 }}>{"❄️"}</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setShowTrophyModal(true)}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+                backgroundColor: "rgba(140, 200, 255, 0.1)",
+                paddingVertical: 8,
+                paddingHorizontal: 14,
+                borderRadius: 10,
+                borderWidth: 1.5,
+                borderColor: "rgba(160, 210, 255, 0.5)",
+                shadowColor: "#7EC8E3",
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+              }}
+            >
+              <Text style={{ fontSize: 14 }}>{"🏆"}</Text>
+              <Text style={{ color: "#B0D4F1", fontSize: 12, fontFamily: "Paaxel" }}>All-Time</Text>
+              <Text style={{ fontSize: 8, position: "absolute", top: -2, left: -2 }}>{"❄️"}</Text>
+            </Pressable>
+          </View>
 
           {/* Sunday States */}
           {sundayState === 'pre-fireside' && (
@@ -2211,6 +2284,21 @@ function GroupScreenInner() {
           recSubmitting={recSubmitting}
           onSubmit={submitRecommendation}
         />
+
+        {/* Season Leaderboard Modal */}
+        <SeasonLeaderboardModal
+          visible={showSeasonModal}
+          onClose={() => setShowSeasonModal(false)}
+          groupId={groupId}
+        />
+
+        {/* Trophy Leaders Modal */}
+        <TrophyLeadersModal
+          visible={showTrophyModal}
+          onClose={() => setShowTrophyModal(false)}
+          groupId={groupId}
+          members={allMembers}
+        />
       </WeatherBackground>
     );
   }
@@ -2273,6 +2361,7 @@ function GroupScreenInner() {
                     showWeeklyCrown={!!member.weekly_crown_until && new Date(member.weekly_crown_until) > new Date()}
                     showTorch={member.user_id === streakLeaderId}
                     showStreakAura={member.current_streak >= 20}
+                    showPerfectWeek={member.hasPerfectWeek}
                   />
                 </View>
               ))}
@@ -2300,6 +2389,44 @@ function GroupScreenInner() {
 
         {/* Personal Streak Sign */}
         <StreakSign currentStreak={userStreak} longestStreak={longestStreak} />
+
+        {/* Season & All-Time Buttons */}
+        <View style={{ flexDirection: "row", justifyContent: "center", gap: 12, marginBottom: 12 }}>
+          <Pressable
+            onPress={() => setShowSeasonModal(true)}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              backgroundColor: CARD,
+              paddingVertical: 8,
+              paddingHorizontal: 14,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: BORDER,
+            }}
+          >
+            <Text style={{ fontSize: 14 }}>{"⚔️"}</Text>
+            <Text style={{ color: TEXT, fontSize: 12, fontFamily: "Paaxel" }}>Season</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setShowTrophyModal(true)}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              backgroundColor: CARD,
+              paddingVertical: 8,
+              paddingHorizontal: 14,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: BORDER,
+            }}
+          >
+            <Text style={{ fontSize: 14 }}>{"🏆"}</Text>
+            <Text style={{ color: TEXT, fontSize: 12, fontFamily: "Paaxel" }}>All-Time</Text>
+          </Pressable>
+        </View>
 
         {loading ? (
           <Card>
@@ -2585,6 +2712,21 @@ function GroupScreenInner() {
         setRecOptions={setRecOptions}
         recSubmitting={recSubmitting}
         onSubmit={submitRecommendation}
+      />
+
+      {/* Season Leaderboard Modal */}
+      <SeasonLeaderboardModal
+        visible={showSeasonModal}
+        onClose={() => setShowSeasonModal(false)}
+        groupId={groupId}
+      />
+
+      {/* Trophy Leaders Modal */}
+      <TrophyLeadersModal
+        visible={showTrophyModal}
+        onClose={() => setShowTrophyModal(false)}
+        groupId={groupId}
+        members={allMembers}
       />
     </WeatherBackground>
   );

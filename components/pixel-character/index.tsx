@@ -1,7 +1,9 @@
 // components/pixel-character/index.tsx
 // HD-2D pixel art character renderer (32x48 grid, SVG-based)
 import React, { useMemo, useState, useEffect, useRef } from "react";
+import { View } from "react-native";
 import { CharacterConfig, PixelRect } from "./types";
+import { AnimatedStaffFlame } from "./AnimatedStaffFlame";
 import {
   SKIN_TONES,
   HAIR_COLORS,
@@ -54,29 +56,6 @@ function weeklyCrownPixels(): PixelRect[] {
   ];
 }
 
-// Streak leader torch — held to the right of the character
-function streakTorchPixels(): PixelRect[] {
-  const r = (x: number, y: number, w: number, h: number, color: string): PixelRect => ({ x, y, w, h, color });
-  return [
-    // Wooden handle
-    r(27, 19, 2, 8, "#6B3A1F"),
-    r(28, 19, 1, 8, "#8B5A30"),
-    // Handle cap
-    r(26, 26, 4, 1, "#5C2D0C"),
-    // Flame base (orange)
-    r(26, 15, 4, 4, "#FF6B35"),
-    r(27, 14, 2, 1, "#FF6B35"),
-    // Flame core (yellow)
-    r(27, 15, 2, 3, "#FFD700"),
-    r(27, 13, 2, 2, "#FFEC8B"),
-    // Flame tip
-    r(28, 12, 1, 1, "#FFEC8B"),
-    // Ember accents
-    r(25, 14, 1, 1, "#FF8C42"),
-    r(30, 16, 1, 1, "#FF8C42"),
-  ];
-}
-
 // Fire aura glow — rendered behind character for 20+ streaks
 function streakAuraPixels(): PixelRect[] {
   const r = (x: number, y: number, w: number, h: number, color: string): PixelRect => ({ x, y, w, h, color });
@@ -105,15 +84,39 @@ function streakAuraPixels(): PixelRect[] {
 const GRID_W = 32;
 const GRID_H = 48;
 
+// Perfect week gold star — worn on shirt (right chest pocket area)
+function perfectWeekStarPixels(): PixelRect[] {
+  const r = (x: number, y: number, w: number, h: number, color: string): PixelRect => ({ x, y, w, h, color });
+  const GOLD = "#FFD700";
+  const HIGHLIGHT = "#FFEC8B";
+  const SHADOW = "#B8960C";
+  return [
+    // Top point
+    r(20, 27, 1, 1, HIGHLIGHT),
+    // Upper arms
+    r(19, 28, 3, 1, GOLD),
+    // Wide middle
+    r(18, 29, 5, 1, GOLD),
+    // Highlight center
+    r(20, 29, 1, 1, HIGHLIGHT),
+    // Lower points (two legs of star)
+    r(18, 30, 1, 1, SHADOW),
+    r(22, 30, 1, 1, SHADOW),
+    r(19, 30, 1, 1, GOLD),
+    r(21, 30, 1, 1, GOLD),
+  ];
+}
+
 interface PixelCharacterProps {
   config: CharacterConfig;
   size?: number;
   showWeeklyCrown?: boolean;
   showTorch?: boolean;
   showStreakAura?: boolean;
+  showPerfectWeek?: boolean;
 }
 
-function PixelCharacterInner({ config, size = 80, showWeeklyCrown = false, showTorch = false, showStreakAura = false }: PixelCharacterProps) {
+function PixelCharacterInner({ config, size = 80, showWeeklyCrown = false, showTorch = false, showStreakAura = false, showPerfectWeek = false }: PixelCharacterProps) {
   const pose = config.pose || "idle";
 
   // Blink animation — random interval, quick close
@@ -165,6 +168,9 @@ function PixelCharacterInner({ config, size = 80, showWeeklyCrown = false, showT
       // Body
       bodyPixels(config.shirtStyle, shirt, skin),
 
+      // Perfect week star patch (on shirt)
+      ...(showPerfectWeek ? [perfectWeekStarPixels()] : []),
+
       // Arms
       armPixels(pose, config.shirtStyle, shirt, skin),
 
@@ -182,9 +188,6 @@ function PixelCharacterInner({ config, size = 80, showWeeklyCrown = false, showT
       // Weapons (rendered on top, near hand)
       ...(config.weapon && config.weapon !== "none" ? [weaponPixels(config.weapon, pose)] : []),
 
-      // Streak leader torch
-      ...(showTorch ? [streakTorchPixels()] : []),
-
       // Weekly crown overlay — rendered on top if winner and not already wearing crown
       ...(showWeeklyCrown && config.accessory !== "crown" ? [
         weeklyCrownPixels(),
@@ -197,16 +200,19 @@ function PixelCharacterInner({ config, size = 80, showWeeklyCrown = false, showT
     config.shirtStyle, config.shirtColor,
     config.pantsStyle, config.pantsColor,
     config.shoeColor, config.accessory, config.pet, config.weapon,
-    pose, blinking, showWeeklyCrown, showTorch, showStreakAura,
+    pose, blinking, showWeeklyCrown, showStreakAura, showPerfectWeek,
   ]);
 
   return (
-    <PixelRenderer
-      pixels={pixels}
-      width={GRID_W}
-      height={GRID_H}
-      size={size}
-    />
+    <View style={{ position: "relative" }}>
+      <PixelRenderer
+        pixels={pixels}
+        width={GRID_W}
+        height={GRID_H}
+        size={size}
+      />
+      {showTorch && <AnimatedStaffFlame size={size} gridWidth={GRID_W} gridHeight={GRID_H} />}
+    </View>
   );
 }
 

@@ -1,4 +1,4 @@
-// WeatherBackground - beautiful night sky with stars, moon, trees, owl and grass
+// WeatherBackground - beautiful winter night sky with stars, moon, snow, trees, owl and grass
 
 import React, { useEffect, useRef, useMemo, useState } from 'react';
 import { View, Animated, Dimensions } from 'react-native';
@@ -326,6 +326,64 @@ function PineTree({ height, x, shade }: { height: number; x: number; shade: numb
 }
 
 
+// Falling snowflake particle
+function Snowflake({ x, delay, size, duration }: { x: number; delay: number; size: number; duration: number }) {
+  const translateY = useRef(new Animated.Value(-20)).current;
+  const translateX = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animate = () => {
+      translateY.setValue(-20);
+      translateX.setValue(0);
+      opacity.setValue(0);
+      Animated.parallel([
+        Animated.sequence([
+          Animated.timing(opacity, { toValue: 0.7, duration: 400, useNativeDriver: true }),
+          Animated.timing(opacity, { toValue: 0.6, duration: duration - 800, useNativeDriver: true }),
+          Animated.timing(opacity, { toValue: 0, duration: 400, useNativeDriver: true }),
+        ]),
+        Animated.timing(translateY, {
+          toValue: SCREEN_HEIGHT + 20,
+          duration,
+          useNativeDriver: true,
+        }),
+        // Gentle lateral drift
+        Animated.sequence([
+          Animated.timing(translateX, { toValue: 15, duration: duration / 3, useNativeDriver: true }),
+          Animated.timing(translateX, { toValue: -10, duration: duration / 3, useNativeDriver: true }),
+          Animated.timing(translateX, { toValue: 5, duration: duration / 3, useNativeDriver: true }),
+        ]),
+      ]).start(() => {
+        setTimeout(animate, Math.random() * 2000);
+      });
+    };
+    const timer = setTimeout(animate, delay);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <Animated.View
+      style={{
+        position: "absolute",
+        left: x,
+        top: 0,
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: "#FFFFFF",
+        opacity,
+        transform: [{ translateY }, { translateX }],
+        shadowColor: "#FFFFFF",
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.5,
+        shadowRadius: size,
+        zIndex: 100,
+      }}
+    />
+  );
+}
+
 export function WeatherBackground({ children }: WeatherBackgroundProps) {
   // Generate random stars with variety - go all the way down to tree tops
   const stars = useMemo(() => {
@@ -338,6 +396,20 @@ export function WeatherBackground({ children }: WeatherBackgroundProps) {
         size: Math.random() < 0.15 ? 3 + Math.random() * 2 : 1 + Math.random() * 2,
         delay: Math.random() * 3000,
         color: starColors[Math.floor(Math.random() * starColors.length)],
+      });
+    }
+    return result;
+  }, []);
+
+  // Generate snowflakes
+  const snowflakes = useMemo(() => {
+    const result = [];
+    for (let i = 0; i < 25; i++) {
+      result.push({
+        x: Math.random() * SCREEN_WIDTH,
+        delay: Math.random() * 6000,
+        size: 1.5 + Math.random() * 3,
+        duration: 6000 + Math.random() * 6000,
       });
     }
     return result;
@@ -380,11 +452,16 @@ export function WeatherBackground({ children }: WeatherBackgroundProps) {
       {/* Shooting star */}
       <ShootingStar delay={4000} />
 
-      {/* Trees */}
+      {/* Snowflakes */}
+      {snowflakes.map((flake, i) => (
+        <Snowflake key={`snow-${i}`} x={flake.x} delay={flake.delay} size={flake.size} duration={flake.duration} />
+      ))}
+
+      {/* Trees — snow-capped for winter */}
       {trees.map((tree, i) => (
         <View key={i} style={{ position: 'absolute', left: tree.x, bottom: 0, zIndex: 10 }}>
           <SwayingTree height={tree.height} shade={tree.shade} stagger={i * 0.05}>
-            <DetailedPineTree height={tree.height} shade={tree.shade} />
+            <DetailedPineTree height={tree.height} shade={tree.shade} snowCapped />
           </SwayingTree>
         </View>
       ))}
@@ -392,33 +469,42 @@ export function WeatherBackground({ children }: WeatherBackgroundProps) {
       {/* Roosting owl */}
       <RoostingOwl treeX={owlTree.x} treeHeight={owlTree.height} />
 
-      {/* Ground layers - DESIGN.md inspired: Clean depth-based layers */}
+      {/* Ground layers — winter snow cover */}
       <View style={{
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
         height: 30,
-        backgroundColor: CampfireColors.GROUND_DARK,
+        backgroundColor: '#1A2A38',
         zIndex: 85,
       }}>
-        {/* Top grass layer - bright accent */}
+        {/* Top snow layer */}
         <View style={{
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
-          height: 4,
-          backgroundColor: CampfireColors.GROUND_GRASS
+          height: 5,
+          backgroundColor: '#D4E5F7',
         }} />
-        {/* Moss/shadow layer - depth */}
+        {/* Snow shadow layer */}
         <View style={{
           position: 'absolute',
-          top: 4,
+          top: 5,
+          left: 0,
+          right: 0,
+          height: 3,
+          backgroundColor: '#A8C4DE',
+        }} />
+        {/* Frozen earth beneath */}
+        <View style={{
+          position: 'absolute',
+          top: 8,
           left: 0,
           right: 0,
           height: 2,
-          backgroundColor: CampfireColors.GROUND_MOSS
+          backgroundColor: '#1F3040',
         }} />
       </View>
 
