@@ -17,7 +17,6 @@ export {
   POSES,
   PETS,
   WEAPONS,
-  DANCES,
   SEASONAL_ACCESSORIES,
   getCurrentSeason,
   getSeasonEndDate,

@@ -16,6 +16,7 @@ export interface ColorPalette {
   shadow: string;
   highlight: string;
   midtone: string;
+  pointsRequired?: number;
 }
 
 export interface CharacterConfig {

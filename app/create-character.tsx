@@ -36,7 +36,6 @@ import {
   POSES,
   PETS,
   WEAPONS,
-  DANCES,
   SEASONAL_ACCESSORIES,
   getCurrentSeason,
   getSeasonEndDate,
@@ -64,7 +63,7 @@ function PixelArrowBack({ size = 20 }: { size?: number }) {
   );
 }
 
-type Category = "skin" | "hair" | "shirt" | "pants" | "shoes" | "accessories" | "pose" | "pets" | "weapons" | "dances";
+type Category = "skin" | "hair" | "shirt" | "pants" | "shoes" | "accessories" | "pose" | "pets" | "weapons";
 
 export default function CreateCharacterScreen() {
   const [username, setUsername] = useState("");
@@ -93,7 +92,6 @@ export default function CreateCharacterScreen() {
     { id: "pose", label: "Pose" },
     { id: "pets", label: "Pets" },
     { id: "weapons", label: "Weapons" },
-    { id: "dances", label: "Dances" },
   ];
 
   useEffect(() => {
@@ -176,15 +174,18 @@ export default function CreateCharacterScreen() {
       case "skin":
         return (
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
-            {SKIN_TONES.map(skin => (
-              <Pressable
-                key={skin.id}
-                onPress={() => updateCharacter("skinTone", skin.id)}
-                style={{ width: 50, height: 50, backgroundColor: skin.base, borderRadius: 25, borderWidth: 3, borderColor: character.skinTone === skin.id ? SELECTED : "transparent", minWidth: 44, minHeight: 44 }}
-                accessibilityRole="button"
-                accessibilityLabel={`Skin tone ${skin.id}`}
-              />
-            ))}
+            {SKIN_TONES.map(skin => {
+              const locked = isItemLocked(skin);
+              return (
+                <Pressable
+                  key={skin.id}
+                  onPress={() => !locked && updateCharacter("skinTone", skin.id)}
+                  style={{ width: 50, height: 50, backgroundColor: skin.base, borderRadius: 25, borderWidth: 3, borderColor: locked ? "#444" : character.skinTone === skin.id ? SELECTED : "transparent", opacity: locked ? 0.5 : 1, minWidth: 44, minHeight: 44 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Skin tone ${skin.id}${locked ? ` (${skin.pointsRequired}pts)` : ""}`}
+                />
+              );
+            })}
           </View>
         );
 
@@ -207,12 +208,15 @@ export default function CreateCharacterScreen() {
             </View>
             <Text style={{ color: MUTED, ...Typography.caption, marginBottom: 10 }}>COLOR</Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
-              {HAIR_COLORS.map(color => (
-                <Pressable key={color.id} onPress={() => updateCharacter("hairColor", color.id)}
-                  style={{ width: 40, height: 40, backgroundColor: color.base, borderRadius: 20, borderWidth: 3, borderColor: character.hairColor === color.id ? SELECTED : "transparent", minWidth: 44, minHeight: 44 }}
-                  accessibilityRole="button" accessibilityLabel={`Hair color ${color.id}`}
-                />
-              ))}
+              {HAIR_COLORS.map(color => {
+                const locked = isItemLocked(color);
+                return (
+                  <Pressable key={color.id} onPress={() => !locked && updateCharacter("hairColor", color.id)}
+                    style={{ width: 40, height: 40, backgroundColor: color.base, borderRadius: 20, borderWidth: 3, borderColor: locked ? "#444" : character.hairColor === color.id ? SELECTED : "transparent", opacity: locked ? 0.5 : 1, minWidth: 44, minHeight: 44 }}
+                    accessibilityRole="button" accessibilityLabel={`Hair color ${color.id}${locked ? ` (${color.pointsRequired}pts)` : ""}`}
+                  />
+                );
+              })}
             </View>
           </View>
         );
@@ -236,12 +240,15 @@ export default function CreateCharacterScreen() {
             </View>
             <Text style={{ color: MUTED, ...Typography.caption, marginBottom: 10 }}>COLOR</Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
-              {SHIRT_COLORS.map(color => (
-                <Pressable key={color.id} onPress={() => updateCharacter("shirtColor", color.id)}
-                  style={{ width: 40, height: 40, backgroundColor: color.base, borderRadius: 20, borderWidth: 3, borderColor: character.shirtColor === color.id ? SELECTED : "transparent", minWidth: 44, minHeight: 44 }}
-                  accessibilityRole="button" accessibilityLabel={`Shirt color ${color.id}`}
-                />
-              ))}
+              {SHIRT_COLORS.map(color => {
+                const locked = isItemLocked(color);
+                return (
+                  <Pressable key={color.id} onPress={() => !locked && updateCharacter("shirtColor", color.id)}
+                    style={{ width: 40, height: 40, backgroundColor: color.base, borderRadius: 20, borderWidth: 3, borderColor: locked ? "#444" : character.shirtColor === color.id ? SELECTED : "transparent", opacity: locked ? 0.5 : 1, minWidth: 44, minHeight: 44 }}
+                    accessibilityRole="button" accessibilityLabel={`Shirt color ${color.id}${locked ? ` (${color.pointsRequired}pts)` : ""}`}
+                  />
+                );
+              })}
             </View>
           </View>
         );
@@ -265,12 +272,15 @@ export default function CreateCharacterScreen() {
             </View>
             <Text style={{ color: MUTED, ...Typography.caption, marginBottom: 10 }}>COLOR</Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
-              {PANTS_COLORS.map(color => (
-                <Pressable key={color.id} onPress={() => updateCharacter("pantsColor", color.id)}
-                  style={{ width: 40, height: 40, backgroundColor: color.base, borderRadius: 20, borderWidth: 3, borderColor: character.pantsColor === color.id ? SELECTED : "transparent", minWidth: 44, minHeight: 44 }}
-                  accessibilityRole="button" accessibilityLabel={`Pants color ${color.id}`}
-                />
-              ))}
+              {PANTS_COLORS.map(color => {
+                const locked = isItemLocked(color);
+                return (
+                  <Pressable key={color.id} onPress={() => !locked && updateCharacter("pantsColor", color.id)}
+                    style={{ width: 40, height: 40, backgroundColor: color.base, borderRadius: 20, borderWidth: 3, borderColor: locked ? "#444" : character.pantsColor === color.id ? SELECTED : "transparent", opacity: locked ? 0.5 : 1, minWidth: 44, minHeight: 44 }}
+                    accessibilityRole="button" accessibilityLabel={`Pants color ${color.id}${locked ? ` (${color.pointsRequired}pts)` : ""}`}
+                  />
+                );
+              })}
             </View>
           </View>
         );
@@ -278,12 +288,15 @@ export default function CreateCharacterScreen() {
       case "shoes":
         return (
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
-            {SHOE_COLORS.map(color => (
-              <Pressable key={color.id} onPress={() => updateCharacter("shoeColor", color.id)}
-                style={{ width: 50, height: 50, backgroundColor: color.base, borderRadius: 25, borderWidth: 3, borderColor: character.shoeColor === color.id ? SELECTED : "transparent", minWidth: 44, minHeight: 44 }}
-                accessibilityRole="button" accessibilityLabel={`Shoe color ${color.id}`}
-              />
-            ))}
+            {SHOE_COLORS.map(color => {
+              const locked = isItemLocked(color);
+              return (
+                <Pressable key={color.id} onPress={() => !locked && updateCharacter("shoeColor", color.id)}
+                  style={{ width: 50, height: 50, backgroundColor: color.base, borderRadius: 25, borderWidth: 3, borderColor: locked ? "#444" : character.shoeColor === color.id ? SELECTED : "transparent", opacity: locked ? 0.5 : 1, minWidth: 44, minHeight: 44 }}
+                  accessibilityRole="button" accessibilityLabel={`Shoe color ${color.id}${locked ? ` (${color.pointsRequired}pts)` : ""}`}
+                />
+              );
+            })}
           </View>
         );
 
@@ -385,38 +398,6 @@ export default function CreateCharacterScreen() {
                     accessibilityRole="button" accessibilityLabel={`Weapon ${weapon.name}`}
                   >
                     <Text style={{ color: locked ? "#666" : TEXT, ...Typography.caption }}>{weapon.name} {locked && `(${weapon.pointsRequired}pts)`}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-        );
-
-      case "dances":
-        return (
-          <View>
-            <Text style={{ color: MUTED, ...Typography.caption, marginBottom: 12 }}>Choose a dance move (replaces pose)</Text>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {DANCES.map(dance => {
-                const locked = isItemLocked(dance);
-                const danceIds = DANCES.map(d => d.id);
-                const currentPose = character.pose || "idle";
-                const isSelected = dance.id === "none"
-                  ? !danceIds.includes(currentPose) || currentPose === "idle"
-                  : currentPose === dance.id;
-                return (
-                  <Pressable key={dance.id} onPress={() => {
-                    if (locked) return;
-                    if (dance.id === "none") {
-                      updateCharacter("pose", "idle");
-                    } else {
-                      updateCharacter("pose", dance.id);
-                    }
-                  }}
-                    style={{ paddingHorizontal: 14, paddingVertical: 10, backgroundColor: isSelected ? SELECTED : CARD, borderRadius: Radii.sm, borderWidth: 1, borderColor: locked ? "#444" : BORDER, opacity: locked ? 0.5 : 1, minHeight: 44, justifyContent: "center" }}
-                    accessibilityRole="button" accessibilityLabel={`Dance ${dance.name}`}
-                  >
-                    <Text style={{ color: locked ? "#666" : TEXT, ...Typography.caption }}>{dance.name} {locked && `(${dance.pointsRequired}pts)`}</Text>
                   </Pressable>
                 );
               })}

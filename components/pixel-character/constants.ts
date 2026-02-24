@@ -11,17 +11,17 @@ export const SKIN_TONES: ColorPalette[] = [
   { id: "brown", base: "#8D5524", shadow: "#6D3D14", highlight: "#A86C38", midtone: "#7D4820" },
   { id: "dark", base: "#5C3A21", shadow: "#3C2211", highlight: "#7A5030", midtone: "#4D2E18" },
   { id: "espresso", base: "#4A3020", shadow: "#301810", highlight: "#604030", midtone: "#3C2418" },
-  // 10 fantasy colors
+  // 10 fantasy colors (first free, rest locked)
   { id: "blue", base: "#7CB9E8", shadow: "#5090C0", highlight: "#A0D0F0", midtone: "#68A8D8" },
-  { id: "green", base: "#90C090", shadow: "#60A060", highlight: "#B0E0B0", midtone: "#78B078" },
-  { id: "purple", base: "#B090D0", shadow: "#8060A0", highlight: "#D0B0F0", midtone: "#9878B8" },
-  { id: "pink", base: "#FFB0C0", shadow: "#E08090", highlight: "#FFD0E0", midtone: "#F098A8" },
-  { id: "gray", base: "#A0A0A0", shadow: "#707070", highlight: "#C8C8C8", midtone: "#888888" },
-  { id: "red", base: "#E07060", shadow: "#B84840", highlight: "#F09888", midtone: "#D06050" },
-  { id: "gold", base: "#E8C858", shadow: "#C0A030", highlight: "#F8E088", midtone: "#D8B848" },
-  { id: "cyan", base: "#70D0D0", shadow: "#48A8A8", highlight: "#98E8E8", midtone: "#60C0C0" },
-  { id: "lavender", base: "#C8A8E8", shadow: "#A080C0", highlight: "#E0C8FF", midtone: "#B898D8" },
-  { id: "mint", base: "#88D8A8", shadow: "#60B080", highlight: "#B0F0C8", midtone: "#78C898" },
+  { id: "green", base: "#90C090", shadow: "#60A060", highlight: "#B0E0B0", midtone: "#78B078", pointsRequired: 30 },
+  { id: "purple", base: "#B090D0", shadow: "#8060A0", highlight: "#D0B0F0", midtone: "#9878B8", pointsRequired: 35 },
+  { id: "pink", base: "#FFB0C0", shadow: "#E08090", highlight: "#FFD0E0", midtone: "#F098A8", pointsRequired: 40 },
+  { id: "gray", base: "#A0A0A0", shadow: "#707070", highlight: "#C8C8C8", midtone: "#888888", pointsRequired: 45 },
+  { id: "red", base: "#E07060", shadow: "#B84840", highlight: "#F09888", midtone: "#D06050", pointsRequired: 50 },
+  { id: "gold", base: "#E8C858", shadow: "#C0A030", highlight: "#F8E088", midtone: "#D8B848", pointsRequired: 55 },
+  { id: "cyan", base: "#70D0D0", shadow: "#48A8A8", highlight: "#98E8E8", midtone: "#60C0C0", pointsRequired: 60 },
+  { id: "lavender", base: "#C8A8E8", shadow: "#A080C0", highlight: "#E0C8FF", midtone: "#B898D8", pointsRequired: 70 },
+  { id: "mint", base: "#88D8A8", shadow: "#60B080", highlight: "#B0F0C8", midtone: "#78C898", pointsRequired: 75 },
 ];
 
 export const HAIR_COLORS: ColorPalette[] = [
@@ -32,16 +32,17 @@ export const HAIR_COLORS: ColorPalette[] = [
   { id: "blonde", base: "#DAA520", shadow: "#a07810", highlight: "#F0C040", midtone: "#C49018" },
   { id: "platinum", base: "#E8E8E8", shadow: "#c0c0c0", highlight: "#FFFFFF", midtone: "#d8d8d8" },
   { id: "red", base: "#B22222", shadow: "#801818", highlight: "#D44444", midtone: "#991c1c" },
-  { id: "pink", base: "#FF69B4", shadow: "#d44090", highlight: "#FF8DC7", midtone: "#f050a0" },
-  { id: "blue", base: "#4169E1", shadow: "#2848a8", highlight: "#6189FF", midtone: "#3858c8" },
-  { id: "purple", base: "#8B5CF6", shadow: "#6840c0", highlight: "#A87CFF", midtone: "#7a50e0" },
-  { id: "green", base: "#228B22", shadow: "#166016", highlight: "#44AD44", midtone: "#1c781c" },
-  { id: "teal", base: "#20B2AA", shadow: "#148884", highlight: "#40D2CA", midtone: "#189898" },
-  { id: "silver", base: "#C0C0C0", shadow: "#909090", highlight: "#E0E0E0", midtone: "#A8A8A8" },
-  { id: "white", base: "#F0F0F0", shadow: "#C8C8C8", highlight: "#FFFFFF", midtone: "#E0E0E0" },
+  { id: "pink", base: "#FF69B4", shadow: "#d44090", highlight: "#FF8DC7", midtone: "#f050a0", pointsRequired: 30 },
+  { id: "blue", base: "#4169E1", shadow: "#2848a8", highlight: "#6189FF", midtone: "#3858c8", pointsRequired: 35 },
+  { id: "purple", base: "#8B5CF6", shadow: "#6840c0", highlight: "#A87CFF", midtone: "#7a50e0", pointsRequired: 40 },
+  { id: "green", base: "#228B22", shadow: "#166016", highlight: "#44AD44", midtone: "#1c781c", pointsRequired: 50 },
+  { id: "teal", base: "#20B2AA", shadow: "#148884", highlight: "#40D2CA", midtone: "#189898", pointsRequired: 55 },
+  { id: "silver", base: "#C0C0C0", shadow: "#909090", highlight: "#E0E0E0", midtone: "#A8A8A8", pointsRequired: 65 },
+  { id: "white", base: "#F0F0F0", shadow: "#C8C8C8", highlight: "#FFFFFF", midtone: "#E0E0E0", pointsRequired: 75 },
 ];
 
 export const HAIR_STYLES = [
+  // Free top half (9)
   { id: "short", name: "Short", unlocked: true },
   { id: "medium", name: "Medium", unlocked: true },
   { id: "long", name: "Long", unlocked: true },
@@ -50,7 +51,8 @@ export const HAIR_STYLES = [
   { id: "dreads", name: "Dreads", unlocked: true },
   { id: "ponytail", name: "Ponytail", unlocked: true },
   { id: "bun", name: "Bun", unlocked: true },
-  { id: "spiky", name: "Spiky", pointsRequired: 50 },
+  { id: "spiky", name: "Spiky", unlocked: true },
+  // Locked bottom half (8)
   { id: "mohawk", name: "Mohawk", pointsRequired: 100 },
   { id: "pigtails", name: "Pigtails", pointsRequired: 75 },
   { id: "braids", name: "Braids", pointsRequired: 60 },
@@ -68,21 +70,23 @@ export const SHIRT_COLORS: ColorPalette[] = [
   { id: "blue", base: "#2563EB", shadow: "#1845a8", highlight: "#4080FF", midtone: "#2055d0" },
   { id: "green", base: "#16A34A", shadow: "#0e7030", highlight: "#28C860", midtone: "#129040" },
   { id: "yellow", base: "#EAB308", shadow: "#b08800", highlight: "#FFD030", midtone: "#d0a008" },
-  { id: "purple", base: "#9333EA", shadow: "#6820b0", highlight: "#B050FF", midtone: "#8028d0" },
-  { id: "pink", base: "#EC4899", shadow: "#c03078", highlight: "#FF60B0", midtone: "#d83888" },
-  { id: "orange", base: "#EA580C", shadow: "#b04008", highlight: "#FF7028", midtone: "#d04c0a" },
-  { id: "teal", base: "#0D9488", shadow: "#087068", highlight: "#20B8A8", midtone: "#0a8078" },
-  { id: "brown", base: "#8B6914", shadow: "#6B4C0C", highlight: "#A8842C", midtone: "#7A5C10" },
-  { id: "crimson", base: "#9B1B30", shadow: "#6D1020", highlight: "#C02040", midtone: "#881828" },
+  { id: "purple", base: "#9333EA", shadow: "#6820b0", highlight: "#B050FF", midtone: "#8028d0", pointsRequired: 30 },
+  { id: "pink", base: "#EC4899", shadow: "#c03078", highlight: "#FF60B0", midtone: "#d83888", pointsRequired: 35 },
+  { id: "orange", base: "#EA580C", shadow: "#b04008", highlight: "#FF7028", midtone: "#d04c0a", pointsRequired: 45 },
+  { id: "teal", base: "#0D9488", shadow: "#087068", highlight: "#20B8A8", midtone: "#0a8078", pointsRequired: 55 },
+  { id: "brown", base: "#8B6914", shadow: "#6B4C0C", highlight: "#A8842C", midtone: "#7A5C10", pointsRequired: 65 },
+  { id: "crimson", base: "#9B1B30", shadow: "#6D1020", highlight: "#C02040", midtone: "#881828", pointsRequired: 75 },
 ];
 
 export const SHIRT_STYLES = [
+  // Free top half (6)
   { id: "tshirt", name: "T-Shirt", unlocked: true },
   { id: "polo", name: "Polo", unlocked: true },
   { id: "tank", name: "Tank Top", unlocked: true },
   { id: "crop", name: "Crop Top", unlocked: true },
-  { id: "hoodie", name: "Hoodie", pointsRequired: 30 },
-  { id: "vest", name: "Vest", pointsRequired: 35 },
+  { id: "hoodie", name: "Hoodie", unlocked: true },
+  { id: "vest", name: "Vest", unlocked: true },
+  // Locked bottom half (6)
   { id: "sweater", name: "Sweater", pointsRequired: 40 },
   { id: "jacket", name: "Jacket", pointsRequired: 55 },
   { id: "flannel", name: "Flannel", pointsRequired: 60 },
@@ -96,18 +100,20 @@ export const PANTS_COLORS: ColorPalette[] = [
   { id: "black", base: "#1F1F1F", shadow: "#0a0a0a", highlight: "#383838", midtone: "#151515" },
   { id: "brown", base: "#78350F", shadow: "#4c2208", highlight: "#985018", midtone: "#602c0c" },
   { id: "gray", base: "#4B5563", shadow: "#303840", highlight: "#687080", midtone: "#404850" },
-  { id: "green", base: "#166534", shadow: "#0d4020", highlight: "#208548", midtone: "#125028" },
-  { id: "khaki", base: "#A8A29E", shadow: "#807870", highlight: "#C0B8B0", midtone: "#989088" },
-  { id: "white", base: "#E8E8E8", shadow: "#B8B8B8", highlight: "#FFFFFF", midtone: "#D8D8D8" },
-  { id: "red", base: "#8B2020", shadow: "#5C1010", highlight: "#B03030", midtone: "#781818" },
+  { id: "green", base: "#166534", shadow: "#0d4020", highlight: "#208548", midtone: "#125028", pointsRequired: 30 },
+  { id: "khaki", base: "#A8A29E", shadow: "#807870", highlight: "#C0B8B0", midtone: "#989088", pointsRequired: 40 },
+  { id: "white", base: "#E8E8E8", shadow: "#B8B8B8", highlight: "#FFFFFF", midtone: "#D8D8D8", pointsRequired: 50 },
+  { id: "red", base: "#8B2020", shadow: "#5C1010", highlight: "#B03030", midtone: "#781818", pointsRequired: 60 },
 ];
 
 export const PANTS_STYLES = [
+  // Free top half (4)
   { id: "jeans", name: "Jeans", unlocked: true },
   { id: "skinny", name: "Skinny Pants", unlocked: true },
   { id: "ripped", name: "Ripped Jeans", unlocked: true },
   { id: "shorts", name: "Shorts", unlocked: true },
-  { id: "skirt", name: "Skirt", unlocked: true },
+  // Locked bottom half (3)
+  { id: "skirt", name: "Skirt", pointsRequired: 30 },
   { id: "baggy", name: "Baggy Pants", pointsRequired: 40 },
   { id: "dress", name: "Dress", pointsRequired: 50 },
 ];
@@ -117,9 +123,9 @@ export const SHOE_COLORS: ColorPalette[] = [
   { id: "black", base: "#1F1F1F", shadow: "#0a0a0a", highlight: "#383838", midtone: "#151515" },
   { id: "white", base: "#E5E5E5", shadow: "#b8b8b8", highlight: "#FFFFFF", midtone: "#d0d0d0" },
   { id: "red", base: "#DC2626", shadow: "#9c1818", highlight: "#F04040", midtone: "#c42020" },
-  { id: "blue", base: "#2563EB", shadow: "#1845a8", highlight: "#4080FF", midtone: "#2055d0" },
-  { id: "green", base: "#166534", shadow: "#0d4020", highlight: "#208548", midtone: "#125028" },
-  { id: "pink", base: "#EC4899", shadow: "#c03078", highlight: "#FF60B0", midtone: "#d83888" },
+  { id: "blue", base: "#2563EB", shadow: "#1845a8", highlight: "#4080FF", midtone: "#2055d0", pointsRequired: 30 },
+  { id: "green", base: "#166534", shadow: "#0d4020", highlight: "#208548", midtone: "#125028", pointsRequired: 40 },
+  { id: "pink", base: "#EC4899", shadow: "#c03078", highlight: "#FF60B0", midtone: "#d83888", pointsRequired: 50 },
 ];
 
 export const ACCESSORIES = [
@@ -138,8 +144,8 @@ export const ACCESSORIES = [
   { id: "monocle", name: "Monocle", unlocked: true },
   { id: "war_paint", name: "War Paint", unlocked: true },
   { id: "unicorn_horn", name: "Unicorn Horn", unlocked: true },
-  // Locked bottom half (50-500 pts)
-  { id: "cape", name: "Cape", pointsRequired: 50 },
+  { id: "cape", name: "Cape", unlocked: true },
+  // Locked bottom half (75-500 pts)
   { id: "witch_hat", name: "Witch Hat", pointsRequired: 75 },
   { id: "wings", name: "Wings", pointsRequired: 100 },
   { id: "flame_aura", name: "Flame Aura", pointsRequired: 100 },
@@ -208,18 +214,20 @@ export function getSeasonEndDate(): Date {
 }
 
 export const POSES = [
+  // Free top half (12)
   { id: "idle", name: "Idle", unlocked: true },
   { id: "waving", name: "Waving", unlocked: true },
   { id: "raising_roof", name: "Raising the Roof", unlocked: true },
   { id: "robot", name: "Robot Arms", unlocked: true },
   { id: "tpose", name: "T-Pose", unlocked: true },
-  { id: "karate", name: "Karate", pointsRequired: 20 },
-  { id: "hands_up", name: "Hands Up", pointsRequired: 25 },
-  { id: "dab", name: "Dab", pointsRequired: 30 },
-  { id: "thinking", name: "Thinking", pointsRequired: 35 },
-  { id: "peace", name: "Peace Signs", pointsRequired: 40 },
-  { id: "crossed_arms", name: "Crossed Arms", pointsRequired: 45 },
-  { id: "flexing", name: "Flexing", pointsRequired: 50 },
+  { id: "karate", name: "Karate", unlocked: true },
+  { id: "hands_up", name: "Hands Up", unlocked: true },
+  { id: "dab", name: "Dab", unlocked: true },
+  { id: "thinking", name: "Thinking", unlocked: true },
+  { id: "peace", name: "Peace Signs", unlocked: true },
+  { id: "crossed_arms", name: "Crossed Arms", unlocked: true },
+  { id: "flexing", name: "Flexing", unlocked: true },
+  // Locked bottom half (11)
   { id: "fighting_stance", name: "Fighter", pointsRequired: 60 },
   { id: "casting", name: "Casting", pointsRequired: 70 },
   { id: "middle_fingers", name: "Middle Fingers", pointsRequired: 75 },
@@ -234,10 +242,12 @@ export const POSES = [
 ];
 
 export const PETS = [
+  // Free top half (4)
   { id: "none", name: "None", unlocked: true },
-  { id: "puppy", name: "Puppy", pointsRequired: 50 },
-  { id: "kitten", name: "Kitten", pointsRequired: 75 },
-  { id: "frog", name: "Frog", pointsRequired: 100 },
+  { id: "puppy", name: "Puppy", unlocked: true },
+  { id: "kitten", name: "Kitten", unlocked: true },
+  { id: "frog", name: "Frog", unlocked: true },
+  // Locked bottom half (4)
   { id: "owl", name: "Owl", pointsRequired: 150 },
   { id: "fox", name: "Fox", pointsRequired: 225 },
   { id: "baby_dragon", name: "Baby Dragon", pointsRequired: 350 },
@@ -245,25 +255,16 @@ export const PETS = [
 ];
 
 export const WEAPONS = [
+  // Free top half (4)
   { id: "none", name: "None", unlocked: true },
-  { id: "wooden_sword", name: "Wooden Sword", pointsRequired: 50 },
-  { id: "dagger", name: "Dagger", pointsRequired: 75 },
-  { id: "bow", name: "Bow", pointsRequired: 100 },
+  { id: "wooden_sword", name: "Wooden Sword", unlocked: true },
+  { id: "dagger", name: "Dagger", unlocked: true },
+  { id: "bow", name: "Bow", unlocked: true },
+  // Locked bottom half (4)
   { id: "battle_axe", name: "Battle Axe", pointsRequired: 175 },
   { id: "trident", name: "Trident", pointsRequired: 275 },
   { id: "flame_sword", name: "Flame Sword", pointsRequired: 400 },
   { id: "celestial_staff", name: "Celestial Staff", pointsRequired: 500 },
-];
-
-export const DANCES = [
-  { id: "none", name: "None", unlocked: true },
-  { id: "disco", name: "Disco", pointsRequired: 50 },
-  { id: "floss", name: "Floss", pointsRequired: 75 },
-  { id: "moonwalk", name: "Moonwalk", pointsRequired: 125 },
-  { id: "breakdance", name: "Breakdance", pointsRequired: 200 },
-  { id: "macarena", name: "Macarena", pointsRequired: 300 },
-  { id: "robot_dance", name: "Robot Dance", pointsRequired: 400 },
-  { id: "fire_dance", name: "Fire Dance", pointsRequired: 500 },
 ];
 
 export const DEFAULT_CHARACTER: CharacterConfig = {
