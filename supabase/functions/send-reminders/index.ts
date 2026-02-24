@@ -56,18 +56,19 @@ Deno.serve(async (req) => {
 
     if (forceAll) {
       // Get ALL currently active prompts (ignore reminder timing/flags)
-      // Active = started today (within last 24h)
+      // Active = scheduled within last 24h and not yet expired
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
       const result = await supabase
-        .from('prompt_instances')
+        .from('group_prompts')
         .select(`
           id,
           group_id,
           groups!inner(name),
           prompts!inner(title, type)
         `)
-        .gte('starts_at', yesterday)
-        .lte('starts_at', new Date().toISOString())
+        .gte('scheduled_for', yesterday)
+        .lte('scheduled_for', new Date().toISOString())
+        .eq('is_active', true)
 
       if (result.error) {
         promptError = result.error
