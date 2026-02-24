@@ -46,7 +46,7 @@ interface MembersCircleModalProps {
     user_id: string;
     avatar_config: CharacterConfig | null;
     username: string | null;
-    weekly_crown_until?: string | null;
+    isWeeklyCrownWinner?: boolean;
     current_streak?: number;
   }>;
   streakLeaderId?: string | null;
@@ -125,7 +125,7 @@ function DancingMember({
         <PixelCharacter
           config={config}
           size={55}
-          showWeeklyCrown={!!member.weekly_crown_until && new Date(member.weekly_crown_until) > new Date()}
+          showWeeklyCrown={!!member.isWeeklyCrownWinner}
           showTorch={isStreakLeader}
           showStreakAura={(member.current_streak || 0) >= 20}
         />

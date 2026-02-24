@@ -1246,7 +1246,7 @@ function GroupScreenInner() {
   const [userStreak, setUserStreak] = useState<number>(0);
   const [longestStreak, setLongestStreak] = useState<number>(0);
   const [myAvatar, setMyAvatar] = useState<CharacterConfig | null>(null);
-  const [allMembers, setAllMembers] = useState<Array<{ user_id: string; avatar_config: CharacterConfig | null; username: string | null; weekly_crown_until: string | null; current_streak: number; hasPerfectWeek: boolean }>>([]);
+  const [allMembers, setAllMembers] = useState<Array<{ user_id: string; avatar_config: CharacterConfig | null; username: string | null; isWeeklyCrownWinner: boolean; current_streak: number; hasPerfectWeek: boolean }>>([]);
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [memberStatuses, setMemberStatuses] = useState<Record<string, 'not_seen' | 'seen' | 'responded'>>({});
   const [firesideProgress, setFiresideProgress] = useState<Record<string, 'completed' | 'partial' | 'not_started'>>({});
@@ -1512,24 +1512,25 @@ function GroupScreenInner() {
         setFireLevel((data as any).fire_level || 1);
       }
 
-      // Load user's individual streak
+      // Load user's individual streak (per-group from group_members)
       const { data: userData } = await supabase.auth.getUser();
       if (userData?.user) {
-        const { data: profile } = await supabase
-          .from("profiles")
+        const { data: gmStreak } = await supabase
+          .from("group_members")
           .select("current_streak, longest_streak")
-          .eq("id", userData.user.id)
+          .eq("group_id", groupId)
+          .eq("user_id", userData.user.id)
           .single();
-        if (profile) {
-          setUserStreak(profile.current_streak || 0);
-          setLongestStreak((profile as any).longest_streak || 0);
+        if (gmStreak) {
+          setUserStreak((gmStreak as any).current_streak || 0);
+          setLongestStreak((gmStreak as any).longest_streak || 0);
         }
       }
 
-      // Load all group members
+      // Load all group members (with per-group streak data)
       const { data: members, error: membersError } = await supabase
         .from("group_members")
-        .select("user_id")
+        .select("user_id, current_streak, longest_streak")
         .eq("group_id", groupId);
 
       if (membersError) {
@@ -1539,15 +1540,33 @@ function GroupScreenInner() {
       if (members && members.length > 0) {
         setMemberCount(members.length);
 
-        // Fetch profiles for all members
+        // Fetch profiles for all members (avatar + username only)
         const userIds = members.map((m: any) => m.user_id);
         const { data: profiles, error: profilesError } = await supabase
           .from("profiles")
-          .select("id, avatar_config, username, weekly_crown_until, current_streak")
+          .select("id, avatar_config, username")
           .in("id", userIds);
 
         if (profilesError) {
           console.error("Error loading profiles:", profilesError);
+        }
+
+        // Determine crown winner from weekly_winners for THIS group (not global)
+        const { data: recentWinner } = await supabase
+          .from("weekly_winners")
+          .select("winner_user_id, week_of")
+          .eq("group_id", groupId)
+          .order("week_of", { ascending: false })
+          .limit(1)
+          .single();
+        // Crown lasts 7 days from the Monday of the winning week
+        let crownUserId: string | null = null;
+        if (recentWinner) {
+          const winWeek = new Date(recentWinner.week_of + 'T00:00:00');
+          const daysSinceWin = (Date.now() - winWeek.getTime()) / (1000 * 60 * 60 * 24);
+          if (daysSinceWin <= 10) { // generous window: winning week + next week
+            crownUserId = recentWinner.winner_user_id;
+          }
         }
 
         // Query perfect week status from last completed week
@@ -1567,15 +1586,15 @@ function GroupScreenInner() {
           (perfectWeekData || []).map((pw: any) => pw.user_id)
         );
 
-        // Combine member data with avatars
+        // Combine member data with avatars + per-group streaks + per-group crown
         const membersWithAvatars = members.map((m: any) => {
           const profile = profiles?.find((p: any) => p.id === m.user_id);
           return {
             user_id: m.user_id,
             avatar_config: profile?.avatar_config as CharacterConfig | null,
             username: (profile as any)?.username as string | null ?? null,
-            weekly_crown_until: (profile as any)?.weekly_crown_until as string | null ?? null,
-            current_streak: (profile as any)?.current_streak as number || 0,
+            isWeeklyCrownWinner: m.user_id === crownUserId,
+            current_streak: (m as any)?.current_streak as number || 0,
             hasPerfectWeek: perfectWeekUserIds.has(m.user_id),
           };
         });
@@ -1883,7 +1902,7 @@ function GroupScreenInner() {
                       <PixelCharacter
                         config={member.avatar_config || DEFAULT_CHARACTER}
                         size={22}
-                        showWeeklyCrown={!!member.weekly_crown_until && new Date(member.weekly_crown_until) > new Date()}
+                        showWeeklyCrown={member.isWeeklyCrownWinner}
                         showTorch={member.user_id === streakLeaderId}
                         showStreakAura={member.current_streak >= 20}
                         showPerfectWeek={member.hasPerfectWeek}
@@ -2358,7 +2377,7 @@ function GroupScreenInner() {
                   <PixelCharacter
                     config={member.avatar_config || DEFAULT_CHARACTER}
                     size={22}
-                    showWeeklyCrown={!!member.weekly_crown_until && new Date(member.weekly_crown_until) > new Date()}
+                    showWeeklyCrown={member.isWeeklyCrownWinner}
                     showTorch={member.user_id === streakLeaderId}
                     showStreakAura={member.current_streak >= 20}
                     showPerfectWeek={member.hasPerfectWeek}

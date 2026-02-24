@@ -1164,7 +1164,7 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
                   <PixelCharacter
                     config={(entry.avatar_config as unknown as CharacterConfig) || DEFAULT_CHARACTER}
                     size={36}
-                    showWeeklyCrown={!!entry.weekly_crown_until && new Date(entry.weekly_crown_until) > new Date()}
+                    showWeeklyCrown={index === 0}
                   />
                 </View>
                 <View style={styles.leaderboardInfo}>
