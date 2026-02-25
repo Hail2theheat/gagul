@@ -16,17 +16,17 @@ export const SCHEDULE = {
   },
 
   nudge: {
-    hour: 19,               // 7 PM ET (non-responders)
+    hour: 14,               // 2 PM ET — new prompt announcement (non-responders)
+    reminderHour: 20,       // 8:30 PM ET — reminder (non-responders)
     activeDays: [1, 2, 3, 4, 5, 6] as readonly number[], // Mon–Sat
   },
 
   fireside: {
     day: 0,                 // Sunday
-    visibleHour: 2,         // Sun 2 AM — card appears (locked)
-    nudgeHour: 18,          // Sun 6 PM — nudge ALL users
-    unlockHour: 19,         // Sun 7 PM — fireside opens
+    visibleHour: 12,        // Sun 12 PM — fireside opens
+    unlockHour: 12,         // Sun 12 PM — fireside opens (no locked period)
     endDay: 1,              // Monday
-    endHour: 6,             // Mon 6 AM ET — fireside closes
+    endHour: 3,             // Mon 3 AM ET — fireside closes (2:59 AM)
   },
 } as const;
 
@@ -115,9 +115,8 @@ export function getActivePromptDay(now?: Date): number | null {
 /**
  * Get the current fireside state.
  *
- * HIDDEN:          Mon 6 AM → Sun 1:59 AM  (all week)
- * VISIBLE_LOCKED:  Sun 2 AM → Sun 6:59 PM  (card visible, can't enter)
- * UNLOCKED:        Sun 7 PM → Mon 5:59 AM  (fireside open)
+ * HIDDEN:    Mon 3 AM → Sun 11:59 AM  (all week)
+ * UNLOCKED:  Sun 12 PM → Mon 2:59 AM  (fireside open)
  */
 export function getFiresideState(now?: Date): FiresideState {
   const { dayOfWeek, hour } = getNowET(now);
@@ -146,19 +145,22 @@ export function getFiresideState(now?: Date): FiresideState {
 /**
  * Should a nudge notification be sent right now?
  *
- * Mon–Sat 7 PM ET → nudge non-responders
- * Sun 6 PM ET     → nudge ALL users (fireside reminder)
+ * Mon–Sat 2 PM ET    → new prompt announcement (non-responders)
+ * Mon–Sat 8:30 PM ET → prompt reminder (non-responders)
+ * Sun 12 PM ET       → fireside open (ALL users)
+ * Sun 9 PM ET        → fireside reminder (users who haven't seen it)
  */
 export function shouldSendNudge(now?: Date): { should: boolean; targetAll: boolean } {
   const { dayOfWeek, hour } = getNowET(now);
 
-  // Sunday fireside nudge
-  if (dayOfWeek === SCHEDULE.fireside.day && hour === SCHEDULE.fireside.nudgeHour) {
-    return { should: true, targetAll: true };
+  // Sunday fireside notifications
+  if (dayOfWeek === SCHEDULE.fireside.day && (hour === 12 || hour === 21)) {
+    return { should: true, targetAll: hour === 12 };
   }
 
-  // Mon–Sat prompt nudge
-  if (SCHEDULE.nudge.activeDays.includes(dayOfWeek) && hour === SCHEDULE.nudge.hour) {
+  // Mon–Sat prompt nudge (2 PM or 8:30 PM)
+  if (SCHEDULE.nudge.activeDays.includes(dayOfWeek) &&
+      (hour === SCHEDULE.nudge.hour || hour === SCHEDULE.nudge.reminderHour)) {
     return { should: true, targetAll: false };
   }
 
@@ -170,8 +172,8 @@ export function shouldSendNudge(now?: Date): { should: boolean; targetAll: boole
  * Uses Intl so it automatically adjusts for the viewer's locale.
  */
 export function getFiresideLocalTime(): string {
-  // Build a Date for "next Sunday 7 PM ET" — we only need the time portion
-  // so we construct a reference date in UTC that corresponds to 7 PM ET.
+  // Build a Date for "next Sunday 12 PM ET" — we only need the time portion
+  // so we construct a reference date in UTC that corresponds to 12 PM ET.
   // ET is UTC-5 (EST) or UTC-4 (EDT). Intl handles this for us: we just
   // need any Sunday at unlockHour in ET.
   const ref = new Date();
