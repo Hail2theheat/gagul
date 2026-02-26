@@ -21,6 +21,8 @@ import {
 } from "../lib/hooks/useAdminData";
 import { getWeekOf, type AdminGroupPrompt, type AdminResponse } from "../lib/services/adminService";
 import { getSignedImageUrl } from "../lib/services/firesideService";
+import { getPhotoCompletionResults } from "../lib/services/photoCompletionService";
+import type { PhotoCompletionPair } from "../lib/types/photoCompletion";
 import { supabase } from "../lib/supabase";
 import { NightSky } from "../components/sky";
 import { PixelTitle } from "../components/PixelTitle";
@@ -746,32 +748,12 @@ function AIOperationsSection({
             );
           })}
 
-          {/* Photo Completion AI Merge */}
+          {/* Photo Completion AI Merge + Preview */}
           {hasPhotoCompletion && (
-            <AIOpRow
-              icon="Merge"
-              label="AI Photo Merge"
-              detail={`Phase: ${pcState?.phase || "?"}`}
-              status={pcState?.phase === "complete" ? "done" : pcState?.phase === "submit_completion" ? "waiting" : "scheduled"}
-              actionLabel={pcState?.phase === "complete" ? "Run Merge" : undefined}
-              onAction={
-                pcState?.phase === "complete" && groupId
-                  ? () => {
-                      Alert.alert(
-                        "Run AI Merge",
-                        "Trigger AI photo merging for all completed pairs?",
-                        [
-                          { text: "Cancel", style: "cancel" },
-                          {
-                            text: "Merge",
-                            onPress: () =>
-                              Alert.alert("TODO", "Call merge-photos edge function for each pair"),
-                          },
-                        ]
-                      );
-                    }
-                  : undefined
-              }
+            <PhotoCompletionPreview
+              groupId={groupId!}
+              weekOf={weekOf}
+              phase={pcState?.phase || "?"}
             />
           )}
 
@@ -810,6 +792,334 @@ function AIOperationsSection({
                 : undefined
             }
           />
+        </View>
+      )}
+    </View>
+  );
+}
+
+// ─── Photo Completion Preview ───────────────────────────────
+function PhotoCompletionPreview({
+  groupId,
+  weekOf,
+  phase,
+}: {
+  groupId: string;
+  weekOf: string;
+  phase: string;
+}) {
+  const [pairs, setPairs] = useState<PhotoCompletionPair[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(false);
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  const [merging, setMerging] = useState<Record<string, boolean>>({});
+  const [mergeResults, setMergeResults] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    loadPairs();
+  }, [groupId, weekOf]);
+
+  const loadPairs = async () => {
+    setLoading(true);
+    const results = await getPhotoCompletionResults(groupId, weekOf);
+    const p = results?.pairs || [];
+    setPairs(p);
+    setLoading(false);
+
+    // Resolve signed URLs for all photos
+    const urls: Record<string, string> = {};
+    for (const pair of p) {
+      if (pair.original_photo_url) {
+        const signed = await getSignedImageUrl(pair.original_photo_url);
+        if (signed) urls[pair.original_photo_url] = signed;
+      }
+      if (pair.completion_photo_url) {
+        const signed = await getSignedImageUrl(pair.completion_photo_url);
+        if (signed) urls[pair.completion_photo_url] = signed;
+      }
+      if (pair.merged_photo_url) {
+        const signed = await getSignedImageUrl(pair.merged_photo_url);
+        if (signed) urls[pair.merged_photo_url] = signed;
+      }
+    }
+    setSignedUrls(urls);
+  };
+
+  const handleMerge = async (pair: PhotoCompletionPair) => {
+    if (!pair.original_photo_url || !pair.completion_photo_url) {
+      Alert.alert("Missing Photos", "Both cutoff and completion photos are required.");
+      return;
+    }
+
+    setMerging((prev) => ({ ...prev, [pair.assignment_id]: true }));
+    try {
+      const resp = await supabase.functions.invoke("merge-photos", {
+        body: {
+          assignment_id: pair.assignment_id,
+          original_photo_path: pair.original_photo_url,
+          completion_photo_path: pair.completion_photo_url,
+        },
+      });
+
+      if (resp.error) {
+        Alert.alert("Merge Failed", resp.error.message || "Unknown error");
+      } else if (resp.data?.success) {
+        setMergeResults((prev) => ({ ...prev, [pair.assignment_id]: resp.data.merged_url }));
+        // Refresh signed URL for merged photo
+        if (resp.data.merged_url) {
+          const signed = await getSignedImageUrl(resp.data.merged_url);
+          if (signed) setSignedUrls((prev) => ({ ...prev, [resp.data.merged_url]: signed }));
+        }
+        Alert.alert("Merged!", resp.data.description || "Photo merged successfully");
+      } else {
+        Alert.alert("Merge Failed", resp.data?.error || "Unknown error");
+      }
+    } catch (e: any) {
+      Alert.alert("Error", e?.message || "Failed to call merge function");
+    } finally {
+      setMerging((prev) => ({ ...prev, [pair.assignment_id]: false }));
+    }
+  };
+
+  const status: AIOpStatus =
+    phase === "complete" ? "done" : phase === "submit_completion" ? "waiting" : "scheduled";
+  const completePairs = pairs.filter(
+    (p) => p.original_photo_url && p.completion_photo_url
+  );
+
+  return (
+    <View
+      style={{
+        backgroundColor: BG,
+        borderColor: BORDER,
+        borderWidth: 1,
+        borderRadius: Radii.sm,
+        padding: Spacing.sm,
+      }}
+    >
+      {/* Header row */}
+      <Pressable
+        onPress={() => setExpanded(!expanded)}
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        <Text style={{ fontSize: 18 }}>{"\uD83E\uDDE9"}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: TEXT, fontSize: 13, fontFamily: "Paaxel" }}>
+            AI Photo Merge
+          </Text>
+          <Text style={{ color: MUTED, fontSize: 11 }}>
+            Phase: {phase} | {completePairs.length}/{pairs.length} pairs ready
+          </Text>
+        </View>
+        <View style={{ alignItems: "flex-end", gap: 4 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <View
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: 4,
+                backgroundColor: AI_STATUS_COLORS[status],
+              }}
+            />
+            <Text
+              style={{
+                color: AI_STATUS_COLORS[status],
+                fontSize: 10,
+                fontFamily: "Paaxel",
+              }}
+            >
+              {AI_STATUS_LABELS[status]}
+            </Text>
+          </View>
+        </View>
+        <Text style={{ color: MUTED, fontSize: 14 }}>
+          {expanded ? "\u25B2" : "\u25BC"}
+        </Text>
+      </Pressable>
+
+      {/* Expanded pairs view */}
+      {expanded && (
+        <View style={{ marginTop: 12, gap: 12 }}>
+          {loading && <ActivityIndicator color={BTN} />}
+          {!loading && pairs.length === 0 && (
+            <Text style={{ color: MUTED, fontSize: 12, textAlign: "center" }}>
+              No pairs found
+            </Text>
+          )}
+          {pairs.map((pair) => {
+            const origUrl = pair.original_photo_url
+              ? signedUrls[pair.original_photo_url]
+              : null;
+            const compUrl = pair.completion_photo_url
+              ? signedUrls[pair.completion_photo_url]
+              : null;
+            const mergedKey =
+              mergeResults[pair.assignment_id] || pair.merged_photo_url;
+            const mergedUrl = mergedKey ? signedUrls[mergedKey] : null;
+            const isMerging = merging[pair.assignment_id] || false;
+            const canMerge =
+              !!pair.original_photo_url && !!pair.completion_photo_url && !isMerging;
+
+            return (
+              <View
+                key={pair.assignment_id}
+                style={{
+                  backgroundColor: CARD,
+                  borderColor: BORDER,
+                  borderWidth: 1,
+                  borderRadius: Radii.sm,
+                  padding: Spacing.sm,
+                }}
+              >
+                {/* Names */}
+                <Text style={{ color: TEXT, fontSize: 12, fontFamily: "Paaxel", marginBottom: 6 }}>
+                  {pair.original_username} {"\u2192"} {pair.completer_username}
+                </Text>
+
+                {/* Photos side by side */}
+                <View style={{ flexDirection: "row", gap: 6, marginBottom: 8 }}>
+                  {/* Cutoff photo */}
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: MUTED, fontSize: 9, marginBottom: 2 }}>Cutoff</Text>
+                    {origUrl ? (
+                      <Image
+                        source={{ uri: origUrl }}
+                        style={{ width: "100%", height: 100, borderRadius: 6 }}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View
+                        style={{
+                          width: "100%",
+                          height: 100,
+                          borderRadius: 6,
+                          backgroundColor: BG,
+                          justifyContent: "center",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Text style={{ color: MUTED, fontSize: 10 }}>Waiting...</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Completion photo */}
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: MUTED, fontSize: 9, marginBottom: 2 }}>Completion</Text>
+                    {compUrl ? (
+                      <Image
+                        source={{ uri: compUrl }}
+                        style={{ width: "100%", height: 100, borderRadius: 6 }}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View
+                        style={{
+                          width: "100%",
+                          height: 100,
+                          borderRadius: 6,
+                          backgroundColor: BG,
+                          justifyContent: "center",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Text style={{ color: MUTED, fontSize: 10 }}>Waiting...</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+
+                {/* Merged photo (full width) */}
+                {mergedUrl && (
+                  <View style={{ marginBottom: 8 }}>
+                    <Text style={{ color: "#FFD700", fontSize: 10, fontFamily: "Paaxel", marginBottom: 2 }}>
+                      AI Merged
+                    </Text>
+                    <Image
+                      source={{ uri: mergedUrl }}
+                      style={{ width: "100%", height: 140, borderRadius: 6 }}
+                      resizeMode="cover"
+                    />
+                  </View>
+                )}
+
+                {/* Merge button */}
+                {canMerge && !mergedUrl && (
+                  <Pressable
+                    onPress={() => handleMerge(pair)}
+                    style={{
+                      backgroundColor: "#FFD700" + "20",
+                      paddingVertical: 8,
+                      borderRadius: 6,
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text style={{ color: "#FFD700", fontSize: 12, fontFamily: "Paaxel" }}>
+                      {"\u2728"} Generate AI Merge
+                    </Text>
+                  </Pressable>
+                )}
+                {isMerging && (
+                  <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, paddingVertical: 8 }}>
+                    <ActivityIndicator size="small" color="#FFD700" />
+                    <Text style={{ color: "#FFD700", fontSize: 11 }}>Merging...</Text>
+                  </View>
+                )}
+              </View>
+            );
+          })}
+
+          {/* Merge All button */}
+          {completePairs.length > 1 && (
+            <Pressable
+              onPress={() => {
+                Alert.alert(
+                  "Merge All Pairs",
+                  `Generate AI merge for ${completePairs.length} pairs?`,
+                  [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                      text: "Merge All",
+                      onPress: () => {
+                        for (const pair of completePairs) {
+                          if (!pair.merged_photo_url && !mergeResults[pair.assignment_id]) {
+                            handleMerge(pair);
+                          }
+                        }
+                      },
+                    },
+                  ]
+                );
+              }}
+              style={{
+                backgroundColor: "#FFD700" + "30",
+                paddingVertical: 10,
+                borderRadius: 8,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: "#FFD700", fontSize: 13, fontFamily: "Paaxel" }}>
+                {"\u2728"} Merge All ({completePairs.filter((p) => !p.merged_photo_url && !mergeResults[p.assignment_id]).length} remaining)
+              </Text>
+            </Pressable>
+          )}
+
+          {/* Refresh button */}
+          <Pressable
+            onPress={loadPairs}
+            style={{
+              paddingVertical: 6,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: MUTED, fontSize: 11, fontFamily: "Paaxel" }}>
+              {"\u21BB"} Refresh
+            </Text>
+          </Pressable>
         </View>
       )}
     </View>
