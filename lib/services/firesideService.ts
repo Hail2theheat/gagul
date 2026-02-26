@@ -78,10 +78,12 @@ export interface FiresidePrompt {
   correct_answer?: string;
   is_most_likely?: boolean;
   media_url?: string;
+  payload?: Record<string, any>;
   responses: FiresideResponse[];
   quiplash_data?: QuiplashParticipant[];
   caption_data?: CaptionResultEntry[];
   mc_results?: MCResults;
+  photo_completion_pairs?: PhotoCompletionPairData[];
 }
 
 export interface LeaderboardEntry {
@@ -120,12 +122,32 @@ export interface MemeFiresideData {
   captions: CaptionResultEntry[];
 }
 
+export interface PhotoCompletionPairData {
+  assignment_id: string;
+  original_user_id: string;
+  original_username: string;
+  original_avatar: Record<string, unknown> | null;
+  completer_user_id: string;
+  completer_username: string;
+  completer_avatar: Record<string, unknown> | null;
+  original_photo_url: string | null;
+  completion_photo_url: string | null;
+  merged_photo_url: string | null;
+}
+
+export interface PhotoCompletionFiresideData {
+  game_id: string;
+  phase: string;
+  pairs: PhotoCompletionPairData[];
+}
+
 export interface FiresideData {
   week_of: string;
   prompts: FiresidePrompt[];
   leaderboard: LeaderboardEntry[];
   winner: WeeklyWinner | null;
   meme_data?: MemeFiresideData | null;
+  photo_completion_data?: PhotoCompletionFiresideData | null;
 }
 
 export interface FiresideComment {

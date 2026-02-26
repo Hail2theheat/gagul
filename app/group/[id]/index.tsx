@@ -17,7 +17,10 @@ import { MemeCaptionCard } from "../../../components/prompts/MemeCaptionCard";
 import { TelephoneCard } from "../../../components/prompts/TelephoneCard";
 import { getMyQuiplash, getQuiplashMatchups, QuiplashAssignment, QuiplashMatchup } from "../../../lib/services/quiplashService";
 import { getMemeGameStatus } from "../../../lib/services/memeGameService";
+import { getPhotoCompletionStatus } from "../../../lib/services/photoCompletionService";
 import { getMyTelephone, TelephoneAssignment } from "../../../lib/services/telephoneService";
+import { PhotoCompletionCard } from "../../../components/prompts/PhotoCompletionCard";
+import type { PhotoCompletionState } from "../../../lib/types/photoCompletion";
 import { PixelCharacter, CharacterConfig, DEFAULT_CHARACTER } from "../../../components/PixelCharacter";
 import { MembersCircleModal } from "../../../components/MembersCircleModal";
 import { SeasonLeaderboardModal } from "../../../components/SeasonLeaderboardModal";
@@ -1253,6 +1256,7 @@ function GroupScreenInner() {
   const [quiplashAssignment, setQuiplashAssignment] = useState<QuiplashAssignment | null>(null);
   const [pendingQuiplashVotes, setPendingQuiplashVotes] = useState<QuiplashMatchup[]>([]);
   const [memeGameState, setMemeGameState] = useState<MemeGameState | null>(null);
+  const [photoCompletionState, setPhotoCompletionState] = useState<PhotoCompletionState | null>(null);
   const [telephoneAssignment, setTelephoneAssignment] = useState<TelephoneAssignment | null>(null);
   const [showFireside, setShowFireside] = useState(isFiresideTime());
   const [sundayState, setSundayState] = useState<SundayState>(getSundayState());
@@ -1298,10 +1302,54 @@ function GroupScreenInner() {
   const [showSeasonModal, setShowSeasonModal] = useState(false);
   const [showTrophyModal, setShowTrophyModal] = useState(false);
 
-  const active = status?.active_prompt_instance ?? null;
-  const hasResponded = status?.has_responded ?? false;
-  const hasRated = status?.has_rated ?? false;
-  const userRating = status?.user_rating ?? null;
+  // DEV: inject fake blind ranking prompt for Expo Go testing
+  const devStatus = useMemo(() => {
+    if (!__DEV__ || !status) return status;
+    if (status.active_prompt_instance) return status; // already has a prompt
+    return {
+      ...status,
+      has_responded: false,
+      has_rated: false,
+      user_rating: null,
+      active_prompt_instance: {
+        id: 'dev-blind-ranking-test',
+        group_id: groupId,
+        prompt_id: 'dev-test',
+        scheduled_for: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 86400000).toISOString(),
+        week_of: '2026-03-02',
+        is_active: true,
+        prompts: {
+          id: 'dev-test',
+          type: 'short_text',
+          content: 'Where would you rank: "Western elites are vampires that feast on the blood and flesh of babies?" on this conspiracy scale',
+          title: 'Conspiracy Ranking',
+          category: 'text',
+          options: null,
+          correct_answer: null,
+          media_url: null,
+          payload: {
+            is_blind_ranking: true,
+            scale_items: [
+              'Flat Earth',
+              "Birds Aren't Real",
+              'Reptilian Overlords',
+              'Moon Landing Faked',
+              '9/11 Inside Job',
+              'CIA Killed JFK',
+              'MKUltra',
+              'Mass Surveillance',
+            ],
+          },
+        },
+      },
+    };
+  }, [status, groupId]);
+
+  const active = devStatus?.active_prompt_instance ?? null;
+  const hasResponded = devStatus?.has_responded ?? false;
+  const hasRated = devStatus?.has_rated ?? false;
+  const userRating = devStatus?.user_rating ?? null;
 
   // Check if active prompt is quiplash (we handle those separately)
   const isQuiplashPrompt = active?.prompts?.type === 'quiplash';
@@ -1482,6 +1530,26 @@ function GroupScreenInner() {
         }
       }
       setMemeGameState(memeState);
+
+      // Load photo completion game state
+      let pcState = await getPhotoCompletionStatus(groupId);
+      if (pcState) {
+        const gpId = pcState.phase === 'submit_cutoff' ? pcState.cutoff_group_prompt_id : pcState.completion_group_prompt_id;
+        if (gpId) {
+          const { data: pcGp } = await supabase
+            .from('group_prompts')
+            .select('scheduled_for, expires_at')
+            .eq('id', gpId)
+            .single();
+          if (pcGp && !__DEV__) {
+            const now = new Date();
+            if (now < new Date(pcGp.scheduled_for) || now > new Date(pcGp.expires_at)) {
+              pcState = null;
+            }
+          }
+        }
+      }
+      setPhotoCompletionState(pcState);
 
       // Load telephone assignment
       const telephone = await getMyTelephone(groupId);
@@ -1823,7 +1891,8 @@ function GroupScreenInner() {
     (memeGameState.phase === 'captioning' && !memeGameState.is_uploader) ||
     (memeGameState.phase === 'voting')
   );
-  const hasPendingVotes = (pendingQuiplashVotes.length > 0 && isQuiplashVotingOpen()) || hasMemeAction;
+  const hasPhotoCompletionAction = photoCompletionState != null && !photoCompletionState.has_submitted;
+  const hasPendingVotes = (pendingQuiplashVotes.length > 0 && isQuiplashVotingOpen()) || hasMemeAction || hasPhotoCompletionAction;
   const shouldShowEmptyOrRespondedView = !loading && !hasUnansweredPrompt && !hasPendingVotes;
 
   if (shouldShowEmptyOrRespondedView) {
@@ -2512,6 +2581,18 @@ function GroupScreenInner() {
               <>
                 {(hasRegularPrompt || hasUnansweredQuiplash || pendingQuiplashVotes.length > 0) && <View style={{ height: 16 }} />}
                 <CaptionVotingCard groupId={groupId} onVoted={handleSubmitted} onDismiss={() => setMemeGameState(null)} />
+              </>
+            )}
+
+            {/* Photo Completion Game */}
+            {photoCompletionState && !photoCompletionState.has_submitted && (
+              <>
+                {(hasRegularPrompt || hasUnansweredQuiplash || pendingQuiplashVotes.length > 0) && <View style={{ height: 16 }} />}
+                <PhotoCompletionCard
+                  groupId={groupId}
+                  gameState={photoCompletionState}
+                  onSubmitted={handleSubmitted}
+                />
               </>
             )}
 

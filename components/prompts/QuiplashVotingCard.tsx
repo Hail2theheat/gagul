@@ -15,7 +15,7 @@ import Animated, {
   withTiming,
   runOnJS,
 } from 'react-native-reanimated';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
 import { SPRING_SNAPPY } from '../../constants/animations';
 import { CampfireColors } from '../../constants/theme';
@@ -178,39 +178,41 @@ export function QuiplashVotingCard({ groupId, onVoted }: QuiplashVotingCardProps
       )}
 
       {/* Responses to vote on */}
-      <GestureDetector gesture={panGesture}>
-        <Animated.View style={[styles.responsesContainer, swipeStyle]} key={`matchup-${currentMatchupIndex}`}>
-          <Text style={styles.votePrompt}>Which answer is better? (tap or swipe)</Text>
+      <GestureHandlerRootView>
+        <GestureDetector gesture={panGesture}>
+          <Animated.View style={[styles.responsesContainer, swipeStyle]} key={`matchup-${currentMatchupIndex}`}>
+            <Text style={styles.votePrompt}>Which answer is better? (tap or swipe)</Text>
 
-          {currentMatchup.responses.map((response, index) => {
-            const animStyle = index === 0 ? optionAStyle : optionBStyle;
-            const scaleVal = index === 0 ? optionAScale : optionBScale;
-            return (
-              <Animated.View key={response.response_id} style={animStyle} entering={FadeInRight.delay(index * 100).duration(250)}>
-                <Pressable
-                  style={[styles.responseOption, submitting && styles.responseDisabled]}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    handleVote(response.response_id);
-                  }}
-                  onPressIn={() => { scaleVal.value = withSpring(0.97, SPRING_SNAPPY); }}
-                  onPressOut={() => { scaleVal.value = withSpring(1, SPRING_SNAPPY); }}
-                  disabled={submitting}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Vote for answer ${index === 0 ? 'A' : 'B'}`}
-                >
-                  <Text style={styles.responseLabel}>
-                    {index === 0 ? 'A' : 'B'}
-                  </Text>
-                  <Text style={styles.responseText}>
-                    "{response.content}"
-                  </Text>
-                </Pressable>
-              </Animated.View>
-            );
-          })}
-        </Animated.View>
-      </GestureDetector>
+            {currentMatchup.responses.map((response, index) => {
+              const animStyle = index === 0 ? optionAStyle : optionBStyle;
+              const scaleVal = index === 0 ? optionAScale : optionBScale;
+              return (
+                <Animated.View key={response.response_id} style={animStyle} entering={FadeInRight.delay(index * 100).duration(250)}>
+                  <Pressable
+                    style={[styles.responseOption, submitting && styles.responseDisabled]}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      handleVote(response.response_id);
+                    }}
+                    onPressIn={() => { scaleVal.value = withSpring(0.97, SPRING_SNAPPY); }}
+                    onPressOut={() => { scaleVal.value = withSpring(1, SPRING_SNAPPY); }}
+                    disabled={submitting}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Vote for answer ${index === 0 ? 'A' : 'B'}`}
+                  >
+                    <Text style={styles.responseLabel}>
+                      {index === 0 ? 'A' : 'B'}
+                    </Text>
+                    <Text style={styles.responseText}>
+                      "{response.content}"
+                    </Text>
+                  </Pressable>
+                </Animated.View>
+              );
+            })}
+          </Animated.View>
+        </GestureDetector>
+      </GestureHandlerRootView>
 
       {submitting && (
         <View style={styles.submittingOverlay}>

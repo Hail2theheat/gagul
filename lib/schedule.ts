@@ -195,15 +195,13 @@ export function getFiresideLocalTime(): string {
 /**
  * Is the quiplash voting window open?
  *
- * Mon–Fri: always open
- * Saturday: only before 2 AM ET (end of prompt week)
- * Sunday: closed
+ * Mon–Sat: always open
+ * Sunday: closed (Fireside day)
  */
 export function isQuiplashVotingOpen(now?: Date): boolean {
-  const { dayOfWeek, hour } = getNowET(now);
+  const { dayOfWeek } = getNowET(now);
   if (dayOfWeek === 0) return false;           // Sunday: closed
-  if (dayOfWeek === 6) return hour < 2;        // Saturday: only before 2 AM ET
-  return true;                                  // Mon–Fri: open
+  return true;                                  // Mon–Sat: open
 }
 
 /**

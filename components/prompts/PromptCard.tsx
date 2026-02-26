@@ -41,6 +41,8 @@ import { QuizQuestion } from './QuizQuestion';
 import { QuiplashInput } from './QuiplashInput';
 import { PhotoCaptionInput } from './PhotoCaptionInput';
 import { CounterInput } from './CounterInput';
+import { BlindRankingInput } from './BlindRankingInput';
+import { StepsPhotoInput } from './StepsPhotoInput';
 import { PromptRating } from './PromptRating';
 import { MajorityGuess } from './MajorityGuess';
 
@@ -106,6 +108,12 @@ export function PromptCard({
   // Check if this is a Counter prompt (tap to increment)
   const isCounter = (prompt?.payload as any)?.is_counter === true;
 
+  // Check if this is a Blind Ranking prompt (draggable scale)
+  const isBlindRanking = (prompt?.payload as any)?.is_blind_ranking === true;
+
+  // Check if this is a Steps prompt (photo + step count number)
+  const isSteps = (prompt?.payload as any)?.is_steps === true;
+
   // Submit button press feedback
   const submitScale = useSharedValue(1);
   const submitAnimStyle = useAnimatedStyle(() => ({
@@ -113,10 +121,14 @@ export function PromptCard({
   }));
 
   // Validation
-  const validation = validateResponse(promptType, textValue, photoUri ?? undefined, selectedOption ?? undefined);
+  const validation = isBlindRanking
+    ? { valid: textValue.trim() !== '' } // Blind ranking just needs a value
+    : validateResponse(promptType, isSteps ? undefined : textValue, photoUri ?? undefined, selectedOption ?? undefined);
   // For majority guess, we also need a guess to be selected
   const majorityGuessValid = !isMajorityGuess || (isMajorityGuess && majorityGuess !== null);
-  const canSubmit = validation.valid && majorityGuessValid && !submitting && !expired;
+  // For steps, need both a valid number AND a photo
+  const stepsValid = !isSteps || (textValue.trim() !== '' && /^\d+$/.test(textValue.trim()) && photoUri !== null);
+  const canSubmit = validation.valid && majorityGuessValid && stepsValid && !submitting && !expired;
 
   // Handle submission
   const handleSubmit = async () => {
@@ -139,8 +151,8 @@ export function PromptCard({
         mediaUrl = uploadResult.url ?? undefined;
       }
 
-      // Determine content - use photoCaption for photo prompts, textValue otherwise
-      const contentToSubmit = promptType === 'photo' ? (photoCaption || undefined) : (textValue || undefined);
+      // Determine content - steps stores step count in content, photo uses caption, text uses textValue
+      const contentToSubmit = isSteps ? textValue : (promptType === 'photo' ? (photoCaption || undefined) : (textValue || undefined));
 
       // Submit response - use majority guess function if applicable
       let result;
@@ -209,6 +221,16 @@ export function PromptCard({
 
     switch (promptType) {
       case 'short_text':
+        if (isBlindRanking) {
+          return (
+            <BlindRankingInput
+              value={textValue}
+              onChangeText={setTextValue}
+              scaleItems={(prompt?.payload as any)?.scale_items || []}
+              disabled={submitting}
+            />
+          );
+        }
         if (isCounter) {
           return (
             <CounterInput
@@ -236,6 +258,17 @@ export function PromptCard({
         );
 
       case 'photo':
+        if (isSteps) {
+          return (
+            <StepsPhotoInput
+              photoUri={photoUri}
+              onPhotoChange={setPhotoUri}
+              stepCount={textValue}
+              onStepCountChange={setTextValue}
+              disabled={submitting}
+            />
+          );
+        }
         return (
           <PhotoPicker
             value={photoUri}

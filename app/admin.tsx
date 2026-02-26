@@ -57,11 +57,11 @@ function formatDay(dateStr: string): string {
 
 function formatWeekRange(weekOf: string): string {
   const mon = new Date(weekOf + "T12:00:00");
-  const sat = new Date(mon);
-  sat.setDate(mon.getDate() + 6);
+  const sun = new Date(mon);
+  sun.setDate(mon.getDate() + 6);
   const fmt = (d: Date) =>
-    d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/Denver" });
-  return `${fmt(mon)} - ${fmt(sat)}`;
+    d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "America/Denver" });
+  return `${fmt(mon)} - ${fmt(sun)}`;
 }
 
 function promptStatus(gp: AdminGroupPrompt): "active" | "expired" | "upcoming" | "deactivated" {
@@ -620,6 +620,296 @@ function FeedbackSection() {
   );
 }
 
+// ─── AI Operations Section ───────────────────────────────────
+function AIOperationsSection({
+  schedule,
+  groupId,
+  weekOf,
+}: {
+  schedule: AdminGroupPrompt[];
+  groupId: string | undefined;
+  weekOf: string;
+}) {
+  const [expanded, setExpanded] = useState(true);
+  const [pcState, setPcState] = useState<any>(null);
+
+  // Load photo completion game state for this week
+  useEffect(() => {
+    if (!groupId) return;
+    supabase
+      .from("photo_completion_game_state")
+      .select("id, phase, cutoff_group_prompt_id, completion_group_prompt_id")
+      .eq("group_id", groupId)
+      .eq("week_of", weekOf)
+      .maybeSingle()
+      .then(({ data }) => setPcState(data));
+  }, [groupId, weekOf]);
+
+  // Detect AI-relevant prompts from the schedule
+  const aiJudgePrompts = schedule.filter(
+    (gp) => gp.prompt?.payload?.is_tribunal === true
+  );
+  const blindRankingPrompts = schedule.filter(
+    (gp) => gp.prompt?.payload?.is_blind_ranking === true
+  );
+  const stepsPrompts = schedule.filter(
+    (gp) => gp.prompt?.payload?.is_steps === true
+  );
+  const hasPhotoCompletion = pcState !== null;
+
+  const totalOps =
+    aiJudgePrompts.length +
+    blindRankingPrompts.length +
+    stepsPrompts.length +
+    (hasPhotoCompletion ? 1 : 0) +
+    1; // +1 for Fireside
+
+  return (
+    <View
+      style={{
+        backgroundColor: CARD,
+        borderColor: "#FFD700",
+        borderWidth: 1,
+        borderRadius: Radii.md,
+        padding: Spacing.md,
+        marginTop: Spacing.lg,
+      }}
+    >
+      <Pressable
+        onPress={() => setExpanded(!expanded)}
+        style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Text style={{ color: "#FFD700", fontFamily: "Paaxel", fontSize: 16 }}>
+            AI Operations
+          </Text>
+          <View
+            style={{
+              backgroundColor: "#FFD700" + "25",
+              paddingHorizontal: 6,
+              paddingVertical: 2,
+              borderRadius: 8,
+            }}
+          >
+            <Text style={{ color: "#FFD700", fontSize: 11, fontWeight: "700" }}>
+              {totalOps}
+            </Text>
+          </View>
+        </View>
+        <Text style={{ color: MUTED, fontFamily: "Paaxel", fontSize: 14 }}>
+          {expanded ? "\u25B2" : "\u25BC"}
+        </Text>
+      </Pressable>
+
+      {expanded && (
+        <View style={{ marginTop: Spacing.md, gap: 8 }}>
+          {/* AI Judge prompts (Tribunal) */}
+          {aiJudgePrompts.map((gp) => {
+            const status = promptStatus(gp);
+            const allResponded = gp.response_count >= 8; // rough check
+            return (
+              <AIOpRow
+                key={gp.id}
+                icon="Tribunal"
+                label={`AI Judge — ${gp.prompt?.title || "prompt"}`}
+                detail={`${gp.response_count} responses | ${status}`}
+                status={status === "expired" && allResponded ? "ready" : status === "active" ? "waiting" : status === "upcoming" ? "scheduled" : "idle"}
+              />
+            );
+          })}
+
+          {/* Blind Ranking (AI processes results for Fireside visualization) */}
+          {blindRankingPrompts.map((gp) => {
+            const status = promptStatus(gp);
+            return (
+              <AIOpRow
+                key={gp.id}
+                icon="Scale"
+                label={`Blind Ranking — ${gp.prompt?.title || "prompt"}`}
+                detail={`${gp.response_count} responses | ${status}`}
+                status={status === "expired" ? "ready" : status === "active" ? "waiting" : "scheduled"}
+              />
+            );
+          })}
+
+          {/* Steps Challenge */}
+          {stepsPrompts.map((gp) => {
+            const status = promptStatus(gp);
+            return (
+              <AIOpRow
+                key={gp.id}
+                icon="Steps"
+                label={`Steps Race — ${gp.prompt?.title || "prompt"}`}
+                detail={`${gp.response_count} responses | ${status}`}
+                status={status === "expired" ? "ready" : status === "active" ? "waiting" : "scheduled"}
+              />
+            );
+          })}
+
+          {/* Photo Completion AI Merge */}
+          {hasPhotoCompletion && (
+            <AIOpRow
+              icon="Merge"
+              label="AI Photo Merge"
+              detail={`Phase: ${pcState?.phase || "?"}`}
+              status={pcState?.phase === "complete" ? "done" : pcState?.phase === "submit_completion" ? "waiting" : "scheduled"}
+              actionLabel={pcState?.phase === "complete" ? "Run Merge" : undefined}
+              onAction={
+                pcState?.phase === "complete" && groupId
+                  ? () => {
+                      Alert.alert(
+                        "Run AI Merge",
+                        "Trigger AI photo merging for all completed pairs?",
+                        [
+                          { text: "Cancel", style: "cancel" },
+                          {
+                            text: "Merge",
+                            onPress: () =>
+                              Alert.alert("TODO", "Call merge-photos edge function for each pair"),
+                          },
+                        ]
+                      );
+                    }
+                  : undefined
+              }
+            />
+          )}
+
+          {/* Fireside Preview */}
+          <AIOpRow
+            icon="Fire"
+            label="Fireside Preview"
+            detail="Weekly review compilation"
+            status="scheduled"
+            actionLabel="Preview"
+            onAction={
+              groupId
+                ? () =>
+                    router.push({
+                      pathname: "/group/[id]/lowdown",
+                      params: { id: groupId },
+                    })
+                : undefined
+            }
+          />
+
+          {/* AI Judge Test */}
+          <AIOpRow
+            icon="Test"
+            label="AI Judge Test Page"
+            detail="Mock data testing"
+            status="idle"
+            actionLabel="Open"
+            onAction={
+              groupId
+                ? () =>
+                    router.push({
+                      pathname: "/judge-test",
+                      params: { groupId },
+                    })
+                : undefined
+            }
+          />
+        </View>
+      )}
+    </View>
+  );
+}
+
+type AIOpStatus = "scheduled" | "waiting" | "ready" | "done" | "idle";
+
+const AI_STATUS_COLORS: Record<AIOpStatus, string> = {
+  scheduled: "#4A9EFF",
+  waiting: "#FFA033",
+  ready: SUCCESS,
+  done: SUCCESS,
+  idle: MUTED,
+};
+
+const AI_STATUS_LABELS: Record<AIOpStatus, string> = {
+  scheduled: "Scheduled",
+  waiting: "Collecting...",
+  ready: "Ready",
+  done: "Complete",
+  idle: "Idle",
+};
+
+function AIOpRow({
+  icon,
+  label,
+  detail,
+  status,
+  actionLabel,
+  onAction,
+}: {
+  icon: string;
+  label: string;
+  detail: string;
+  status: AIOpStatus;
+  actionLabel?: string;
+  onAction?: () => void;
+}) {
+  const iconMap: Record<string, string> = {
+    Tribunal: "\u2696\uFE0F",
+    Scale: "\u2696\uFE0F",
+    Steps: "\uD83D\uDC5F",
+    Merge: "\uD83E\uDDE9",
+    Fire: "\uD83D\uDD25",
+    Test: "\uD83E\uDDEA",
+  };
+
+  return (
+    <View
+      style={{
+        backgroundColor: BG,
+        borderColor: BORDER,
+        borderWidth: 1,
+        borderRadius: Radii.sm,
+        padding: Spacing.sm,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+      }}
+    >
+      <Text style={{ fontSize: 18 }}>{iconMap[icon] || "\u2728"}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: TEXT, fontSize: 13, fontFamily: "Paaxel" }}>{label}</Text>
+        <Text style={{ color: MUTED, fontSize: 11 }}>{detail}</Text>
+      </View>
+      <View style={{ alignItems: "flex-end", gap: 4 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <View
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: 4,
+              backgroundColor: AI_STATUS_COLORS[status],
+            }}
+          />
+          <Text style={{ color: AI_STATUS_COLORS[status], fontSize: 10, fontFamily: "Paaxel" }}>
+            {AI_STATUS_LABELS[status]}
+          </Text>
+        </View>
+        {actionLabel && onAction && (
+          <Pressable
+            onPress={onAction}
+            style={{
+              paddingHorizontal: 8,
+              paddingVertical: 3,
+              borderRadius: 4,
+              backgroundColor: "#FFD700" + "20",
+            }}
+          >
+            <Text style={{ color: "#FFD700", fontSize: 10, fontFamily: "Paaxel" }}>
+              {actionLabel}
+            </Text>
+          </Pressable>
+        )}
+      </View>
+    </View>
+  );
+}
+
 // ─── Main Admin Screen ───────────────────────────────────────
 export default function AdminScreen() {
   const { data: groups, isLoading: groupsLoading } = useMyGroups();
@@ -787,26 +1077,12 @@ export default function AdminScreen() {
           </View>
         )}
 
-        {/* AI Judge Test Button */}
-        <Pressable
-          onPress={() => router.push({ pathname: "/judge-test", params: { groupId: activeGroupId } })}
-          style={{
-            backgroundColor: "rgba(255, 215, 0, 0.12)",
-            borderColor: "#FFD700",
-            borderWidth: 1,
-            borderRadius: Radii.md,
-            padding: Spacing.md,
-            marginTop: Spacing.lg,
-            alignItems: "center",
-          }}
-        >
-          <Text style={{ color: "#FFD700", fontFamily: "Paaxel", fontSize: 16, marginBottom: 2 }}>
-            Test AI Judge
-          </Text>
-          <Text style={{ color: MUTED, fontSize: 12 }}>
-            Vertical Jump Challenge (Mock Data)
-          </Text>
-        </Pressable>
+        {/* AI Operations */}
+        <AIOperationsSection
+          schedule={schedule || []}
+          groupId={activeGroupId}
+          weekOf={weekOf}
+        />
 
         {/* Feedback & Custom Prompts */}
         <FeedbackSection />

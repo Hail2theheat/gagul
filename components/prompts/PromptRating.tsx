@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { submitRating } from '../../lib/services/promptService';
 import { awardPoints } from '../../lib/services/pointsService';
 import { CampfireColors } from '../../constants/theme';
@@ -129,7 +129,6 @@ export function PromptRating({
     ? (initialRating ? 5 : 1)
     : (initialRating ?? null);
   const [rating, setRating] = useState<number | null>(convertedInitial);
-  const [loading, setLoading] = useState(false);
   const [fadeAnim] = useState(() => new Animated.Value(1));
 
   // Sync with parent prop - if parent says already rated, skip to dismissed
@@ -157,25 +156,21 @@ export function PromptRating({
   }, [hasRated, rating]);
 
   const handleRate = async (newRating: number) => {
-    if (loading || hasRated) return;
+    if (hasRated) return;
 
-    setLoading(true);
+    // Optimistic — show "Thanks" immediately, submit in background
+    // (rating is low-stakes, don't block the user)
+    setHasRated(true);
+    setRating(newRating);
+    onRated?.(newRating);
+
     try {
       const result = await submitRating(promptId, newRating);
-
       if (result.success) {
-        // Award point in background - don't block dismissal
         awardPoints('rating').catch(() => {});
       }
     } catch (err) {
       console.error('Rating submission error:', err);
-    } finally {
-      // Always show "Thanks" and dismiss, even if the call failed
-      // (rating is low-stakes, don't block the user)
-      setHasRated(true);
-      setRating(newRating);
-      setLoading(false);
-      onRated?.(newRating);
     }
   };
 
@@ -198,25 +193,20 @@ export function PromptRating({
   return (
     <View style={styles.container}>
       <Text style={styles.label}>How was this prompt?</Text>
-      {loading ? (
-        <ActivityIndicator size="large" color={COLORS.selected} style={{ marginTop: 16 }} />
-      ) : (
-        <View style={styles.facesRow}>
-          {FACE_CONFIGS.map((config) => (
-            <TouchableOpacity
-              key={config.rating}
-              style={styles.faceButton}
-              onPress={() => handleRate(config.rating)}
-              disabled={loading}
-            >
-              <PixelFace rating={config.rating} size={40} />
-              <Text style={[styles.faceLabel, { color: config.color }]}>
-                {config.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
+      <View style={styles.facesRow}>
+        {FACE_CONFIGS.map((config) => (
+          <TouchableOpacity
+            key={config.rating}
+            style={styles.faceButton}
+            onPress={() => handleRate(config.rating)}
+          >
+            <PixelFace rating={config.rating} size={40} />
+            <Text style={[styles.faceLabel, { color: config.color }]}>
+              {config.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
     </View>
   );
 }

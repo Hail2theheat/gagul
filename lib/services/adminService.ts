@@ -36,6 +36,7 @@ export interface AdminGroupPrompt {
     category: string | null;
     options: string[] | null;
     correct_answer: string | null;
+    payload: Record<string, any> | null;
   } | null;
   response_count: number;
   // Quiplash-specific counts
@@ -62,7 +63,7 @@ export async function getWeekSchedule(
     .from('group_prompts')
     .select(`
       id, group_id, prompt_id, scheduled_for, expires_at, week_of, is_active,
-      prompts!inner(id, type, content, title, category, options, correct_answer)
+      prompts!inner(id, type, content, title, category, options, correct_answer, payload)
     `)
     .eq('group_id', groupId)
     .gte('scheduled_for', mondayStart)

@@ -38,6 +38,7 @@ import {
   WeeklyWinner,
   QuiplashVoter,
   MemeFiresideData,
+  PhotoCompletionFiresideData,
 } from "../../../lib/services/firesideService";
 import { awardPoints } from "../../../lib/services/pointsService";
 import { supabase } from "../../../lib/supabase";
@@ -356,6 +357,7 @@ export default function LowdownScreen() {
   const [comments, setComments] = useState<FiresideComment[]>([]);
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
   const [signedPhotoUrl, setSignedPhotoUrl] = useState<string | null>(null);
+  const [signedPcPhotos, setSignedPcPhotos] = useState<Record<string, string>>({});
   const [quiplashVoters, setQuiplashVoters] = useState<QuiplashVoter[]>([]);
   const [showCustomPrompt, setShowCustomPrompt] = useState(false);
   const [customPromptText, setCustomPromptText] = useState("");
@@ -418,6 +420,23 @@ export default function LowdownScreen() {
     let cancelled = false;
     const fetchSignedUrl = async () => {
       const prompt = firesideData?.prompts[currentPromptIndex];
+
+      // Photo completion: fetch signed URLs for all pair photos
+      if (prompt?.type === 'photo_completion' && prompt.photo_completion_pairs) {
+        const urls: Record<string, string> = {};
+        for (const pair of prompt.photo_completion_pairs) {
+          for (const url of [pair.original_photo_url, pair.completion_photo_url, pair.merged_photo_url]) {
+            if (url && !urls[url]) {
+              try {
+                const signed = await getSignedImageUrl(url);
+                if (signed && !cancelled) urls[url] = signed;
+              } catch (e) { /* skip */ }
+            }
+          }
+        }
+        if (!cancelled) setSignedPcPhotos(urls);
+        return;
+      }
 
       // Meme game: fetch signed URL for the meme photo
       if (prompt?.type === 'meme_game' && prompt.media_url) {
@@ -561,6 +580,21 @@ export default function LowdownScreen() {
           };
           data.prompts = [...data.prompts, memePrompt];
         }
+
+        // Inject photo completion game as a synthetic prompt if data exists
+        if (data.photo_completion_data && data.photo_completion_data.pairs && data.photo_completion_data.pairs.length > 0) {
+          const pcPrompt: FiresidePrompt = {
+            group_prompt_id: data.photo_completion_data.game_id,
+            scheduled_for: '',
+            prompt_id: data.photo_completion_data.game_id,
+            type: 'photo_completion',
+            content: 'Photo Completion',
+            title: 'Photo Completion',
+            responses: [],
+            photo_completion_pairs: data.photo_completion_data.pairs,
+          };
+          data.prompts = [...data.prompts, pcPrompt];
+        }
         setFiresideData(data);
         setScreenState("intro");
         startFireAnimation();
@@ -657,6 +691,42 @@ export default function LowdownScreen() {
     const isQuiplash = currentPrompt.type === "quiplash";
     const isMemeGame = currentPrompt.type === "meme_game";
 
+    // Blind Ranking: N+1 step reveal (step 0 = empty scale, steps 1..N = one avatar each)
+    const isBlindRanking = currentPrompt.payload?.is_blind_ranking === true;
+    if (isBlindRanking) {
+      const totalSteps = responses.length + 1; // scale + one per response + final all-shown
+      if (revealStep < totalSteps) {
+        setRevealStep(revealStep + 1);
+        return;
+      }
+      goToNextPrompt();
+      return;
+    }
+
+    // Steps Race: 2-step reveal (step 0 = show screenshots, step 1 = race animation)
+    const isStepsRace = currentPrompt.payload?.is_steps === true;
+    if (isStepsRace) {
+      if (revealStep < 1) {
+        setRevealStep(revealStep + 1);
+        return;
+      }
+      goToNextPrompt();
+      return;
+    }
+
+    // Photo Completion: 3 steps per pair (cutoff, completion, merged)
+    const isPhotoCompletion = currentPrompt.type === "photo_completion";
+    if (isPhotoCompletion) {
+      const pairs = currentPrompt.photo_completion_pairs || [];
+      const totalSteps = pairs.length * 3; // 3 steps per pair
+      if (revealStep < totalSteps - 1) {
+        setRevealStep(revealStep + 1);
+        return;
+      }
+      goToNextPrompt();
+      return;
+    }
+
     // Meme Game: 2-step reveal (0→photo+captions+authors, 1→votes+winner)
     if (isMemeGame) {
       if (revealStep < 1) {
@@ -690,9 +760,9 @@ export default function LowdownScreen() {
       }
     }
 
-    // Showing prompt - move to responses (but NOT for quiz/MC/quiplash/meme_game)
+    // Showing prompt - move to responses (but NOT for quiz/MC/quiplash/meme_game/special types)
     if (currentResponseIndex === -1) {
-      if (responses.length > 0 && !isQuizOrMC && !isQuiplash && !isMemeGame) {
+      if (responses.length > 0 && !isQuizOrMC && !isQuiplash && !isMemeGame && !isBlindRanking && !isStepsRace && !isPhotoCompletion) {
         setCurrentResponseIndex(0);
       } else {
         // No responses or quiz/quiplash done, next prompt
@@ -703,14 +773,14 @@ export default function LowdownScreen() {
 
     // Text-only prompts: show all responses at once, skip per-response cycling
     const hasMedia = responses.some(r => r.media_url);
-    const isTextOnly = !hasMedia && !isQuizOrMC && !isQuiplash && !isMemeGame;
+    const isTextOnly = !hasMedia && !isQuizOrMC && !isQuiplash && !isMemeGame && !isBlindRanking && !isStepsRace && !isPhotoCompletion;
     if (isTextOnly && currentResponseIndex >= 0) {
       goToNextPrompt();
       return;
     }
 
-    // Showing responses - move to next or next prompt (never for quiplash/meme_game)
-    if (!isQuiplash && !isMemeGame && currentResponseIndex < responses.length - 1) {
+    // Showing responses - move to next or next prompt (never for quiplash/meme_game/special types)
+    if (!isQuiplash && !isMemeGame && !isBlindRanking && !isStepsRace && !isPhotoCompletion && currentResponseIndex < responses.length - 1) {
       setCurrentResponseIndex(currentResponseIndex + 1);
     } else {
       goToNextPrompt();
@@ -746,6 +816,18 @@ export default function LowdownScreen() {
     const isQuiplash = currentPrompt.type === "quiplash";
     const isMemeGame = currentPrompt.type === "meme_game";
 
+    // Special types: step back through reveal stages
+    const isBlindRanking = currentPrompt.payload?.is_blind_ranking === true;
+    const isStepsRace = currentPrompt.payload?.is_steps === true;
+    const isPhotoCompletion = currentPrompt.type === "photo_completion";
+
+    if (isBlindRanking || isStepsRace || isPhotoCompletion) {
+      if (revealStep > 0) {
+        setRevealStep(revealStep - 1);
+        return;
+      }
+    }
+
     // Meme Game: step back through reveal stages
     if (isMemeGame) {
       if (revealStep > 0) {
@@ -766,20 +848,20 @@ export default function LowdownScreen() {
 
     // Text-only prompts: go straight back to prompt view (skip per-response)
     const hasMedia = responses.some(r => r.media_url);
-    const isTextOnly = !hasMedia && !isQuizOrMC && !isQuiplash && !isMemeGame;
+    const isTextOnly = !hasMedia && !isQuizOrMC && !isQuiplash && !isMemeGame && !isBlindRanking && !isStepsRace && !isPhotoCompletion;
     if (isTextOnly && currentResponseIndex >= 0) {
       setCurrentResponseIndex(-1);
       return;
     }
 
-    // If showing responses (not for quiplash/meme_game), go to previous response or back to prompt
-    if (!isQuiplash && !isMemeGame && currentResponseIndex > 0) {
+    // If showing responses (not for quiplash/meme_game/special), go to previous response or back to prompt
+    if (!isQuiplash && !isMemeGame && !isBlindRanking && !isStepsRace && !isPhotoCompletion && currentResponseIndex > 0) {
       setCurrentResponseIndex(currentResponseIndex - 1);
       return;
     }
 
-    // If showing first response (not for quiplash/meme_game), go back to prompt view
-    if (!isQuiplash && !isMemeGame && currentResponseIndex === 0) {
+    // If showing first response (not for quiplash/meme_game/special), go back to prompt view
+    if (!isQuiplash && !isMemeGame && !isBlindRanking && !isStepsRace && !isPhotoCompletion && currentResponseIndex === 0) {
       setCurrentResponseIndex(-1);
       return;
     }
@@ -798,12 +880,25 @@ export default function LowdownScreen() {
       const prevIsQuizOrMC = prevPrompt && ["quiz", "multiple_choice"].includes(prevPrompt.type);
       const prevIsQuiplash = prevPrompt?.type === "quiplash";
       const prevIsMemeGame = prevPrompt?.type === "meme_game";
+      const prevIsBlindRanking = prevPrompt?.payload?.is_blind_ranking === true;
+      const prevIsStepsRace = prevPrompt?.payload?.is_steps === true;
+      const prevIsPhotoCompletion = prevPrompt?.type === "photo_completion";
 
       setCurrentPromptIndex(prevPromptIndex);
       setComments([]);
 
-      // Go to last response of previous prompt (or prompt itself for quiz/MC/quiplash/meme_game)
-      if (prevIsQuizOrMC) {
+      // Go to last response of previous prompt (or prompt itself for quiz/MC/quiplash/meme_game/specials)
+      if (prevIsBlindRanking) {
+        setCurrentResponseIndex(-1);
+        setRevealStep(prevResponses.length + 1); // Fully revealed
+      } else if (prevIsStepsRace) {
+        setCurrentResponseIndex(-1);
+        setRevealStep(1); // Fully revealed
+      } else if (prevIsPhotoCompletion) {
+        const prevPairs = prevPrompt?.photo_completion_pairs || [];
+        setCurrentResponseIndex(-1);
+        setRevealStep(prevPairs.length * 3 - 1); // Fully revealed
+      } else if (prevIsQuizOrMC) {
         setCurrentResponseIndex(-1);
         setRevealStep(3); // Show fully revealed
       } else if (prevIsMemeGame) {
@@ -1412,8 +1507,11 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
   const isQuizOrMC = ["quiz", "multiple_choice"].includes(currentPrompt.type);
   const isQuiplash = currentPrompt.type === "quiplash";
   const isMemeGame = currentPrompt.type === "meme_game";
+  const isBlindRanking = currentPrompt.payload?.is_blind_ranking === true;
+  const isStepsRace = currentPrompt.payload?.is_steps === true;
+  const isPhotoCompletion = currentPrompt.type === "photo_completion";
   const hasMedia = responses.some(r => r.media_url);
-  const isTextOnly = !hasMedia && !isQuizOrMC && !isQuiplash && !isMemeGame;
+  const isTextOnly = !hasMedia && !isQuizOrMC && !isQuiplash && !isMemeGame && !isBlindRanking && !isStepsRace && !isPhotoCompletion;
 
   // Helper to determine media type
   const getMediaType = (promptType: string, mediaUrl?: string): 'photo' | 'video' | 'audio' | null => {
@@ -1504,7 +1602,7 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
   }
 
   // Get the response ID for comments - for quiz/MC/quiplash use first response, otherwise current
-  const commentResponseId = (isQuizOrMC || isQuiplash || isMemeGame) && responses.length > 0
+  const commentResponseId = (isQuizOrMC || isQuiplash || isMemeGame || isBlindRanking || isStepsRace || isPhotoCompletion) && responses.length > 0
     ? responses[0].response_id
     : currentResponse?.response_id;
 
@@ -1595,11 +1693,11 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
         <Ionicons name="chevron-forward" size={32} color={COLORS.text} />
       </TouchableOpacity>
 
-      <View style={[styles.promptContainer, isMemeGame && { paddingTop: 8, paddingBottom: 20 }]}>
+      <View style={[styles.promptContainer, (isMemeGame || isPhotoCompletion) && { paddingTop: 8, paddingBottom: 20 }]}>
         {showingPrompt ? (
           // Show the prompt
-          <View style={[styles.promptContent, isMemeGame && { paddingTop: 0, paddingBottom: 0 }]}>
-            {!isMemeGame && (
+          <View style={[styles.promptContent, (isMemeGame || isPhotoCompletion) && { paddingTop: 0, paddingBottom: 0 }]}>
+            {!isMemeGame && !isPhotoCompletion && (
               <AutoShrinkText style={styles.promptTitle} text={currentPrompt.content || currentPrompt.title || ''} />
             )}
 
@@ -1888,8 +1986,204 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
                 })}
               </View>
             )}
+            {/* Blind Ranking — Scale with progressive avatar reveal */}
+            {isBlindRanking && (() => {
+              const scaleItems: string[] = currentPrompt.payload?.scale_items || [];
+              const maxVal = Math.max(scaleItems.length - 1, 1);
+              const trackW = SCREEN_WIDTH - 80;
+
+              return (
+                <View style={{ width: '100%', marginTop: 12 }}>
+                  {/* Scale track */}
+                  <View style={{ height: 4, backgroundColor: COLORS.border, borderRadius: 2, width: trackW, alignSelf: 'center', position: 'relative', marginTop: 40 }}>
+                    {/* Tick marks */}
+                    {scaleItems.map((_, i) => (
+                      <View key={`tick-${i}`} style={{
+                        position: 'absolute',
+                        left: (i / maxVal) * trackW,
+                        top: -6,
+                        width: 2,
+                        height: 16,
+                        backgroundColor: COLORS.muted + '60',
+                        borderRadius: 1,
+                      }} />
+                    ))}
+
+                    {/* Labels */}
+                    {scaleItems.map((item, i) => (
+                      <Text key={`label-${i}`} style={{
+                        position: 'absolute',
+                        left: (i / maxVal) * trackW - 28,
+                        top: 16,
+                        width: 56,
+                        fontSize: 8,
+                        fontFamily: 'Paaxel',
+                        color: COLORS.muted,
+                        textAlign: 'center',
+                      }} numberOfLines={2}>
+                        {item.length > 12 ? item.substring(0, 10) + '…' : item}
+                      </Text>
+                    ))}
+
+                    {/* Avatars revealed one by one */}
+                    {responses.map((response, idx) => {
+                      if (idx + 1 > revealStep) return null; // Not yet revealed
+                      const val = parseFloat(response.content || '0');
+                      const xPos = (val / maxVal) * trackW;
+
+                      return (
+                        <View key={response.response_id} style={{
+                          position: 'absolute',
+                          left: xPos - 14,
+                          top: -40,
+                          alignItems: 'center',
+                        }}>
+                          <View style={{ width: 24, height: 30 }}>
+                            <PixelCharacter
+                              config={(response.avatar_config as unknown as CharacterConfig) || DEFAULT_CHARACTER}
+                              size={20}
+                            />
+                          </View>
+                          <Text style={{ color: COLORS.text, fontSize: 8, fontFamily: 'Paaxel', marginTop: 1 }} numberOfLines={1}>
+                            {response.username || '?'}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </View>
+              );
+            })()}
+
+            {/* Steps Race — Screenshots first, then race animation */}
+            {isStepsRace && (() => {
+              // Step 0: show screenshots (normal photo cycling handled by parent)
+              // Step 1: race animation
+              const stepsResponses = responses
+                .filter(r => r.content && /^\d+$/.test(r.content.trim()))
+                .map(r => ({ ...r, steps: parseInt(r.content!.trim(), 10) }));
+
+              const maxSteps = Math.max(...stepsResponses.map(r => r.steps), 1);
+              const raceWidth = SCREEN_WIDTH - 100;
+
+              if (revealStep >= 1 && stepsResponses.length > 0) {
+                return (
+                  <View style={{ width: '100%', marginTop: 16, gap: 12 }}>
+                    <Text style={{ color: COLORS.text, fontSize: 16, fontFamily: 'Paaxel', textAlign: 'center', marginBottom: 8 }}>
+                      Steps Race
+                    </Text>
+                    {stepsResponses
+                      .sort((a, b) => b.steps - a.steps)
+                      .map((response, idx) => {
+                        const barWidth = (response.steps / maxSteps) * raceWidth;
+                        return (
+                          <View key={response.response_id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <View style={{ width: 30, height: 36, alignItems: 'center' }}>
+                              <PixelCharacter
+                                config={(response.avatar_config as unknown as CharacterConfig) || DEFAULT_CHARACTER}
+                                size={20}
+                              />
+                            </View>
+                            <View style={{
+                              height: 24,
+                              width: barWidth,
+                              backgroundColor: idx === 0 ? CampfireColors.FIRE_ORANGE : CampfireColors.BORDER,
+                              borderRadius: 6,
+                              justifyContent: 'center',
+                              paddingHorizontal: 8,
+                            }}>
+                              <Text style={{
+                                color: idx === 0 ? '#fff' : COLORS.muted,
+                                fontSize: 11,
+                                fontFamily: 'Paaxel',
+                                fontWeight: idx === 0 ? '700' : '400',
+                              }}>
+                                {response.steps.toLocaleString()}
+                              </Text>
+                            </View>
+                            {idx === 0 && (
+                              <Text style={{ fontSize: 14 }}>👑</Text>
+                            )}
+                          </View>
+                        );
+                      })}
+                  </View>
+                );
+              }
+
+              // Step 0: show the prompt text normally (already handled above)
+              return null;
+            })()}
+
+            {/* Photo Completion — Pair reveal: cutoff → completion → merged */}
+            {isPhotoCompletion && currentPrompt.photo_completion_pairs && (() => {
+              const pairs = currentPrompt.photo_completion_pairs || [];
+              const currentPairIdx = Math.floor(revealStep / 3);
+              const stepInPair = revealStep % 3;
+
+              return (
+                <View style={{ width: '100%', marginTop: 8, gap: 12 }}>
+                  <Text style={{ color: CampfireColors.ACCENT_PURPLE, fontSize: 11, fontFamily: 'Paaxel', textAlign: 'center', letterSpacing: 2, textTransform: 'uppercase' }}>
+                    PHOTO COMPLETION
+                  </Text>
+
+                  {pairs.map((pair, pairIdx) => {
+                    if (pairIdx > currentPairIdx) return null; // Not yet shown
+                    const isCurrentPair = pairIdx === currentPairIdx;
+                    const showCompletion = !isCurrentPair || stepInPair >= 1;
+                    const showMerged = !isCurrentPair || stepInPair >= 2;
+
+                    return (
+                      <View key={pair.assignment_id} style={{ gap: 8, marginBottom: 12 }}>
+                        {/* Original cutoff photo */}
+                        <View style={{ alignItems: 'center', gap: 4 }}>
+                          <Text style={{ color: COLORS.muted, fontSize: 11, fontFamily: 'Paaxel' }}>
+                            {pair.original_username}'s cutoff:
+                          </Text>
+                          {pair.original_photo_url && (
+                            <Image
+                              source={{ uri: signedPcPhotos[pair.original_photo_url] || pair.original_photo_url }}
+                              style={{ width: 200, height: 200, borderRadius: 12 }}
+                              resizeMode="cover"
+                            />
+                          )}
+                        </View>
+
+                        {/* Completion photo */}
+                        {showCompletion && pair.completion_photo_url && (
+                          <View style={{ alignItems: 'center', gap: 4 }}>
+                            <Text style={{ color: COLORS.muted, fontSize: 11, fontFamily: 'Paaxel' }}>
+                              {pair.completer_username}'s completion:
+                            </Text>
+                            <Image
+                              source={{ uri: signedPcPhotos[pair.completion_photo_url] || pair.completion_photo_url }}
+                              style={{ width: 200, height: 200, borderRadius: 12 }}
+                              resizeMode="cover"
+                            />
+                          </View>
+                        )}
+
+                        {/* Merged photo (AI-generated) */}
+                        {showMerged && pair.merged_photo_url && (
+                          <View style={{ alignItems: 'center', gap: 4 }}>
+                            <Text style={{ color: CampfireColors.FIRE_YELLOW, fontSize: 12, fontFamily: 'Paaxel' }}>
+                              AI Merged:
+                            </Text>
+                            <Image
+                              source={{ uri: signedPcPhotos[pair.merged_photo_url] || pair.merged_photo_url }}
+                              style={{ width: 260, height: 260, borderRadius: 12 }}
+                              resizeMode="cover"
+                            />
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })}
+                </View>
+              );
+            })()}
           </View>
-        ) : !isQuiplash && !isMemeGame && isTextOnly && currentResponseIndex >= 0 ? (
+        ) : !isQuiplash && !isMemeGame && !isBlindRanking && !isStepsRace && !isPhotoCompletion && isTextOnly && currentResponseIndex >= 0 ? (
           // Scrollable all-responses view for text-only prompts
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 200 }}>
             <Text style={styles.promptTitle}>{currentPrompt.content || currentPrompt.title || ''}</Text>
@@ -1910,7 +2204,7 @@ function PixelStarIcon({ size = 20 }: { size?: number }) {
               ))}
             </View>
           </ScrollView>
-        ) : !isQuiplash && !isMemeGame ? (
+        ) : !isQuiplash && !isMemeGame && !isBlindRanking && !isStepsRace && !isPhotoCompletion ? (
           // Regular single-response view (photos, video, audio)
           <View style={styles.responseContainer}>
             {/* Photo author - top left, OUTSIDE the photo */}

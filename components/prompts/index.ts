@@ -16,6 +16,11 @@ export { PromptRating } from './PromptRating';
 export { QuiplashCard } from './QuiplashCard';
 export { QuiplashVotingCard } from './QuiplashVotingCard';
 
+// New game mechanics
+export { BlindRankingInput } from './BlindRankingInput';
+export { StepsPhotoInput } from './StepsPhotoInput';
+export { PhotoCompletionCard } from './PhotoCompletionCard';
+
 // Fireside reactions & comments
 export { ReactionBar } from './ReactionBar';
 export { CommentSheet } from './CommentSheet';
