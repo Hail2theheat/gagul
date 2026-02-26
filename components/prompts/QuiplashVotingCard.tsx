@@ -40,10 +40,9 @@ const COLORS = {
 interface QuiplashVotingCardProps {
   groupId: string;
   onVoted?: () => void;
-  onDismiss?: () => void;
 }
 
-export function QuiplashVotingCard({ groupId, onVoted, onDismiss }: QuiplashVotingCardProps) {
+export function QuiplashVotingCard({ groupId, onVoted }: QuiplashVotingCardProps) {
   const [loading, setLoading] = useState(true);
   const [matchups, setMatchups] = useState<QuiplashMatchup[]>([]);
   const [currentMatchupIndex, setCurrentMatchupIndex] = useState(0);
@@ -164,21 +163,9 @@ export function QuiplashVotingCard({ groupId, onVoted, onDismiss }: QuiplashVoti
         <View style={styles.badge}>
           <Text style={styles.badgeText}>⚔️ QUIPLASH VOTE</Text>
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <Text style={styles.progress}>
-            {currentMatchupIndex + 1} / {matchups.length}
-          </Text>
-          <Pressable
-            onPress={() => {
-              setMatchups([]);
-              onDismiss?.();
-            }}
-            hitSlop={8}
-            style={styles.dismissButton}
-          >
-            <Text style={styles.dismissText}>✕</Text>
-          </Pressable>
-        </View>
+        <Text style={styles.progress}>
+          {currentMatchupIndex + 1} / {matchups.length}
+        </Text>
       </Animated.View>
 
       {/* Prompt */}
@@ -315,19 +302,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     flex: 1,
     fontStyle: 'italic',
-  },
-  dismissButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dismissText: {
-    color: COLORS.muted,
-    fontSize: 14,
-    fontWeight: '700',
   },
   submittingOverlay: {
     position: 'absolute',

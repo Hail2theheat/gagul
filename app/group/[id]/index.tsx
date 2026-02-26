@@ -8,7 +8,7 @@ import { supabase } from "../../../lib/supabase";
 import { PromptCard, PromptRating } from "../../../components/prompts";
 import { recordPromptView, getMemberPromptStatuses } from "../../../lib/services/promptService";
 import { getFiresideProgress } from "../../../lib/services/firesideService";
-import { getFiresideState, getNowET, getFiresideLocalTime } from "../../../lib/schedule";
+import { getFiresideState, getNowET, getFiresideLocalTime, isQuiplashVotingOpen } from "../../../lib/schedule";
 import { QuiplashCard } from "../../../components/prompts/QuiplashCard";
 import { QuiplashVotingCard } from "../../../components/prompts/QuiplashVotingCard";
 import { CaptionVotingCard } from "../../../components/prompts/CaptionVotingCard";
@@ -1823,7 +1823,7 @@ function GroupScreenInner() {
     (memeGameState.phase === 'captioning' && !memeGameState.is_uploader) ||
     (memeGameState.phase === 'voting')
   );
-  const hasPendingVotes = pendingQuiplashVotes.length > 0 || hasMemeAction;
+  const hasPendingVotes = (pendingQuiplashVotes.length > 0 && isQuiplashVotingOpen()) || hasMemeAction;
   const shouldShowEmptyOrRespondedView = !loading && !hasUnansweredPrompt && !hasPendingVotes;
 
   if (shouldShowEmptyOrRespondedView) {
@@ -2477,11 +2477,11 @@ function GroupScreenInner() {
               </>
             )}
 
-            {/* Quiplash voting (mid-week) */}
-            {pendingQuiplashVotes.length > 0 && (
+            {/* Quiplash voting (mid-week, persists until voted or week ends) */}
+            {pendingQuiplashVotes.length > 0 && isQuiplashVotingOpen() && (
               <>
                 {(hasRegularPrompt || hasUnansweredQuiplash) && <View style={{ height: 16 }} />}
-                <QuiplashVotingCard groupId={groupId} onVoted={handleSubmitted} onDismiss={() => setPendingQuiplashVotes([])} />
+                <QuiplashVotingCard groupId={groupId} onVoted={handleSubmitted} />
               </>
             )}
 
