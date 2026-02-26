@@ -55,8 +55,8 @@ import { NightSky } from "../../../components/sky";
 import { FiresideIntro } from "../../../components/FiresideIntro";
 import { FireworkShow } from "../../../components/effects/FireworkShow";
 import AIJudgeReveal from "../../../components/fireside/AIJudgeReveal";
-import { MOCK_JUDGE_ENTRIES, MOCK_NON_SUBMITTERS, MOCK_CHALLENGE_TITLE, AIJudgeEntry, NonSubmitter } from "../../../components/fireside/mockJudgeData";
-import { WIRTHLIN_JUDGE_ENTRIES, WIRTHLIN_NON_SUBMITTERS, WIRTHLIN_CHALLENGE_TITLE } from "../../../components/fireside/wirthlinJudgeData";
+import { JUDGE_CONFIGS, type JudgeConfig } from "../../../components/fireside/judgeConfigs";
+import type { AIJudgeEntry, NonSubmitter } from "../../../components/fireside/mockJudgeData";
 import {
   getFiresideCount,
   incrementFiresideCount,
@@ -384,35 +384,52 @@ export default function LowdownScreen() {
   }, [groupId]);
 
   // Detect AI Judge prompt (The Tribunal) — supports multiple groups/prompts
-  const AI_JUDGE_CONFIGS: Record<string, { entries: AIJudgeEntry[]; nonSubmitters: NonSubmitter[]; title: string }> = {
-    'de17f81c-58c6-4b8d-86a6-247ac774380c': { entries: MOCK_JUDGE_ENTRIES, nonSubmitters: MOCK_NON_SUBMITTERS, title: MOCK_CHALLENGE_TITLE },
-    '6e6b26af-5a53-4347-8654-8c48daaa4e6b': { entries: WIRTHLIN_JUDGE_ENTRIES, nonSubmitters: WIRTHLIN_NON_SUBMITTERS, title: WIRTHLIN_CHALLENGE_TITLE },
-  };
   const [activeJudgeConfig, setActiveJudgeConfig] = useState<{ entries: AIJudgeEntry[]; nonSubmitters: NonSubmitter[]; title: string } | null>(null);
 
   useEffect(() => {
     const prompt = firesideData?.prompts[currentPromptIndex];
     const gpId = prompt?.group_prompt_id;
-    const config = gpId ? AI_JUDGE_CONFIGS[gpId] : undefined;
-    if (config && screenState === 'prompts') {
-      // Fetch signed URLs for all judge entries, then activate
-      (async () => {
-        const urls: Record<string, string> = {};
-        await Promise.all(
-          config.entries.map(async (entry) => {
-            try {
-              const signedUrl = await getSignedImageUrl(entry.photo_path);
-              if (signedUrl) urls[entry.user_id] = signedUrl;
-            } catch (e) {
-              console.error('[AIJudge] Failed to get signed URL for', entry.username, e);
-            }
-          })
-        );
-        setAiJudgePhotoUrls(urls);
-        setActiveJudgeConfig(config);
-        setAiJudgeActive(true);
-      })();
+    if (!gpId || screenState !== 'prompts') return;
+
+    const activateConfig = async (config: JudgeConfig) => {
+      const urls: Record<string, string> = {};
+      await Promise.all(
+        config.entries.map(async (entry) => {
+          try {
+            const signedUrl = await getSignedImageUrl(entry.photo_path);
+            if (signedUrl) urls[entry.user_id] = signedUrl;
+          } catch (e) {
+            console.error('[AIJudge] Failed to get signed URL for', entry.username, e);
+          }
+        })
+      );
+      setAiJudgePhotoUrls(urls);
+      setActiveJudgeConfig(config);
+      setAiJudgeActive(true);
+    };
+
+    // Check hardcoded configs first
+    const hardcoded = JUDGE_CONFIGS[gpId];
+    if (hardcoded) {
+      activateConfig(hardcoded);
+      return;
     }
+
+    // DB fallback: check tribunal_judge_results
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('tribunal_judge_results')
+          .select('result_json')
+          .eq('group_prompt_id', gpId)
+          .maybeSingle();
+        if (data?.result_json) {
+          activateConfig(data.result_json as JudgeConfig);
+        }
+      } catch (e) {
+        console.error('[AIJudge] Failed to fetch dynamic judge data:', e);
+      }
+    })();
   }, [currentPromptIndex, screenState, firesideData]);
 
   // Fetch signed URL when showing a photo response or meme game prompt

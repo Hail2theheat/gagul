@@ -21,6 +21,7 @@ import {
 } from "../lib/hooks/useAdminData";
 import { getWeekOf, type AdminGroupPrompt, type AdminResponse } from "../lib/services/adminService";
 import { getSignedImageUrl } from "../lib/services/firesideService";
+import { JUDGE_CONFIGS } from "../components/fireside/judgeConfigs";
 import { getPhotoCompletionResults } from "../lib/services/photoCompletionService";
 import type { PhotoCompletionPair } from "../lib/types/photoCompletion";
 import { supabase } from "../lib/supabase";
@@ -634,6 +635,7 @@ function AIOperationsSection({
 }) {
   const [expanded, setExpanded] = useState(true);
   const [pcState, setPcState] = useState<any>(null);
+  const [tribunalCache, setTribunalCache] = useState<Record<string, boolean>>({});
 
   // Load photo completion game state for this week
   useEffect(() => {
@@ -646,6 +648,23 @@ function AIOperationsSection({
       .maybeSingle()
       .then(({ data }) => setPcState(data));
   }, [groupId, weekOf]);
+
+  // Check DB for dynamically generated tribunal results
+  useEffect(() => {
+    const tribunalGpIds = schedule
+      .filter((gp) => gp.prompt?.payload?.is_tribunal && !JUDGE_CONFIGS[gp.id])
+      .map((gp) => gp.id);
+    if (tribunalGpIds.length === 0) return;
+    supabase
+      .from("tribunal_judge_results")
+      .select("group_prompt_id")
+      .in("group_prompt_id", tribunalGpIds)
+      .then(({ data }) => {
+        const cache: Record<string, boolean> = {};
+        for (const row of data || []) cache[row.group_prompt_id] = true;
+        setTribunalCache(cache);
+      });
+  }, [schedule]);
 
   // Detect AI-relevant prompts from the schedule
   const aiJudgePrompts = schedule.filter(
@@ -705,10 +724,35 @@ function AIOperationsSection({
 
       {expanded && (
         <View style={{ marginTop: Spacing.md, gap: 8 }}>
-          {/* AI Judge prompts (Tribunal) — expandable with photo previews */}
-          {aiJudgePrompts.map((gp) => (
-            <TribunalPreview key={gp.id} gp={gp} />
-          ))}
+          {/* AI Judge prompts (Tribunal) — simple preview row */}
+          {aiJudgePrompts.map((gp) => {
+            const st = promptStatus(gp);
+            const hasData = !!JUDGE_CONFIGS[gp.id] || tribunalCache[gp.id];
+            const opSt: AIOpStatus = hasData
+              ? "done"
+              : st === "expired" && gp.response_count >= 2
+              ? "ready"
+              : st === "active"
+              ? "waiting"
+              : st === "upcoming"
+              ? "scheduled"
+              : "idle";
+            return (
+              <AIOpRow
+                key={gp.id}
+                icon="Tribunal"
+                label={`AI Judge — ${gp.prompt?.title || "prompt"}`}
+                detail={`${gp.response_count} responses | ${st}`}
+                status={opSt}
+                actionLabel={hasData ? "Preview" : undefined}
+                onAction={
+                  hasData
+                    ? () => router.push({ pathname: "/judge-test", params: { gpId: gp.id } })
+                    : undefined
+                }
+              />
+            );
+          })}
 
           {/* Blind Ranking (AI processes results for Fireside visualization) */}
           {blindRankingPrompts.map((gp) => {
@@ -782,177 +826,6 @@ function AIOperationsSection({
                 : undefined
             }
           />
-        </View>
-      )}
-    </View>
-  );
-}
-
-// ─── Tribunal Photo Preview ─────────────────────────────────
-function TribunalPreview({ gp }: { gp: AdminGroupPrompt }) {
-  const [expanded, setExpanded] = useState(false);
-  const [responses, setResponses] = useState<AdminResponse[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
-
-  const status = promptStatus(gp);
-  const opStatus: AIOpStatus =
-    status === "expired" && gp.response_count >= 2
-      ? "ready"
-      : status === "active"
-      ? "waiting"
-      : status === "upcoming"
-      ? "scheduled"
-      : "idle";
-
-  const handleToggle = async () => {
-    const next = !expanded;
-    setExpanded(next);
-    if (next && responses.length === 0) {
-      setLoading(true);
-      const { data } = await supabase
-        .from("responses")
-        .select("id, user_id, content, media_url, selected_option, submitted_at")
-        .eq("group_prompt_id", gp.id)
-        .order("submitted_at");
-
-      if (data && data.length > 0) {
-        const userIds = data.map((r: any) => r.user_id);
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("id, username, avatar_config")
-          .in("id", userIds);
-        const profileMap: Record<string, any> = {};
-        for (const p of profiles || []) profileMap[p.id] = p;
-
-        const mapped: AdminResponse[] = data.map((r: any) => ({
-          ...r,
-          username: profileMap[r.user_id]?.username || "???",
-          avatar_config: profileMap[r.user_id]?.avatar_config || null,
-        }));
-        setResponses(mapped);
-
-        // Resolve signed URLs
-        const urls: Record<string, string> = {};
-        for (const r of mapped) {
-          if (r.media_url) {
-            const signed = await getSignedImageUrl(r.media_url);
-            if (signed) urls[r.media_url] = signed;
-          }
-        }
-        setSignedUrls(urls);
-      }
-      setLoading(false);
-    }
-  };
-
-  return (
-    <View
-      style={{
-        backgroundColor: BG,
-        borderColor: BORDER,
-        borderWidth: 1,
-        borderRadius: Radii.sm,
-        padding: Spacing.sm,
-      }}
-    >
-      {/* Header */}
-      <Pressable
-        onPress={handleToggle}
-        style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
-      >
-        <Text style={{ fontSize: 18 }}>{"\u2696\uFE0F"}</Text>
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: TEXT, fontSize: 13, fontFamily: "Paaxel" }}>
-            AI Judge — {gp.prompt?.title || "prompt"}
-          </Text>
-          <Text style={{ color: MUTED, fontSize: 11 }}>
-            {gp.response_count} responses | {status}
-          </Text>
-        </View>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-          <View
-            style={{
-              width: 7,
-              height: 7,
-              borderRadius: 4,
-              backgroundColor: AI_STATUS_COLORS[opStatus],
-            }}
-          />
-          <Text style={{ color: AI_STATUS_COLORS[opStatus], fontSize: 10, fontFamily: "Paaxel" }}>
-            {AI_STATUS_LABELS[opStatus]}
-          </Text>
-        </View>
-        <Text style={{ color: MUTED, fontSize: 14 }}>
-          {expanded ? "\u25B2" : "\u25BC"}
-        </Text>
-      </Pressable>
-
-      {/* Expanded photo grid */}
-      {expanded && (
-        <View style={{ marginTop: 10 }}>
-          {loading && <ActivityIndicator color={BTN} />}
-          {!loading && responses.length === 0 && (
-            <Text style={{ color: MUTED, fontSize: 12, textAlign: "center" }}>
-              No responses yet
-            </Text>
-          )}
-          {/* Photo grid — 2 columns */}
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {responses.map((r) => {
-              const url = r.media_url ? signedUrls[r.media_url] : null;
-              return (
-                <View
-                  key={r.id}
-                  style={{
-                    width: (SCREEN_W - 80) / 2,
-                    backgroundColor: CARD,
-                    borderRadius: 8,
-                    overflow: "hidden",
-                    borderWidth: 1,
-                    borderColor: BORDER,
-                  }}
-                >
-                  {url ? (
-                    <Image
-                      source={{ uri: url }}
-                      style={{ width: "100%", height: 120 }}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View
-                      style={{
-                        width: "100%",
-                        height: 120,
-                        backgroundColor: BG,
-                        justifyContent: "center",
-                        alignItems: "center",
-                      }}
-                    >
-                      <Text style={{ color: MUTED, fontSize: 10 }}>
-                        {r.media_url ? "Loading..." : "No photo"}
-                      </Text>
-                    </View>
-                  )}
-                  <View style={{ padding: 6 }}>
-                    <Text
-                      style={{ color: TEXT, fontSize: 11, fontFamily: "Paaxel" }}
-                    >
-                      {r.username}
-                    </Text>
-                    {r.content && (
-                      <Text
-                        style={{ color: MUTED, fontSize: 10, marginTop: 1 }}
-                        numberOfLines={1}
-                      >
-                        {r.content}
-                      </Text>
-                    )}
-                  </View>
-                </View>
-              );
-            })}
-          </View>
         </View>
       )}
     </View>
