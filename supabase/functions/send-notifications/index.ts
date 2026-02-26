@@ -8,6 +8,10 @@
 //   Sun   12:00 PM → fireside_open     → ALL users: "fireside is live"
 //   Sun   9:00 PM  → fireside_reminder → users who haven't viewed fireside
 //
+// Manual override: POST with { "type": "...", "force_all": true, "title": "...", "body": "..." }
+//   force_all = true  → send to ALL non-responders for active prompts (ignores cron timing)
+//   title / body      → override default notification text
+//
 // DEPLOY: npx supabase functions deploy send-notifications
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -28,16 +32,26 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Parse notification type from request body
+    // Parse notification type + optional overrides from request body
     let type = 'new_prompt'
+    let forceAll = false
+    let customTitle: string | null = null
+    let customBody: string | null = null
     try {
       const body = await req.json()
       type = body.type || 'new_prompt'
+      forceAll = body.force_all || false
+      customTitle = body.title || null
+      customBody = body.body || null
     } catch {
       // Default to new_prompt if no body
     }
 
-    console.log(`[send-notifications] type=${type} at ${new Date().toISOString()}`)
+    if (forceAll) {
+      type = 'prompt_reminder'
+    }
+
+    console.log(`[send-notifications] type=${type} force_all=${forceAll} at ${new Date().toISOString()}`)
 
     const notifications: PushMessage[] = []
 
@@ -109,12 +123,12 @@ Deno.serve(async (req) => {
       }
 
       // Build ONE notification per user
-      const title = type === 'new_prompt'
+      const title = customTitle || (type === 'new_prompt'
         ? '🔥 Stokie'
-        : '⏰ Stokie'
-      const body = type === 'new_prompt'
+        : '⏰ Stokie')
+      const body = customBody || (type === 'new_prompt'
         ? "You've got a new prompt! Stoke the fire before it burns out 🪵🔥"
-        : "Your prompt is still waiting — don't let the fire die 🔥"
+        : "Your prompt is still waiting — don't let the fire die 🔥")
 
       for (const [, token] of userTokens) {
         notifications.push({ to: token, title, body, sound: 'default', data: { type } })
