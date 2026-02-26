@@ -11,6 +11,7 @@ export { PhotoPicker } from './PhotoPicker';
 export { MultipleChoice } from './MultipleChoice';
 export { QuizQuestion } from './QuizQuestion';
 export { QuiplashInput } from './QuiplashInput';
+export { CounterInput } from './CounterInput';
 export { PromptRating } from './PromptRating';
 export { QuiplashCard } from './QuiplashCard';
 export { QuiplashVotingCard } from './QuiplashVotingCard';

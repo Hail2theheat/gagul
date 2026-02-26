@@ -40,6 +40,7 @@ import { MultipleChoice } from './MultipleChoice';
 import { QuizQuestion } from './QuizQuestion';
 import { QuiplashInput } from './QuiplashInput';
 import { PhotoCaptionInput } from './PhotoCaptionInput';
+import { CounterInput } from './CounterInput';
 import { PromptRating } from './PromptRating';
 import { MajorityGuess } from './MajorityGuess';
 
@@ -101,6 +102,9 @@ export function PromptCard({
 
   // Check if this is a Tribunal (AI-judged) prompt
   const isTribunal = (prompt?.payload as any)?.is_tribunal === true;
+
+  // Check if this is a Counter prompt (tap to increment)
+  const isCounter = (prompt?.payload as any)?.is_counter === true;
 
   // Submit button press feedback
   const submitScale = useSharedValue(1);
@@ -205,6 +209,15 @@ export function PromptCard({
 
     switch (promptType) {
       case 'short_text':
+        if (isCounter) {
+          return (
+            <CounterInput
+              value={textValue}
+              onChangeText={setTextValue}
+              disabled={submitting}
+            />
+          );
+        }
         return (
           <ShortTextInput
             value={textValue}
